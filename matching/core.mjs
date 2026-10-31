@@ -105,6 +105,10 @@ function matchIncoming(state, incoming, seq) {
       maker: maker.owner,
       taker: incoming.owner,
       priceE7: maker.priceE7, // price-time priority: maker/resting price
+      makerSide: maker.side,
+      takerSide: incoming.side,
+      makerLimitE7: maker.priceE7,
+      takerLimitE7: incoming.priceE7,
       quantityE7: formatUnits(amount),
       settlement: "NOT_SETTLED",
       simulated: true,
