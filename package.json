@@ -16,7 +16,8 @@
     "check:infra": "node scripts/check-infra.mjs",
     "test:matching": "node --test tests/matching.test.mjs",
     "dev:matching": "node scripts/start-matching.mjs",
-    "test:marketdata": "node --test tests/marketdata.test.mjs"
+    "test:marketdata": "node --test tests/marketdata.test.mjs",
+    "check:readiness": "node scripts/check-readiness.mjs"
   },
   "engines": {
     "node": ">=20"

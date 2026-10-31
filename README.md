@@ -10,6 +10,8 @@ Hoxo-SS is a proposed non-custodial exchange for Stellar. The intended product c
 
 **Status: early development.** M4 read-only Stellar Testnet RPC + Horizon infrastructure is verified in CI; M5 provides read-only market-data adapters; M6/M7 contain unverified Rust source code (vault and risk-preview). **No HOXO contracts are deployed, no wallet-controlled deposits have been executed, and there is no audited unified-margin risk engine.** Testnet-first. No synthetic volumes or fake live market data.
 
+[M1–M8 audited implementation and blockers](docs/m1-m8-audit.md) · `npm run check:readiness` verifies no premature real-trading claims.
+
 ## Technical direction
 
 Stellar smart contracts (Rust `soroban-sdk`) for vaults, settlement and enforcement; deterministic fixed-point shared risk math; oracle staleness checks; off-chain matching and indexer where necessary; wallet-signed Stellar transactions. A single risk-accounting specification must govern spot, perps and lending, and state-changing actions must be enforced **on-chain**, never merely by frontend checks.
