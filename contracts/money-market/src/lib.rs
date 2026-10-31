@@ -228,6 +228,10 @@ impl MoneyMarket {
         keep_instance(&e);
     }
     pub fn asset(e:Env)->Address{asset(&e)}
+    /// Actual accrued debt remains on the standalone money-market ledger.
+    /// M15 custody handoffs reject ANY outstanding debt rather than
+    /// pretending borrow claims can be collateralised by a second vault.
+    pub fn outstanding_debt_e7(e:Env)->i128{pool(&e).borrowed_e7}
     pub fn admin(e:Env)->Address{admin(&e)}
     pub fn deposits_paused(e:Env)->bool{
         e.storage().instance().get(&Key::Pause).unwrap_or(true)
