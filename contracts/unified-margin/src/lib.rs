@@ -3,7 +3,9 @@
 //! Spot, perpetual and lending roles reserve the SAME recorded user balance.
 //! Never count a reservation twice. No lending principal is minted, no
 //! leverage or cross-asset valuations are represented by this contract.
-//! Existing M9/M11/M12 contracts are NOT CONNECTED to this ledger.
+//! Existing M9/M11/M12 contracts do not share cross-product risk positions.
+//! An optional Testnet-only custody router now atomically transfers FREE
+//! tokens/claims between their isolated vaults; not shared leveraged margin.
 //! Authorised adapters must be independently audited before activation.
 //! M7's current preview-only risk gate returns false for enablement.
 //! Starts PAUSED, with no risk authority and no adapters.

@@ -274,6 +274,11 @@ impl PerpClearinghouse {
             keeper_reward_bps:insurance.keeper_reward_bps,
         }
     }
+    /// Immutable collateral asset of the separately held M12 escrow.
+    pub fn collateral_asset(e:Env)->Address{collateral(&e)}
+    /// M15 custody handoff must never treat open perp liabilities as
+    /// free canonical margin. Exposes only actual stored open position count.
+    pub fn active_positions(e:Env)->u32{totals(&e).open_positions}
     pub fn wallet(e:Env,owner:Address)->Wallet {wallet(&e,&owner)}
     pub fn reconciliation(e:Env)->Result<Reconciliation,PerpError>{
         require_testnet(&e)?;

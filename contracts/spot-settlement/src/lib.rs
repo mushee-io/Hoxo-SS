@@ -3,7 +3,9 @@
 //!
 //! BOTH maker and taker must authorise exactly the same Soroban invocation.
 //! The matched M8 off-chain intent alone NEVER gives custody/spending rights.
-//! M6 vault and M7 unified margin are deliberately NOT integrated here.
+//! M9 standalone settlement remains independent of M15 reserved collateral.
+//! An external, optional Testnet-only custody router can atomically migrate
+//! FREE M15 quote collateral around M9 settle without changing this ABI.
 //!
 //! Only approved 7-decimal tokens, bounded amounts/prices, unique match IDs,
 //! dual-sided limit checks, fresh ledger deadline, and exact token delivery.

@@ -20,6 +20,7 @@ const perp=await read("contracts/perp-clearinghouse/src/lib.rs");
 const funding=await read("contracts/perp-clearinghouse/src/m13.rs");
 const liquidation=await read("contracts/perp-clearinghouse/src/m14.rs");
 const unified=await read("contracts/unified-margin/src/lib.rs");
+const custodyRouter=await read("contracts/custody-router/src/lib.rs");
 const chainRisk=await read("contracts/canonical-risk/src/lib.rs");
 const sandbox=snapshot(emptyBook(),"xlm-usdc-spot");
 const advanced=await read("matching/advanced.mjs");
@@ -185,6 +186,15 @@ const invariants={
     chainRisk.includes('_proposed_amount_e7:i128,_projected_debt_e7:i128')&&
     chainRisk.includes('cross_product_margin_active:false')&&
     !chainRisk.includes('fn sendTransaction('),
+  m15AtomicCustodyRouterOnly:custodyRouter.includes('pub fn settle_spot_from_margin(')&&
+    custodyRouter.includes('pub fn supply_from_margin(')&&
+    custodyRouter.includes('pub fn redeem_to_margin(')&&
+    custodyRouter.includes('pub fn perp_from_margin(')&&
+    custodyRouter.includes('pub fn perp_to_margin(')&&
+    custodyRouter.includes('fn ensure_lending(')&&
+    custodyRouter.includes('fn ensure_perp(')&&
+    custodyRouter.includes('financial_beta_approved:false')&&
+    custodyRouter.includes('isolated_not_shared:true'),
   m24NoMainnetApproval:m24Gate.includes('NO_GO_INDEPENDENT_APPROVAL_AND_LIVE_PROOF_MISSING')&&
     m24Gate.includes('mainnetLaunchApproved:false')&&
     m24Gate.includes('mainnetOperationsEnabled:false'),

@@ -178,6 +178,8 @@ jobs:
         run: cargo test -p hoxo-oracle-adapter --lib
       - name: Run chain-backed M15 spot-only canonical risk and oracle integration tests
         run: cargo test -p hoxo-canonical-risk --lib
+      - name: Test atomic M15→M9/M11/M12 custody router and solvency reconciliation
+        run: cargo test -p hoxo-custody-router --lib
       - name: Run M9 atomic spot settlement contract tests
         run: cargo test -p hoxo-spot-settlement --lib
       - name: Run M10–M11 supply, interest, guarded borrow and repayment contract tests
@@ -204,6 +206,11 @@ jobs:
           stellar contract build --package hoxo-canonical-risk
           test -s target/wasm32v1-none/release/hoxo_canonical_risk.wasm
           sha256sum target/wasm32v1-none/release/hoxo_canonical_risk.wasm
+      - name: Build Testnet-only custody router WASM for independent review
+        run: |
+          stellar contract build --package hoxo-custody-router
+          test -s target/wasm32v1-none/release/hoxo_custody_router.wasm
+          sha256sum target/wasm32v1-none/release/hoxo_custody_router.wasm
       - name: Build M9 WASM with official stellar contract build
         run: |
           stellar --version
@@ -225,6 +232,12 @@ jobs:
           stellar contract build --package hoxo-unified-margin
           test -s target/wasm32v1-none/release/hoxo_unified_margin.wasm
           sha256sum target/wasm32v1-none/release/hoxo_unified_margin.wasm
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hoxo-atomic-m9-m11-m12-custody-router-wasm-review-only
+          path: target/wasm32v1-none/release/hoxo_custody_router.wasm
+          if-no-files-found: error
+          retention-days: 7
       - uses: actions/upload-artifact@v4
         with:
           name: hoxo-m15-chain-backed-spot-only-risk-wasm-review-only
