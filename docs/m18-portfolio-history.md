@@ -52,3 +52,15 @@ CI covers official payment records without a ledger field, excluded complex oper
 4. **Independent Stellar Testnet signed end-to-end acceptance**, adversarial audit and portfolio reconciliation against the on-chain vault. Never use simulated positions or public payment transfers to claim Hoxo open interest, trading volume, yield or protocol revenue.
 
 **M18 read-only engineering is buildable and tested; authenticated live Hoxo positions, PnL, funding, interest and trades remain blocked.**
+
+## Verified M18 source, browser, wallet and contract build — 31 October 2026
+
+[GitHub Actions run 41223324644](https://github.com/mushee-io/Hoxo-SS/actions/runs/41223324644) completed **all 7 jobs successfully** for M18 source commit `3dc3e033ba180ae9df0f96ff9e02e525ab3c07d5`.
+
+- **19/19 M18 Node.js portfolio tests**: exact canonical Testnet root and account identity, Horizon production payment schema **without per-payment ledger field**, payment and account-creation attribution, explicit excluded complex operations and original cursor preservation, invalid transaction data, wrong owner, forged account response, pagination safety, anonymous public-address semantics, hash-chain tamper rejection, sandbox-source separation and read-only HTTP.
+- **124/124 total JavaScript tests** and **9/9 Chromium browser tests**, including a locally mocked Freighter-connected wallet rendering a real-format Testnet payment with a safe explorer transaction link, alongside disabled trading and custody.
+- **135/135 existing native Rust/Soroban tests** across M7/M9/M11/M14/M15/M16; all five previously established official Stellar CLI optimized WASM builds succeeded.
+- Live **read-only** Stellar Testnet Horizon/RPC and registry checks passed. These checks do **not** demonstrate Hoxo exchange deposits, live trades, PnL or actual interest distributions.
+- `check:readiness` still reports **`NOT_LIVE`**, disabled actual trading and custody, no registered deployed Hoxo contracts, and no canonical on-chain portfolio authority.
+
+**No new Soroban contract or WASM is created by M18**: it is wallet read-only interface, transaction normalization and journal history code. A Horizon operation without a ledger field is displayed without an invented number; the latest observed network ledger is separately shown. This distinction is intentional.
