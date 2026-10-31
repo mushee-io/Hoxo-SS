@@ -17,3 +17,4 @@ hoxo-unified-margin = { path = "../unified-margin" }
 hoxo-money-market = { path = "../money-market" }
 hoxo-perp-clearinghouse = { path = "../perp-clearinghouse" }
 hoxo-custody-router = { path = "../custody-router" }
+hoxo-canonical-risk = { path = "../canonical-risk" }

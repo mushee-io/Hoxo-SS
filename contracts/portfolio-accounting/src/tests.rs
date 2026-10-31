@@ -1,5 +1,6 @@
 use super::*;
-use hoxo_unified_margin::{UnifiedMargin,UnifiedMarginClient};
+use hoxo_unified_margin::{UnifiedMargin,UnifiedMarginClient,Product};
+use hoxo_canonical_risk::{CanonicalRisk,CanonicalRiskClient};
 use hoxo_money_market::{MoneyMarket,MoneyMarketClient};
 use hoxo_perp_clearinghouse::{PerpClearinghouse,PerpClearinghouseClient,Price};
 use hoxo_custody_router::{CustodyRouter,CustodyRouterClient};
@@ -50,10 +51,11 @@ impl TestOnlySpot{
 struct F{
     e:Env,admin:Address,alice:Address,bob:Address,
     asset:Address,vault:Address,lending:Address,perp:Address,
-    router:Address,portfolio:Address,
+    router:Address,portfolio:Address,spot_risk:Option<Address>,spot:Address,
 }
 impl F{
-    fn new()->Self{
+    fn new()->Self{Self::with_spot_risk(false)}
+    fn with_spot_risk(enforce:bool)->Self{
         let e=Env::default();e.ledger().set_network_id(TESTNET_ID);
         e.mock_all_auths(); // local simulator, NOT real Stellar user signatures
         let admin=Address::generate(&e);
@@ -69,18 +71,30 @@ impl F{
         let spot=e.register(TestOnlySpot,());
         let router=e.register(CustodyRouter,(&admin,&vault,&spot,&lending,&perp,&asset));
         let portfolio=e.register(PortfolioAccounting,(&admin,&vault,&lending,&perp,&asset));
+        let oracle=e.register(TestOnlyOracle,());
+        let spot_risk=if enforce{
+            Some(e.register(CanonicalRisk,(&admin,&vault,&asset,&oracle,&1u32,&(50*UNIT))))
+        }else{None};
         let margin=UnifiedMarginClient::new(&e,&vault);
-        margin.set_risk(&e.register(TestOnlyDenyMarginRisk,()));
+        if let Some(risk)=&spot_risk{
+            margin.set_risk(risk);
+            let g=CanonicalRiskClient::new(&e,risk);
+            g.bind_products(&portfolio,&lending,&perp);
+            g.pause(&false);
+            margin.bind_adapter(&Product::Spot,&spot);
+            margin.enable_role(&Product::Spot,&true);
+        }else{
+            margin.set_risk(&e.register(TestOnlyDenyMarginRisk,()));
+        }
         margin.pause(&false);
         margin.deposit(&alice,&(200*UNIT));
         margin.deposit(&bob,&(50*UNIT));
         MoneyMarketClient::new(&e,&lending).pause(&false);
         let perp_client=PerpClearinghouseClient::new(&e,&perp);
-        perp_client.set_controllers(&e.register(TestOnlyOracle,()),
-            &e.register(TestOnlyAllowPerpRisk,()));
+        perp_client.set_controllers(&oracle,&e.register(TestOnlyAllowPerpRisk,()));
         perp_client.set_pause(&false);
         CustodyRouterClient::new(&e,&router).pause(&false);
-        Self{e,admin,alice,bob,asset,vault,lending,perp,router,portfolio}
+        Self{e,admin,alice,bob,asset,vault,lending,perp,router,portfolio,spot_risk,spot}
     }
     fn p(&self)->PortfolioAccountingClient<'_>{
         PortfolioAccountingClient::new(&self.e,&self.portfolio)
@@ -218,6 +232,13 @@ fn actual_open_perp_position_makes_unrealised_account_liabilities_explicitly_inc
     let a=f.p().snapshot(&f.alice);
     assert_eq!(a.m12_global_open_positions,1);
     assert!(a.m12_locked_e7>0);
+    assert_eq!(a.m12_owner_positions,1);
+    assert!(a.m12_owner_marked_complete);
+    assert_eq!(a.m12_owner_mark_pnl_e7,0);
+    assert_eq!(a.m12_marked_equity_e7,10*UNIT);
+    assert_eq!(a.m12_maintenance_e7,6*UNIT);
+    assert_eq!(a.m12_maint_deficit_e7,0);
+    assert_eq!(a.owner_marked_net_e7,a.owner_net_after_debt_e7);
     assert!(a.nominal_book_covered);
     assert_eq!(a.nominal_book_surplus_e7,0);
     assert!(!a.no_open_credit_or_perp_risk);
@@ -255,4 +276,69 @@ fn unauthorised_or_wrong_network_invocation_cannot_enable_any_spending(){
     assert!(!p.approve_open(&f.alice,&f.perp,&1,&UNIT,&UNIT,&UNIT));
     f.e.ledger().set_network_id([0;32]);
     assert!(p.try_snapshot(&f.alice).is_err());
+}
+
+#[test]
+fn real_cross_product_spot_risk_preflight_denies_new_m11_credit_and_m12_positions(){
+    let f=F::with_spot_risk(true);
+    let m=f.m();let acct=f.p();
+    let guard=CanonicalRiskClient::new(&f.e,f.spot_risk.as_ref().unwrap());
+    let id1=BytesN::from_array(&f.e,&[241u8;32]);
+    assert!(acct.spot_reservation_safe(&f.alice,&(10*UNIT)));
+    assert!(guard.prepare_spot_reservation(&f.alice,&id1,&(10*UNIT)));
+    assert_eq!(m.reserve(&f.alice,&f.spot,&Product::Spot,&id1,&(10*UNIT)),190*UNIT);
+    assert!(!acct.spot_reservation_safe(&f.alice,&(191*UNIT)));
+    // Second permit is prepared before another product creates exposures.
+    let id2=BytesN::from_array(&f.e,&[242u8;32]);
+    assert!(guard.prepare_spot_reservation(&f.alice,&id2,&UNIT));
+    let l=f.l();
+    l.set_risk_authority(&f.e.register(TestOnlyAllowBorrowRisk,()));
+    l.set_borrow_policy(&(100*UNIT),&9000u32,&1000u32,&true);
+    f.router().supply_from_margin(&f.alice,&(30*UNIT));
+    l.borrow(&f.alice,&(2*UNIT));
+    assert!(!acct.spot_reservation_safe(&f.alice,&UNIT));
+    assert!(m.try_reserve(&f.alice,&f.spot,&Product::Spot,&id2,&UNIT).is_err());
+    assert!(guard.pending(&f.alice).is_some());
+    // Refund borrowed principal in the isolated M11 ledger.
+    assert_eq!(l.repay(&f.alice,&f.alice,&(2*UNIT)),2*UNIT);
+    assert_eq!(l.current_outstanding_debt_e7(),0);
+    f.router().perp_from_margin(&f.alice,&(40*UNIT));
+    f.router().perp_from_margin(&f.bob,&(40*UNIT));
+    let position=BytesN::from_array(&f.e,&[244u8;32]);
+    f.perps().open(&position,&f.alice,&f.bob,
+        &(4*UNIT),&(12*UNIT),&(8*UNIT),
+        &(f.e.ledger().sequence()+20));
+    assert!(!acct.spot_reservation_safe(&f.alice,&UNIT));
+    assert!(m.try_reserve(&f.alice,&f.spot,&Product::Spot,&id2,&UNIT).is_err());
+    assert!(guard.pending(&f.alice).is_some());
+    f.perps().close(&position);
+    assert!(acct.spot_reservation_safe(&f.alice,&UNIT));
+    assert_eq!(m.reserve(&f.alice,&f.spot,&Product::Spot,&id2,&UNIT),119*UNIT);
+    assert!(guard.pending(&f.alice).is_none());
+    assert!(m.solvent());
+    assert!(!guard.status().cross_product_margin_active);
+    assert!(!guard.approve_borrow(&f.alice,&f.lending,&f.asset,&UNIT,&UNIT));
+    assert!(!guard.approve_open(&f.alice,&f.perp,&1,&UNIT,&UNIT,&UNIT));
+}
+#[test]
+fn canonical_owner_marked_pnl_enters_view_but_never_mints_spendable_margin(){
+    let f=F::new();
+    f.router().perp_from_margin(&f.alice,&(40*UNIT));
+    f.router().perp_from_margin(&f.bob,&(40*UNIT));
+    let id=BytesN::from_array(&f.e,&[245u8;32]);
+    f.perps().open(&id,&f.alice,&f.bob,
+        &(4*UNIT),&(12*UNIT),&(8*UNIT),
+        &(f.e.ledger().sequence()+20));
+    let a=f.p().snapshot(&f.alice);
+    let b=f.p().snapshot(&f.bob);
+    assert_eq!(a.m12_owner_positions,1);
+    assert_eq!(b.m12_owner_positions,1);
+    assert!(a.m12_owner_marked_complete);
+    assert!(!a.full_perp_exposure_enumerated); // market-wide still unproven
+    assert_eq!(a.m12_pending_funding_e7,0);
+    assert_eq!(a.m12_owner_mark_pnl_e7+b.m12_owner_mark_pnl_e7,0);
+    assert_eq!(a.owner_marked_net_e7,a.owner_net_after_debt_e7);
+    assert!(a.nominal_book_covered);
+    assert!(!f.p().spot_reservation_safe(&f.alice,&UNIT));
+    assert!(!a.unified_leverage_authorized);
 }
