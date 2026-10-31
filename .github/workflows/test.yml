@@ -102,6 +102,15 @@ jobs:
             echo "ERROR: independent audit gate incorrectly granted permission"
             exit 1
           fi
+      - name: M23 guarded beta status, deployment hashes, faucet preflight and no fabricated telemetry
+        run: npm run test:m23
+      - name: M23 beta must remain blocked without signed evidence and independent audit
+        run: |
+          npm run m23:readiness
+          if npm run m23:readiness -- --require-open; then
+            echo 'ERROR: M23 public beta opened without independently verified approval'
+            exit 1
+          fi
       - name: M19 default server reports no approved deployments
         run: |
           node --input-type=module -e 'import {createIndexerApi} from "./indexer/api.mjs"; const s=createIndexerApi(); if(!s)process.exit(1); s.close();'

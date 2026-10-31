@@ -34,6 +34,8 @@ const m19Rpc=await read("indexer/rpc.mjs");
 const m19Api=await read("indexer/api.mjs");
 const m19Runner=await read("scripts/start-indexer.mjs");
 const m22Gate=await read("security/m22-review.mjs");
+const m23Gate=await read("beta/readiness.mjs");
+const m23Faucet=await read("beta/faucet.mjs");
 const invariants={
   noVerifiedExchangeContracts:registry.deployedVerified===0 && registry.candidateContracts===0,
   noApprovedRiskOracle:markets.oracleStatus.startsWith("HALTED") && markets.configured===0,
@@ -162,6 +164,13 @@ const invariants={
   m22AuditNotSelfApproved:m22Gate.includes('BLOCKED_EXTERNAL_AUDIT_AND_LIVE_TESTNET_EVIDENCE_REQUIRED')&&
     m22Gate.includes('mainnetPermitted:false')&&
     m22Gate.includes('publicBetaPermitted:false'),
+  m23NoFinancialRelease:m23Gate.includes('BLOCKED_UNVERIFIED_PUBLIC_BETA')&&
+    m23Gate.includes('publicBetaOpen:false')&&
+    m23Gate.includes('tradingPermitted:false')&&
+    m23Gate.includes('mainnetPermitted:false'),
+  m23NoUnattendedFaucet:m23Faucet.includes('M23_FAUCET_ACK')&&
+    m23Faucet.includes('probeInfrastructure')&&
+    !m23Faucet.includes('sendTransaction('),
 
 
 };
@@ -190,6 +199,7 @@ console.log(JSON.stringify({
   M20:"process-local pause and HTTP controls; no audited on-chain guardian",
   M21:"read-only signed receipt proof checker; no real Hoxo lifecycle receipts",
   M22:"seeded off-chain fuzz/chaos tests and blocked external-audit release gate; no independent audit or live on-chain chaos",
+  M23:"read-only beta status page, reviewed WASM SHA inventory, operator-only Testnet Friendbot, one-shot endpoint monitor; financial beta NOT OPEN",
  },
  invariants
 },null,2));
