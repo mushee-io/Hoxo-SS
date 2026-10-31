@@ -116,10 +116,10 @@ fn initial_empty_product_ledgers_keep_all_liabilities_in_m15_and_never_enable_ri
     assert_eq!(a.nominal_book_liabilities_e7,250*UNIT);
     assert_eq!(a.nominal_book_surplus_e7,0);
     assert_eq!(a.actual_cash_across_vaults_e7,250*UNIT);
-    assert_eq!(a.liquid_cash_minus_liabilities_e7,0);
+    assert_eq!(a.liquid_cash_less_claims_e7,0);
     assert!(a.nominal_book_covered);
     assert!(a.liquidity_only_coverage);
-    assert!(a.no_external_credit_or_market_risk);
+    assert!(a.no_open_credit_or_perp_risk);
     assert!(!a.unified_leverage_authorized);
     assert!(!a.financial_beta_authorized);
     assert!(!f.p().status().independent_audit_approved);
@@ -140,8 +140,8 @@ fn ownership_and_global_claims_are_conserved_across_actual_m15_m11_m12_handoffs(
     assert_eq!(a.m15_available_e7,130*UNIT);
     assert_eq!(a.m11_supplier_nominal_e7,40*UNIT);
     assert_eq!(a.m12_available_e7,30*UNIT);
-    assert_eq!(a.owner_book_assets_before_unrealized_e7,200*UNIT);
-    assert_eq!(a.owner_book_net_after_m11_debt_e7,200*UNIT);
+    assert_eq!(a.owner_book_before_pnl_e7,200*UNIT);
+    assert_eq!(a.owner_net_after_debt_e7,200*UNIT);
     assert_eq!(b.m15_available_e7,30*UNIT);
     assert_eq!(b.m11_supplier_nominal_e7,20*UNIT);
     assert_eq!(a.m15_claims_e7,160*UNIT);
@@ -151,7 +151,7 @@ fn ownership_and_global_claims_are_conserved_across_actual_m15_m11_m12_handoffs(
     assert_eq!(a.nominal_book_liabilities_e7,250*UNIT);
     assert_eq!(a.nominal_book_surplus_e7,0);
     assert!(a.nominal_book_covered);
-    assert!(a.no_external_credit_or_market_risk);
+    assert!(a.no_open_credit_or_perp_risk);
     assert_eq!(f.tok().balance(&f.alice),before);
     assert_eq!(m.account(&f.alice).available_e7,130*UNIT);
     assert!(!a.unified_leverage_authorized);
@@ -169,13 +169,13 @@ fn genuine_local_m11_borrowed_debt_is_projected_as_receivable_not_liquid_cash(){
     assert_eq!(a.m11_borrower_debt_e7,10*UNIT);
     assert_eq!(a.m11_projected_receivables_e7,10*UNIT);
     assert_eq!(a.m11_supplier_nominal_e7,100*UNIT);
-    assert_eq!(a.owner_book_assets_before_unrealized_e7,200*UNIT);
-    assert_eq!(a.owner_book_net_after_m11_debt_e7,190*UNIT);
+    assert_eq!(a.owner_book_before_pnl_e7,200*UNIT);
+    assert_eq!(a.owner_net_after_debt_e7,190*UNIT);
     assert_eq!(a.actual_cash_across_vaults_e7,240*UNIT);
     assert_eq!(a.nominal_book_assets_e7,250*UNIT);
     assert_eq!(a.nominal_book_liabilities_e7,250*UNIT);
-    assert_eq!(a.liquid_cash_minus_liabilities_e7,-10*UNIT);
-    assert!(!a.no_external_credit_or_market_risk);
+    assert_eq!(a.liquid_cash_less_claims_e7,-10*UNIT);
+    assert!(!a.no_open_credit_or_perp_risk);
     assert!(!a.liquidity_only_coverage);
     assert!(!a.borrow_credit_loss_risk_priced);
     assert!(!a.unified_leverage_authorized);
@@ -189,7 +189,7 @@ fn genuine_local_m11_borrowed_debt_is_projected_as_receivable_not_liquid_cash(){
     assert!(next.nominal_book_covered);
     assert_eq!(next.nominal_book_surplus_e7,0);
     assert_eq!(next.as_of_sec,f.e.ledger().timestamp());
-    assert!(!next.no_external_credit_or_market_risk);
+    assert!(!next.no_open_credit_or_perp_risk);
     assert!(r.try_supply_from_margin(&f.alice,&UNIT).is_err());
 }
 #[test]
@@ -220,7 +220,7 @@ fn actual_open_perp_position_makes_unrealised_account_liabilities_explicitly_inc
     assert!(a.m12_locked_e7>0);
     assert!(a.nominal_book_covered);
     assert_eq!(a.nominal_book_surplus_e7,0);
-    assert!(!a.no_external_credit_or_market_risk);
+    assert!(!a.no_open_credit_or_perp_risk);
     assert!(!a.full_perp_exposure_enumerated);
     assert!(!a.liquidity_only_coverage);
     assert!(!a.unified_leverage_authorized);
@@ -229,7 +229,7 @@ fn actual_open_perp_position_makes_unrealised_account_liabilities_explicitly_inc
     let closed=f.p().snapshot(&f.alice);
     assert_eq!(closed.m12_global_open_positions,0);
     assert!(closed.full_perp_exposure_enumerated);
-    assert!(closed.no_external_credit_or_market_risk);
+    assert!(closed.no_open_credit_or_perp_risk);
 }
 #[test]
 fn token_deficit_is_visible_and_never_becomes_a_positive_solvency_signal(){
