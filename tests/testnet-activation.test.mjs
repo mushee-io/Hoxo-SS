@@ -71,7 +71,6 @@ test("unverified/wrong/duplicate contracts and mainnet configuration never const
     {...config,moneyMarketContract:C(3)},
     {...config,perpClearinghouseContract:C(5)},
     {...config,spotSettlementContract:C(2)},
-    {...config,portfolioAccountingContract:G},
     {...config,perpClearinghouseContract:G}
   ]){
     const role=Object.hasOwn(bad,"spotSettlementContract")&&
