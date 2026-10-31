@@ -24,6 +24,7 @@ const custodyRouter=await read("contracts/custody-router/src/lib.rs");
 const portfolioAccounting=await read("contracts/portfolio-accounting/src/lib.rs");
 const testnetOperator=await read("deployment/testnet-operator.mjs");
 const testnetBinding=await read("scripts/bind-testnet-risk.mjs");
+const independentTestnetCode=await read("verification/testnet-code.mjs");
 const perpPositionRisk=await read("contracts/perp-clearinghouse/src/lib.rs");
 const lendingAccounting=await read("contracts/money-market/src/lib.rs");
 const chainRisk=await read("contracts/canonical-risk/src/lib.rs");
@@ -219,6 +220,14 @@ const invariants={
     chainRisk.includes('SpotPortfolioClient::new(&e,&portfolio).spot_reservation_safe(')&&
     chainRisk.includes('CreditLedgerClient::new(&e,&lend).current_outstanding_debt_e7()!=0')&&
     chainRisk.includes('PerpPositionsClient::new(&e,&perp).active_positions()!=0'),
+  m26IndependentCodeEvidenceNeverLaunchAuthority:independentTestnetCode.includes('export async function verifyTestnetCode(')&&
+    independentTestnetCode.includes('server.getContractWasmByContractId(')&&
+    independentTestnetCode.includes('sourceAndOnchainCodeMatch:true')&&
+    independentTestnetCode.includes('deploymentTransactionLinkedToContract:false')&&
+    independentTestnetCode.includes('financialBetaAuthorized:false')&&
+    independentTestnetCode.includes('deploymentProven:false')&&
+    independentTestnetCode.includes('realTradingVerified:false')&&
+    independentTestnetCode.includes('permissionToOpenMainnet:false'),
   m25OperatorRiskBindingStillNoLiveApproval:testnetOperator.includes('AUXILIARY_TESTNET_PACKAGES')&&
     testnetOperator.includes('export function prepareTestnetRiskBinding(')&&
     testnetOperator.includes('export async function operatorBindTestnetRisk(')&&

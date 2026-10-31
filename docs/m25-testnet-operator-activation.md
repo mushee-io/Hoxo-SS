@@ -94,3 +94,8 @@ An external smart-contract/economic review must audit the exact deployment sourc
 **Delivered:** updated operator package inventory (7 canonical + 2 auxiliary), verified public-address constructor argument generation for both auxiliary roles, exact one-time M15 risk product-binding preparation, operator-only signed Testnet CLI execution hooks, TTY/CI/network/acknowledgement guards, deterministic tests and documentation.
 
 **Not delivered:** operator credentials, publicly deployed contracts, complete production-grade cross-product liquidation waterfall, real financial transaction receipts, independent audit, signed governance approval or live Hoxo trading. **Public financial beta CLOSED, mainnet NO-GO.**
+
+
+### Subsequent M26 read-only contract-bytecode check
+
+The new `npm run testnet:verify-code` command compares locally reviewed WASM with the actual code fetched from public Stellar Testnet RPC at each candidate C-address. It also checks a supplied transaction hash and prevents mismatched builds and wrong-network responses from being treated as proof. It never submits transactions or updates the registry. Code matching alone does **not** prove the transaction created that C-address or validate its constructor and admin. The result deliberately stays `deploymentProven:false`, `financialBetaAuthorized:false`, and `realTradingVerified:false`. See [M26 review notes](m26-real-testnet-contract-proof.md).
