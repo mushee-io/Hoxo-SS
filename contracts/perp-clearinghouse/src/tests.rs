@@ -766,3 +766,79 @@ fn m14_insurance_and_trading_fees_are_distinct_claims(){
     assert!(c.solvent());
     assert_eq!(token::TokenClient::new(&e,&asset).balance(&id),206*UNIT);
 }
+
+
+/// Real Hoxo candidate-oracle contract ↔ M12 ABI integration, but a DENYING
+/// risk adapter still blocks new positions. This is not a live deployment.
+#[test]
+fn testnet_candidate_oracle_abi_interoperates_without_granting_risk_authority(){
+    use hoxo_oracle_adapter::{OracleAdapter,OracleAdapterClient};
+    let (e,market,admin,long,short,asset)=setup();
+    let publisher1=Address::generate(&e);
+    let publisher2=Address::generate(&e);
+    let oracle=e.register(OracleAdapter,(&admin,&1u32,&publisher1,&publisher2));
+    let o=OracleAdapterClient::new(&e,&oracle);
+    assert!(o.try_current(&1).is_err());
+    o.pause(&false);
+    o.submit(&publisher1,&1,&(10*UNIT),&(10*UNIT));
+    assert!(o.try_current(&1).is_err());
+    o.submit(&publisher2,&1,&(10*UNIT),&(10*UNIT));
+    assert_eq!(o.current(&1).mark_e7,10*UNIT);
+
+    let deny=e.register(MockDenyRisk,());
+    let c=PerpClearinghouseClient::new(&e,&market);
+    c.set_controllers(&oracle,&deny);
+    c.set_pause(&false);
+    fund(&e,&market,&long,&short);
+    assert!(c.try_open(&id(&e,198),&long,&short,&(4*UNIT),
+        &(12*UNIT),&(8*UNIT),&(e.ledger().sequence()+20)).is_err());
+    assert_eq!(c.market().open_positions,0);
+    assert_eq!(c.wallet(&long).locked_e7,0);
+    assert_eq!(c.wallet(&short).locked_e7,0);
+    assert!(c.reconciliation().solvent);
+    assert_eq!(token::TokenClient::new(&e,&asset).balance(&market),200*UNIT);
+    // A healthy candidate price does not imply authorised financial execution.
+    assert!(!o.execution_approved());
+}
+
+
+/// Native Soroban sandbox: actual candidate-oracle ABI drives the isolated
+/// M12 open/close lifecycle with an explicitly TEST-ONLY mock risk approver.
+ /// This is NOT deployed Testnet, authenticated canonical risk, or unified margin.
+#[test]
+fn candidate_oracle_perp_open_close_sandbox_reconciles_two_wallet_collateral(){
+    use hoxo_oracle_adapter::{OracleAdapter,OracleAdapterClient};
+    let (e,market,admin,long,short,asset)=setup();
+    let a=Address::generate(&e);
+    let b=Address::generate(&e);
+    let oracle=e.register(OracleAdapter,(&admin,&1u32,&a,&b));
+    let o=OracleAdapterClient::new(&e,&oracle);
+    o.pause(&false);
+    o.submit(&a,&1,&(10*UNIT),&(10*UNIT));
+    o.submit(&b,&1,&(10*UNIT),&(10*UNIT));
+    let risk=e.register(MockAllowRisk,()); // INSECURE mock, never deploy.
+    let c=PerpClearinghouseClient::new(&e,&market);
+    c.set_controllers(&oracle,&risk);
+    c.set_pause(&false);
+    fund(&e,&market,&long,&short);
+    let pos=c.open(&id(&e,199),&long,&short,&(4*UNIT),
+        &(12*UNIT),&(8*UNIT),&(e.ledger().sequence()+20));
+    assert!(pos.active);
+    assert_eq!(c.market().open_positions,1);
+    assert!(c.reconciliation().solvent);
+    e.ledger().with_mut(|l|{l.sequence_number+=1;l.timestamp+=5;});
+    o.submit(&a,&1,&(11*UNIT),&(11*UNIT));
+    o.submit(&b,&1,&(11*UNIT),&(11*UNIT));
+    let settled=c.close(&id(&e,199));
+    assert!(!settled.active);
+    assert_eq!(settled.close_price_e7,11*UNIT);
+    assert_eq!(settled.long_realised_pnl_e7,4*UNIT);
+    assert_eq!(c.market().open_positions,0);
+    assert_eq!(c.wallet(&long).locked_e7,0);
+    assert_eq!(c.wallet(&short).locked_e7,0);
+    assert_eq!(c.wallet(&long).available_e7+c.wallet(&short).available_e7,200*UNIT);
+    assert_eq!(token::TokenClient::new(&e,&asset).balance(&market),200*UNIT);
+    assert!(c.reconciliation().solvent);
+    assert!(c.try_close(&id(&e,199)).is_err()); // replay prohibited
+    assert!(!o.execution_approved());
+}

@@ -72,3 +72,8 @@ Never give the CLI an `S...` seed, mnemonic, credential, wallet recovery phrase 
 See [SECURITY.md](../SECURITY.md). Privately alert maintainers via GitHub's private vulnerability reporting feature if enabled. Do not publish exploitation details against real deployments. Preserve Testnet receipts and immutable artifacts, halt affected services, pause any verified on-chain contracts under reviewed guardian roles, investigate source/ledger drift and fund losses, and require independent review before re-opening. The present M20 process-local pause is not a deployed contract guardian.
 
 **M23 does not open public beta.** Passing this milestone's software tests is not evidence of audited trading or live blockchain transactions.
+
+
+### M5 candidate oracle in source
+
+`contracts/oracle-adapter` now implements a single-market two-publisher Testnet price candidate with 120s freshness and fail-closed pause; it is neither deployed nor independently audited. The M23 WASM inventory now expects seven packages including `hoxo_oracle_adapter.wasm`. See [the operator handoff](testnet-execution-handoff.md).

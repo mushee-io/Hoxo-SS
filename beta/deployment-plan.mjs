@@ -10,6 +10,7 @@ import {TESTNET_PASSPHRASE} from "../config/testnet.mjs";
 import {validateRegistry} from "../infra/registry.mjs";
 
 export const M23_PACKAGES=Object.freeze([
+  {role:"oracle-adapter",package:"hoxo-oracle-adapter",wasm:"hoxo_oracle_adapter.wasm",kind:"TWO_PUBLISHER_CANDIDATE_ONLY"},
   {role:"risk-engine",package:"hoxo-risk-gate",wasm:"hoxo_risk_gate.wasm",kind:"PREVIEW_ONLY"},
   {role:"collateral-vault",package:"hoxo-collateral-vault",wasm:"hoxo_collateral_vault.wasm",kind:"PAUSED_DEFAULT"},
   {role:"spot-settlement",package:"hoxo-spot-settlement",wasm:"hoxo_spot_settlement.wasm",kind:"PAUSED_DEFAULT"},

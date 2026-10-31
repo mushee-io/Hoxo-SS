@@ -96,3 +96,10 @@ Do not fund unreviewed contracts. No admin or private keys in this repo. Avoid u
 **M18 verification:** [7/7 GitHub Actions jobs passed](https://github.com/mushee-io/Hoxo-SS/actions/runs/41223324644), including 19/19 history tests, 124/124 JavaScript, 9/9 Chromium and 135/135 Rust/Soroban. The Freighter Transfers tab reads public Horizon Testnet payment observations; signed M8/M17 journal portfolio endpoints are **sandbox-only**, not authenticated exchange positions. Real Hoxo PnL, accrued interest, funding and settled trades are unavailable because the exchange contracts and indexing adapters have not been deployed.
 
 **M19 verification:** [GitHub Actions source/test run](https://github.com/mushee-io/Hoxo-SS/actions/runs/41224344199) includes 20/20 M19 RPC/indexer tests, 144/144 total JS and 135/135 unchanged Rust/Soroban tests. Default indexer status is **DISABLED_NO_VERIFIED_DEPLOYMENTS**, with **no event ingestion** because real Hoxo contract deployments have not been verified. REST/SSE is read-only; WebSocket service, full financial decoding and live Hoxo market feeds remain outstanding.
+
+
+## Testnet execution track (after M24)
+
+- [Two-publisher Testnet oracle-adapter source](contracts/oracle-adapter/src/lib.rs) and Soroban tests: independently authorised publisher accounts, 120-second price expiry, source and mark/index deviation checks, pause and execution approval always false. Not audited or approved as canonical market data.
+- [Secure operator deployment and proof handoff](docs/testnet-execution-handoff.md): one-role-at-a-time CLI using locally managed signer identity, valueless Testnet assets and an explicit network preflight. No unattended CI deployment or automatically verified receipt.
+- Native Soroban integration confirms the candidate oracle ABI can be called by M12 while a denying risk authority still prevents any financial position opening. M9/M11/M12/M15 custody remains isolated.
