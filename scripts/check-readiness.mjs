@@ -12,6 +12,7 @@ const app=await read("app/index.html");
 const risk=await read("contracts/risk-engine/src/lib.rs");
 const vault=await read("contracts/collateral-vault/src/lib.rs");
 const spot=await read("contracts/spot-settlement/src/lib.rs");
+const m9Flow=await read("matching/m9-wallet-settlement.mjs");
 const sandbox=snapshot(emptyBook(),"xlm-usdc-spot");
 const invariants={
   noVerifiedExchangeContracts:registry.deployedVerified===0 && registry.candidateContracts===0,
@@ -26,6 +27,10 @@ const invariants={
   spotUsesTestnetNetworkId:spot.includes("fn verify_testnet") && spot.includes("verify_testnet(&e)?"),
   spotRequiresTwoAuthorisations:spot.includes("terms.maker.require_auth()") && spot.includes("terms.taker.require_auth()"),
   spotPausedByDefault:spot.includes('e.storage().instance().set(&Key::Paused,&true)'),
+  m9WalletSpendingDisabledByDefault:m9Flow.includes('send=false') &&
+    m9Flow.includes('sendAcknowledgement!==M9_SEND_ACK') &&
+    m9Flow.includes('needsNonInvokerSigningBy'),
+
 };
 console.log(JSON.stringify({
  project:"Hoxo-SS",network:"Stellar Testnet",readiness:"NOT_LIVE",
@@ -38,7 +43,7 @@ console.log(JSON.stringify({
   M6:"Soroban source; deployment and real transaction missing",
   M7:"mathematical Soroban preview; atomic enforcement missing",
   M8:"signed matching sandbox; not real fills",
-  M9:"dual-authorised Soroban swap code; no deployed contract or signed Testnet settlement",
+  M9:"compiled contract and signed bilateral SDK operator path; no verified Testnet deployment or real signed settlement",
  },
  invariants
 },null,2));

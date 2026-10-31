@@ -51,3 +51,7 @@ The Rust tests cover both maker-side directions, dual-asset transfer balance acc
 - [Review-only M9 WASM artifact](https://github.com/mushee-io/Hoxo-SS/actions/runs/41193442596/artifacts/13039538487) — expires per GitHub's artifact retention settings
 
 This proves compile/test readiness only. Until wallet-signed Testnet deployment and independent RPC receipt verification, there is **no on-chain Hoxo-SS spot settlement contract**.
+
+## M9 signed-wallet operator follow-up
+
+See [M9 two-wallet operator guide](m9-wallet-operator.md). The code supports an SDK-backed, read-only RPC preflight and a **deliberately opt-in** two-wallet Soroban signing/receipt flow with strict network, ID, price, token and fee checks. In CI this is tested with mocks and a pinned official SDK import. **There is no real Stellar Testnet contract deployment or genuine signed swap transaction.** Do not enable normal trading based on this alone.

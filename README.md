@@ -27,6 +27,7 @@ Stellar smart contracts (Rust `soroban-sdk`) for vaults, settlement and enforcem
 - [M7 Risk-preview contract](docs/m7-risk.md): deterministic Rust portfolio risk and read-only Soroban previews; execution authorization remains hard-disabled pending authenticated state.
 - [M8 Sandbox Matching Engine](docs/m8-matching.md): signed off-chain testnet-domain order intents, price/time matching, self-trade prevention, cancellation and deterministic restart replay. **No orders are settled or risk-authorised.**
 - [M9 Soroban bilateral spot settlement](docs/m9-spot-settlement.md): two-wallet atomic token DvP, Testnet-only network ID, maker/taker limit checks, ledger expiry, receipt/replay protection and M8 non-executable proposal handoff. **No live deployment or signed on-chain settlement yet.**
+- [M9 two-wallet Testnet operator](docs/m9-wallet-operator.md): official Stellar SDK RPC preflight, exact agreement and amount validation, separate non-invoker authorisation signing, explicit opt-in broadcast and receipt reconciliation. **Simulation-only until genuine deployment and two signed Testnet wallets.**
 - [Full development roadmap — M0–M24](docs/milestones.md): 25 stages from product design to audited mainnet readiness, with verifiable acceptance gates.
 - [Architecture](docs/architecture.md), [risk model](docs/risk-model.md), [delivery gates](docs/delivery.md).
 
@@ -50,6 +51,8 @@ npm run check:testnet      # Live read-only Stellar Testnet Horizon check
 npm run check:infra        # Live read-only Stellar RPC + Horizon + registry gate
 npm run test:matching      # Signed matching journal and HTTP sandbox tests
 npm run test:spot-preview  # Non-executable M8→M9 settlement proposal tests
+npm run test:m9-wallet     # M9 bilateral SDK/RPC signature orchestrator tests
+npm run m9:preflight       # Operator-only Testnet simulation; explicit opt-in required to send
 npm run dev:matching      # Local sandbox API on 127.0.0.1:8788 (NO exchange execution)
 ```
 
