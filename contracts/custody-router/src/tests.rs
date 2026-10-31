@@ -1,5 +1,5 @@
 use super::*;
-use hoxo_unified_margin::{UnifiedMargin,UnifiedMarginClient,Product};
+use hoxo_unified_margin::{UnifiedMargin,UnifiedMarginClient};
 use hoxo_money_market::{MoneyMarket,MoneyMarketClient};
 use hoxo_perp_clearinghouse::{PerpClearinghouse,PerpClearinghouseClient};
 use hoxo_spot_settlement::{SpotSettlement,SpotSettlementClient};
@@ -253,4 +253,63 @@ fn router_rejects_operator_pause_changes_without_auth_and_wrong_network(){
     assert!(r.try_pause(&true).is_err());
     assert!(r.try_supply_from_margin(&f.buyer,&UNIT).is_err());
     assert_eq!(r.status().financial_beta_approved,false);
+}
+
+#[test]
+fn thirty_two_deterministic_cross_product_round_trips_never_duplicate_claims(){
+    let f=Fixtures::new();f.open();
+    let r=f.r();let m=f.m();let l=f.l();let p=f.p();
+    let original_buyer_quote=f.quote().balance(&f.buyer);
+    let original_seller_quote=f.quote().balance(&f.seller);
+    let base_buyer=f.base().balance(&f.buyer);
+    let mut fills=0i128;
+    for i in 0..32u8{
+        if i%4==0{
+            // Every M9 settlement consumes already-free M15 quote and
+            // re-credits seller atomically without touching global claims.
+            let receipt=r.settle_spot_from_margin(&f.terms(40+i,0));
+            assert_eq!(receipt.base_amount,4*UNIT);
+            fills+=1;
+        }else if i%4==1{
+            let x=r.supply_from_margin(&f.buyer,&(1+((i as i128)%6))*UNIT);
+            let y=r.redeem_to_margin(&f.buyer,&x.share_units_e7);
+            assert_eq!(y.tokens_e7,x.tokens_e7);
+        }else if i%4==2{
+            let x=r.perp_from_margin(&f.seller,&(1+((i as i128)%5))*UNIT);
+            let y=r.perp_to_margin(&f.seller,&x.tokens_e7);
+            assert_eq!(y.tokens_e7,x.tokens_e7);
+        }else{
+            let x=r.supply_from_margin(&f.seller,&(1+((i as i128)%4))*UNIT);
+            let y=r.redeem_to_margin(&f.seller,&x.share_units_e7);
+            assert_eq!(y.tokens_e7,x.tokens_e7);
+        }
+        let sum=m.totals().user_claims_e7
+            +l.pool().cash_e7+p.market().total_user_claims_e7;
+        assert_eq!(sum,250*UNIT);
+        assert_eq!(f.quote().balance(&f.vault)+
+            f.quote().balance(&f.lending)+f.quote().balance(&f.perp),sum);
+        assert_eq!(f.quote().balance(&f.buyer),original_buyer_quote);
+        assert_eq!(f.quote().balance(&f.seller),original_seller_quote);
+        assert_eq!(l.outstanding_debt_e7(),0);
+        assert_eq!(p.active_positions(),0);
+        assert!(m.solvent()&&l.solvent()&&p.solvent());
+    }
+    assert_eq!(f.base().balance(&f.buyer),base_buyer+fills*4*UNIT);
+    assert_eq!(m.totals().user_claims_e7,250*UNIT);
+}
+#[test]
+fn paused_router_never_removes_independent_product_withdrawal_rights(){
+    let f=Fixtures::new();f.open();
+    let r=f.r();let p=f.p();let m=f.m();
+    r.perp_from_margin(&f.buyer,&(20*UNIT));
+    r.pause(&true);
+    assert!(r.try_perp_to_margin(&f.buyer,&(20*UNIT)).is_err());
+    // The original M12 free-balance withdrawal remains callable even when
+    // the convenience bridge is paused. This exits to the owner's wallet.
+    p.set_pause(&true);
+    assert_eq!(p.withdraw(&f.buyer,&(20*UNIT)),0);
+    assert_eq!(p.wallet(&f.buyer).available_e7,0);
+    assert_eq!(m.account(&f.buyer).available_e7,180*UNIT);
+    assert_eq!(f.quote().balance(&f.buyer),820*UNIT);
+    assert!(m.solvent()&&p.solvent());
 }
