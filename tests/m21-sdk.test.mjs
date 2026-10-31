@@ -41,5 +41,5 @@ test("M21 verifies actual signed Testnet XDR transaction hash, wallet and exact 
     })).setTimeout(120).build();
   mainnetTx.sign(maker);
   assert.throws(()=>inspectM21Envelope(stellar,{...params,
-    envelopeXdr:mainnetTx.toXDR()}),/hash/);
+    envelopeXdr:mainnetTx.toXDR()}),/hash|signature/);
 });
