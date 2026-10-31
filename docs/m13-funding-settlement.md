@@ -55,3 +55,16 @@ Native tests use **mock oracle and risk controllers** and prove only contract be
 6. **M15:** canonical shared margin with M6/M11/M9. M12/M13 remain isolated.
 
 **The contract compiles/tests only. Do not claim live positions, funding, trading volume, realised earnings, contract deployment or approved liquidity.**
+
+## Verified build and test evidence — 31 October 2026
+
+[GitHub Actions run 41198308476](https://github.com/mushee-io/Hoxo-SS/actions/runs/41198308476) passed **all 7 jobs**, including the native Soroban M12–M13 test suite (**27/27**) and official Stellar CLI build:
+
+- Existing native Rust/Soroban tests: risk mathematics 14/14, collateral vault 5/5, risk preview 2/2, spot settlement 12/12, money market 32/32. Combined across crates: **92/92**.
+- JavaScript **91/91**, Chromium **8/8**, M8 and M9 SDK checks green.
+- Real **read-only** Horizon/RPC Stellar Testnet checks passed; **no Hoxo contract or funded trade was deployed or verified**.
+- Official CLI v28.1.0 `stellar contract build --package hoxo-perp-clearinghouse` produced **24,580 bytes** of optimized M12–M13 WASM.
+- WASM SHA-256: `562d027437f0fbc4cddf380244b04e9e15b82294851db971729e979b40a250c1`.
+- [Review-only compiled M12–M13 WASM artifact](https://github.com/mushee-io/Hoxo-SS/actions/runs/41198308476/artifacts/13041482002), available for GitHub's configured artifact retention period.
+
+**Final acceptance distinction:** GitHub CI proves source test behavior and a valid WASM build, not authenticated live on-chain oracle updates, wallet-signature acceptance, funding receipts, actual fee income, safe liquidation or cross-margin trading. Every Hoxo exchange contract remains `planned` with `contractId:null` in the Testnet registry.
