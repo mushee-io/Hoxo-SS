@@ -141,5 +141,6 @@ $("buySide").addEventListener("click",()=>chooseSide("buy"));
 $("sellSide").addEventListener("click",()=>chooseSide("sell"));
 $("orderSize").addEventListener("input",updateDraft);
 $("limitPrice").addEventListener("input",updateDraft);
+const initialView=window.location.hash.slice(1);
 chooseSide("buy");chooseOrderType("Market");chooseMarket(market.id);
-if(window.location.hash==="#portfolio"||window.location.hash==="#earn")setView(window.location.hash.slice(1));
+if(initialView==="portfolio"||initialView==="earn")setView(initialView);
