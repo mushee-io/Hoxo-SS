@@ -1,22 +1,29 @@
 <!doctype html>
 <html lang="en">
 <head>
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="HOXO SS — One margin account. Every market.">
+  <meta property="og:description" content="A Stellar Testnet development exchange interface for spot, perps and money markets. No live trading yet.">
+  <link rel="icon" type="image/svg+xml" href="./assets/icon.svg">
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#f3f3ef">
   <title>HOXO SS — Every market. One margin account.</title>
   <meta name="description" content="HOXO SS is building a unified-margin spot, perpetuals and money-market exchange on Stellar. Explore the Stellar Testnet development terminal.">
   <link rel="stylesheet" href="./assets/site.css">
+  <script type="module" src="./assets/landing.mjs"></script>
 </head>
 <body class="landing">
+  <a class="skip-link" href="#main-content">Skip to main content</a>
   <header class="land-nav">
     <a class="brand brand-dark" href="./" aria-label="HOXO SS home"><span class="brand-mark">✳</span> HOXO<span class="brand-slash">/</span>SS</a>
-    <nav class="land-links" aria-label="Main navigation">
+    <nav class="land-links" id="primaryNavigation" aria-label="Main navigation">
       <a href="./app/">Terminal</a><a href="./app/#portfolio">Portfolio</a>
       <a href="./docs/architecture.md">Architecture</a><a href="https://github.com/mushee-io/Hoxo-SS" rel="noopener noreferrer" target="_blank">GitHub ↗</a>
     </nav>
-    <a class="nav-launch" href="./app/">LAUNCH TESTNET TERMINAL <span>↗</span></a>
+    <button type="button" class="mobile-menu-button" id="menuToggle" aria-expanded="false" aria-controls="primaryNavigation" aria-label="Toggle navigation">MENU ☰</button>
+    <a class="nav-launch" href="./app/"><span class="launch-desktop">LAUNCH TESTNET TERMINAL</span><span class="launch-mobile">OPEN APP</span><span aria-hidden="true">↗</span></a>
   </header>
-  <main>
+  <main id="main-content">
     <section class="hero">
       <div class="hero-main">
         <div class="hero-eyebrow"><span class="pulse"></span> STELLAR TESTNET / IN DEVELOPMENT <span class="line"></span> 01—26</div>
@@ -46,11 +53,19 @@
         <div class="network-unit">
           <p class="mono">[ ENVIRONMENT ]</p><strong>STELLAR<br>TESTNET</strong>
           <span class="status-pill"><span class="pulse"></span> TEST ENVIRONMENT ONLY</span>
+          <div class="network-live" aria-label="Live Stellar Testnet network check">
+            <div class="network-live-top"><span>HORIZON / LIVE CHECK</span><span class="network-status-dot" id="networkStatusDot" aria-hidden="true"></span></div>
+            <strong id="networkCheckState" role="status" aria-live="polite">CHECKING...</strong>
+            <div class="network-live-row"><span>LAST VERIFIED LEDGER</span><b id="testnetLedger">—</b></div>
+            <div class="network-live-row"><span>LEDGER CLOSE</span><b id="testnetClose">—</b></div>
+            <p id="networkCheckDetail">Querying Stellar Testnet Horizon. This checks the network only, not exchange readiness.</p>
+            <button class="network-refresh" id="refreshTestnet" type="button">REFRESH NETWORK STATUS ↻</button>
+          </div>
         </div>
         <div class="spec">
           <div><span>01 / SPOT</span><b>TRADE</b></div><div><span>02 / PERPETUALS</span><b>HEDGE</b></div><div><span>03 / MONEY MARKETS</span><b>BORROW</b></div><div><span>04 / MARGIN</span><b>UNIFY</b></div>
         </div>
-        <div class="aside-note">EARLY ACCESS INTERFACE. CONTRACT TRADING AND LENDING ARE NOT YET DEPLOYED. NO LIVE MARKET DATA IS IMPLIED.</div>
+        <div class="aside-note">HORIZON CONNECTIVITY DOES NOT MEAN SPOT, PERPETUALS OR LENDING ARE DEPLOYED.<br><br>EARLY ACCESS INTERFACE. CONTRACT TRADING AND LENDING ARE NOT YET DEPLOYED. NO LIVE MARKET DATA IS IMPLIED.</div>
       </aside>
     </section>
     <section class="rail"><span>01 / TRADE</span><span>↗</span><span>02 / BORROW</span><span>↗</span><span>03 / HEDGE</span><span>↗</span><span>04 / MANAGE</span></section>
@@ -62,7 +77,8 @@
         <article><span>03—</span><div><h3>MONEY MARKETS</h3><p>Supply and borrow assets through isolated pools connected to a shared risk model.</p></div><span class="pillar-arrow">↗</span></article>
       </div>
     </section>
+    <section class="testnet-notice" aria-label="Testnet development scope"><span>✳ / TESTNET BUILD</span><p>THE NETWORK CHECK IS LIVE. THE EXCHANGE IS NOT. TRADING, BORROWING, MARGIN TRANSFERS AND CONTRACT DEPOSITS REMAIN DISABLED UNTIL VERIFIED ON-CHAIN TESTNET DEPLOYMENTS.</p><a href="./docs/milestones.md">FOLLOW DEVELOPMENT ↗</a></section>
   </main>
-  <footer class="land-footer"><span>© 2026 HOXO SS / STELLAR NETWORK</span><span>TESTNET DEVELOPMENT BUILD — NO REAL FUNDS</span><a href="./app/">OPEN THE TERMINAL ↗</a></footer>
+  <footer class="land-footer"><span>© 2026 HOXO SS / STELLAR TESTNET</span><span>TESTNET DEVELOPMENT BUILD — NO REAL FUNDS</span><a href="./app/">OPEN THE TERMINAL ↗</a></footer>
 </body>
 </html>

@@ -9,7 +9,7 @@ This plan deliberately distinguishes a rendered interface, a read-only wallet in
 | ID | Milestone | Acceptance gate | Status |
 | --- | --- | --- | --- |
 | M0 | Architecture and reference risk engine | Written spec; unit tests for fixed-point math, collateral, PnL and margin pass | Complete (reference model only) |
-| M1 | Nado-inspired landing page | Responsive landing, Stellar Testnet label, working terminal navigation, no misleading live data | Initial implementation |
+| M1 | Nado-inspired landing page | Responsive landing, responsive menu, terminal navigation, live Horizon passphrase/ledger check that fails closed, no misleading market data | Implemented; automated tests added; deployment and visual verification pending |
 | M2 | Trading terminal skeleton | Responsive market selector, chart/book/trades/account/order ticket, funding/position tabs; clear empty states | Initial implementation |
 | M3 | Freighter wallet and balances | Wallet authorisation; rejects non-Testnet; retrieves authenticated account balances from Horizon | Initial implementation; live browser test pending |
 | M4 | Stellar Testnet infrastructure | Configurable RPC/Horizon endpoints, Friendbot, registry, verified network diagnostics | Partial: Horizon read and Friendbot UI |
