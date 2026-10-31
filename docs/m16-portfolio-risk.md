@@ -42,3 +42,16 @@ Native Rust tests cover multi-product calculations, positive/negative perp shock
 4. **Deployment/audit:** no verified Testnet deployment, independently signed portfolio test, upstream-asset issuers, external security audit, oracle/economic review or production stress policy exists.
 
 **M16 is buildable risk analytics only; live trading, unified-margin borrowing, deposits and liquidation remain disabled.**
+
+## Build verification — 31 October 2026
+
+[GitHub Actions run 41217789563](https://github.com/mushee-io/Hoxo-SS/actions/runs/41217789563) passed **all seven jobs** at the verified M16 code commit:
+
+- **11/11 M16 pure-math tests** and **14/14 existing M7 math tests**.
+- **5/5 Soroban M7–M16 read-only risk preview tests**.
+- **135/135 total Rust/Soroban tests** across risk, vault, spot settlement, lending, perpetual clearing, and unified-margin reservations.
+- **91/91 JavaScript** and **8/8 Chromium browser tests**, plus independent live **read-only** Stellar Testnet RPC and Horizon connectivity checks.
+- Official **Stellar CLI v28.1.0** `stellar contract build --package hoxo-risk-gate` compiled and optimized **25,434 bytes** of Soroban WASM, SHA-256 `5f58b1626574b681091d1cb15c27a628ebc92bedac9173bd0dbad24cc3234538`.
+- [Compiled M16 risk-analytics WASM review artifact](https://github.com/mushee-io/Hoxo-SS/actions/runs/41217789563/artifacts/13048966081), subject to GitHub retention.
+
+**This verifies source and compilation, not a genuine credit/risk authority or live account balance.** There are no Hoxo contract addresses or ledger transaction receipts registered. The execution permit remains hard-disabled, and no independent audit has established price feed or protocol security.
