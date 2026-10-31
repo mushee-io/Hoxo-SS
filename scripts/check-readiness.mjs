@@ -29,6 +29,10 @@ const walletHistory=await read("portfolio/stellar-history.mjs");
 const sandboxHistory=await read("portfolio/sandbox-history.mjs");
 const portfolioUI=await read("app/wallet-ui.mjs");
 const portfolioServer=await read("matching/http.mjs");
+const m19Store=await read("indexer/store.mjs");
+const m19Rpc=await read("indexer/rpc.mjs");
+const m19Api=await read("indexer/api.mjs");
+const m19Runner=await read("scripts/start-indexer.mjs");
 const invariants={
   noVerifiedExchangeContracts:registry.deployedVerified===0 && registry.candidateContracts===0,
   noApprovedRiskOracle:markets.oracleStatus.startsWith("HALTED") && markets.configured===0,
@@ -141,6 +145,19 @@ const invariants={
     !portfolioServer.includes('/v1/portfolio/execute'),
   m18NoLiveContracts:registry.deployedVerified===0&&
     registry.statuses.every(x=>x.status==="planned"&&x.contractId===null),
+  m19DefaultDisabled:registry.deployedVerified===0&&
+    m19Api.includes('DISABLED_NO_VERIFIED_DEPLOYMENTS')&&
+    m19Runner.includes('HOXO_M19_OBSERVE_CANDIDATES')&&
+    m19Runner.includes('candidates.length===0'),
+  m19LedgerHashAnchor:m19Rpc.includes('getLedgers')&&
+    m19Rpc.includes('M19 ledger hash divergence')&&
+    m19Rpc.includes('Ledger changed during M19 event scan'),
+  m19ReplayHaltOnCorruption:m19Store.includes('checkpoint hash-chain')&&
+    m19Store.includes('incomplete line')&&
+    m19Store.includes('file.sync()'),
+  m19NoFabricatedFinancialHistory:m19Store.includes('financialStateDerived:false')&&
+    m19Api.includes('hoxoFinancialAccountingAvailable:false')&&
+    !m19Runner.includes('sendTransaction'),
 
 
 };
@@ -165,6 +182,7 @@ console.log(JSON.stringify({
   M16:"M7 read-only multi-product fixed-point risk analytics, stress, exposure caps and liquidation thresholds; snapshots untrusted and authorization disabled",
   M17:"signed sandbox limit/IOC/TP-SL, reduce-only simulated exposure and hash-chained transitions; no deployed oracle, canonical position or real execution",
   M18:"read-only Horizon Testnet payments and signed sandbox portfolio/order history; authentic HOXO positions, PnL, funding, interest and trades unavailable",
+  M19:"read-only candidate-only RPC event journal with ledger hash checkpoints, REST/SSE diagnostics and fail-closed reset/replay; NO deployed contracts or real HOXO event reconciliation",
  },
  invariants
 },null,2));

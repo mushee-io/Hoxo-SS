@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "network": "testnet",
   "passphrase": "Test SDF Network ; September 2015",
-  "note": "M18 adds publicly reported Testnet Horizon wallet payments and signed hash-chained M8/M17 sandbox history with distinct provenance. Real Hoxo contract ID registrations remain null, so authenticated live positions, lending interest, funding, PnL and Hoxo settled trades are explicitly unavailable; no public user funds.",
+  "note": "M19 adds a dormant read-only Stellar RPC candidate contract-event watcher, ledger hash/checkpoint replay journal, REST and SSE. All seven Hoxo contracts remain planned/null, no independently verified Hoxo chain events, market feeds, real portfolio accounting, PnL, funding, interest or trade receipts. Indexer defaults DISABLED_NO_VERIFIED_DEPLOYMENTS and will not request events.",
   "assets": [
     {
       "key": "XLM",

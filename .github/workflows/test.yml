@@ -85,6 +85,11 @@ jobs:
         run: npm run test:advanced
       - name: M18 public Testnet payment provenance, signed-journal portfolios and history isolation
         run: npm run test:portfolio
+      - name: M19 durable RPC ledger indexer, candidate provenance and REST/SSE safety
+        run: npm run test:indexer
+      - name: M19 default server reports no approved deployments
+        run: |
+          node --input-type=module -e 'import {createIndexerApi} from "./indexer/api.mjs"; const s=createIndexerApi(); if(!s)process.exit(1); s.close();'
       - name: Verify no executable gateway is enabled
         run: |
           node --input-type=module -e 'import {emptyBook,snapshot} from "./matching/core.mjs"; const book=snapshot(emptyBook(),"xlm-usdc-spot"); if(book.tradingEnabled||book.settleable||book.onchain) process.exit(1);'

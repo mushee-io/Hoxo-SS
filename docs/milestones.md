@@ -47,7 +47,7 @@ This plan deliberately distinguishes a rendered interface, a read-only wallet in
 
 | ID | Milestone | Acceptance gate | Status |
 | --- | --- | --- | --- |
-| M19 | APIs and indexer | REST/WebSocket, replay/reorg reconciliation, durable logs, real market feeds | Not started |
+| M19 | APIs and indexer | REST/WebSocket, replay/reorg reconciliation, durable logs, real market feeds | **Read-only candidate-observation infrastructure built; CI pending.** Testnet RPC `getNetwork/getHealth/getLatestLedger/getLedgers/getEvents` with contract allowlisting, strict ledger hashes, per-ledger pagination, retention/reset and divergence HALT, locked append-only hash journal + fsync, restart replay/duplicate rejection, REST history/checkpoints/status, SSE notifications and 18 adversarial tests. **Not a live Hoxo indexer:** registry has zero independently verified contracts and normal service makes zero event scans; raw candidate XDR is not financial accounting, no WebSocket, authenticated trade/funding reconstruction or real market feed. |
 | M20 | Security and controls | Threat model, role minimisation, rate limits, pause controls, oracle outages, auth abuse testing | Not started |
 | M21 | End-to-end testnet verification | Separate funded wallets perform real deposit→spot→borrow→perp→liquidate/repay→withdraw flows | Not started |
 | M22 | Audit and chaos testing | Invariants, fuzz/property tests, economic stress, external review and findings resolved | Not started |
