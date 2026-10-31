@@ -92,12 +92,35 @@ pub struct PerpReconciliation {
     pub open_positions:u32,
     pub solvent:bool,
 }
+#[contracttype]
+#[derive(Clone,Debug,PartialEq,Eq)]
+pub struct PerpOwnerExposure {
+    pub owner:Address,
+    pub as_of_sec:u64,
+    pub active_positions:u32,
+    pub signed_base_e7:i128,
+    pub initial_locked_e7:i128,
+    pub mark_pnl_e7:i128,
+    pub pending_funding_e7:i128,
+    pub marked_net_pnl_e7:i128,
+    pub marked_equity_e7:i128,
+    pub maintenance_req_e7:i128,
+    pub maintenance_deficit_e7:i128,
+    pub insolvency_deficit_e7:i128,
+    pub available_e7:i128,
+    pub locked_e7:i128,
+    pub index_complete:bool,
+    pub price_current:bool,
+    pub any_liquidation_required:bool,
+    pub executable_margin_approved:bool,
+}
 #[contractclient(name="PerpClient")]
 pub trait Perp {
     fn collateral_asset(env:Env)->Address;
     fn wallet(env:Env,owner:Address)->PerpWallet;
     fn market(env:Env)->PerpMarket;
     fn reconciliation(env:Env)->PerpReconciliation;
+    fn owner_exposure(env:Env,owner:Address)->PerpOwnerExposure;
 }
 #[contracttype]
 #[derive(Clone)]
@@ -116,6 +139,17 @@ pub struct PortfolioExposure {
     pub m11_borrower_debt_e7:i128,
     pub m12_available_e7:i128,
     pub m12_locked_e7:i128,
+    pub m12_owner_positions:u32,
+    pub m12_owner_mark_pnl_e7:i128,
+    pub m12_pending_funding_e7:i128,
+    pub m12_marked_net_pnl_e7:i128,
+    pub m12_marked_equity_e7:i128,
+    pub m12_maintenance_e7:i128,
+    pub m12_maint_deficit_e7:i128,
+    pub m12_bad_debt_e7:i128,
+    pub m12_owner_marked_complete:bool,
+    pub m12_liquidation_required:bool,
+    pub owner_marked_net_e7:i128,
     pub owner_book_before_pnl_e7:i128,
     pub owner_net_after_debt_e7:i128,
     // Global nominal consolidation: M11 RECEIVABLE tracked separately.
@@ -225,6 +259,23 @@ impl PortfolioAccounting {
         _e:Env,_owner:Address,_clearinghouse:Address,_market_id:u32,
         _signed_size:i128,_requested_margin:i128,_mark:i128
     )->bool{false}
+    /// Conservative SPOT-only preflight consumed by separately bound M15
+    /// risk controller. This is NOT a leverage, lending or perp authority.
+    /// All products must have zero global credit / perp positions and their
+    /// actual token-backed book must cover liabilities before an M15 spot
+    /// reservation can be prepared.
+    pub fn spot_reservation_safe(e:Env,owner:Address,amount_e7:i128)->bool{
+        if amount_e7<=0||same_network(&e).is_err(){return false;}
+        let view=match Self::snapshot(e,owner){
+            Ok(v)=>v,Err(_)=>return false,
+        };
+        view.nominal_book_covered&&view.no_open_credit_or_perp_risk&&
+        view.liquidity_only_coverage&&view.m12_owner_marked_complete&&
+        view.m12_owner_positions==0&&view.m11_borrower_debt_e7==0&&
+        view.m15_available_e7>=amount_e7&&
+        view.m12_bad_debt_e7==0&&
+        !view.m12_liquidation_required
+    }
     /// Independent read-only estimate of on-chain claims. NEVER estimate
     /// live market value for positions we cannot actually enumerate.
     pub fn snapshot(e:Env,owner:Address)->Result<PortfolioExposure,AccountingError>{
@@ -240,6 +291,7 @@ impl PortfolioAccounting {
         let total=m.totals();
         let loan=l.projected_portfolio(&owner);
         let position=p.wallet(&owner);
+        let marked=p.owner_exposure(&owner);
         let market=p.market();
         let rec=p.reconciliation();
         if m.collateral_asset()!=asset||loan.asset!=asset||
@@ -248,7 +300,12 @@ impl PortfolioAccounting {
            market.total_user_claims_e7!=rec.user_claims_e7||
            market.open_positions!=rec.open_positions||
            market.insurance_reserves_e7!=rec.insurance_reserve_e7||
-           market.accrued_fees_e7!=rec.accrued_fees_e7{
+           market.accrued_fees_e7!=rec.accrued_fees_e7||
+           marked.owner!=owner||marked.as_of_sec!=e.ledger().timestamp()||
+           marked.available_e7!=position.available_e7||
+           marked.locked_e7!=position.locked_e7||
+           !marked.index_complete||!marked.price_current{
+
             return Err(AccountingError::AssetMismatch);
         }
         nonnegative(&[
@@ -258,6 +315,8 @@ impl PortfolioAccounting {
             loan.total_borrowed_e7,loan.protocol_reserves_e7,
             loan.nominal_supplier_claims_e7,loan.owner_shares_e7,
             position.available_e7,position.locked_e7,
+            marked.maintenance_req_e7,marked.maintenance_deficit_e7,
+            marked.insolvency_deficit_e7,
             rec.actual_cash_e7,rec.user_claims_e7,
             rec.accrued_fees_e7,rec.insurance_reserve_e7,
         ])?;
@@ -283,6 +342,7 @@ impl PortfolioAccounting {
             add(ledger.available_e7,ledger.reserved_e7)?,
             loan.owner_supply_claim_e7)?,add(position.available_e7,position.locked_e7)?)?;
         let net=sub(owner_assets,loan.owner_debt_e7)?;
+        let marked_net=add(net,marked.marked_net_pnl_e7)?;
         let no_external_risk=loan.total_borrowed_e7==0&&rec.open_positions==0;
         let nominal_covered=m15_backed&&m11_backed&&m12_backed&&book_surplus>=0;
         Ok(PortfolioExposure{
@@ -293,6 +353,17 @@ impl PortfolioAccounting {
             m11_borrower_debt_e7:loan.owner_debt_e7,
             m12_available_e7:position.available_e7,
             m12_locked_e7:position.locked_e7,
+            m12_owner_positions:marked.active_positions,
+            m12_owner_mark_pnl_e7:marked.mark_pnl_e7,
+            m12_pending_funding_e7:marked.pending_funding_e7,
+            m12_marked_net_pnl_e7:marked.marked_net_pnl_e7,
+            m12_marked_equity_e7:marked.marked_equity_e7,
+            m12_maintenance_e7:marked.maintenance_req_e7,
+            m12_maint_deficit_e7:marked.maintenance_deficit_e7,
+            m12_bad_debt_e7:marked.insolvency_deficit_e7,
+            m12_owner_marked_complete:marked.index_complete,
+            m12_liquidation_required:marked.any_liquidation_required,
+            owner_marked_net_e7:marked_net,
             owner_book_before_pnl_e7:owner_assets,
             owner_net_after_debt_e7:net,
             actual_cash_across_vaults_e7:cash,
@@ -312,6 +383,8 @@ impl PortfolioAccounting {
             m12_token_backed:m12_backed,
             nominal_book_covered:nominal_covered,
             no_open_credit_or_perp_risk:no_external_risk,
+            // Only this owner's active positions are marked. System-wide
+            // per-account exposure has not been enumerated across all users.
             full_perp_exposure_enumerated:rec.open_positions==0,
             borrow_credit_loss_risk_priced:false,
             liquidity_only_coverage:nominal_covered&&liquid_surplus>=0&&no_external_risk,
