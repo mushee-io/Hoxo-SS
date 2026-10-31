@@ -125,17 +125,17 @@ export function inspectM21Envelope(sdk,{envelopeXdr,transactionHash,expectedSign
   if(tx.source!==expectedSigner||!Array.isArray(tx.signatures)||tx.signatures.length<1)
     fail("Expected exact independent wallet as transaction source");
   const signer=sdk.Keypair.fromPublicKey(expectedSigner);
-  if(!tx.signatures.some(sig=>signer.verify(hash,sig.signature())))
+  if(!tx.signatures.some(sig=>signer.verify(hash,sig.signature.toBytes())))
     fail("Expected wallet Ed25519 transaction signature missing or invalid");
   if(!Array.isArray(tx.operations)||tx.operations.length!==1||
       tx.operations[0]?.type!=="invokeHostFunction")
     fail("Expected one Soroban contract invocation, no other operations");
   const func=tx.operations[0].func;
-  if(func?.switch?.().name!=="hostFunctionTypeInvokeContract")
+  if(func?.type!=="hostFunctionTypeInvokeContract")
     fail("Not a Soroban contract call");
-  const call=func.invokeContract();
-  const address=sdk.Address.fromScAddress(call.contractAddress()).toString();
-  const functionName=call.functionName().toString();
+  const call=func.invokeContract;
+  const address=sdk.Address.fromScAddress(call.contractAddress).toString();
+  const functionName=call.functionName.toString();
   if(address!==contractId||functionName!==method)
     fail("Transaction targeted wrong contract role or method");
   return Object.freeze({

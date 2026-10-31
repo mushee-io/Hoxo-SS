@@ -6,7 +6,6 @@ import {inspectM21Envelope} from "../verification/m21.mjs";
 
 test("M21 verifies actual signed Testnet XDR transaction hash, wallet and exact Soroban call",()=>{
   const maker=Keypair.random(),other=Keypair.random();
-  const contractId="C"+""; // overwritten with canonical StrKey from SDK address
   const contract=stellar.StrKey.encodeContract(Buffer.alloc(32,7));
   const build=(key,method="deposit",contractTarget=contract)=>{
     const tx=new TransactionBuilder(new Account(key.publicKey(),"1"),{
@@ -19,7 +18,7 @@ test("M21 verifies actual signed Testnet XDR transaction hash, wallet and exact 
   };
   const tx=build(maker);
   const params={
-    envelopeXdr:tx.toXDR(),transactionHash:tx.hash().toString("hex"),
+    envelopeXdr:tx.toXDR(),transactionHash:Buffer.from(tx.hash()).toString("hex"),
     expectedSigner:maker.publicKey(),contractId:contract,method:"deposit"
   };
   const good=inspectM21Envelope(stellar,params);
