@@ -28,7 +28,7 @@ This plan deliberately distinguishes a rendered interface, a read-only wallet in
 
 | ID | Milestone | Acceptance gate | Status |
 | --- | --- | --- | --- |
-| M10 | Money market supply | Pool reserves, deposits, withdrawals, utilisation curve, interest index and accounting invariants | Not started |
+| M10 | Money market supply | Single Testnet-only Soroban pool with audited-intent shares, owner-auth deposits/withdrawals, reserve and solvency tracking, supply cap, pause, TTL, rate curve preview, borrowing forbidden | Implemented in source; native contract tests and WASM CI pending; no real Testnet deployment, token approval, deposit or yield |
 | M11 | Borrowing | Originate, accrue, repay, debt caps, shared cross-product risk checks | Not started |
 | M12 | Perpetual clearinghouse | Sign and settle actual testnet long/short positions with margin reservation | Not started |
 | M13 | Funding and settlement | Mark/index price separation, funding updates, realised PnL, fees, reconciliation | Not started |

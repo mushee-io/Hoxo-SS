@@ -13,6 +13,7 @@ const risk=await read("contracts/risk-engine/src/lib.rs");
 const vault=await read("contracts/collateral-vault/src/lib.rs");
 const spot=await read("contracts/spot-settlement/src/lib.rs");
 const m9Flow=await read("matching/m9-wallet-settlement.mjs");
+const moneyMarket=await read("contracts/money-market/src/lib.rs");
 const sandbox=snapshot(emptyBook(),"xlm-usdc-spot");
 const invariants={
   noVerifiedExchangeContracts:registry.deployedVerified===0 && registry.candidateContracts===0,
@@ -30,6 +31,14 @@ const invariants={
   m9WalletSpendingDisabledByDefault:m9Flow.includes('send=false') &&
     m9Flow.includes('sendAcknowledgement!==M9_SEND_ACK') &&
     m9Flow.includes('needsNonInvokerSigningBy'),
+  m10SupplyPoolUndeployed:registry.statuses.some(x=>
+    x.role==="money-market"&&x.status==="planned"&&x.contractId===null),
+  m10BorrowingHardDisabled:moneyMarket.includes('pub fn borrowing_enabled()->bool{false}')&&
+    moneyMarket.includes('Err(PoolError::BorrowingDisabled)'),
+  m10WalletAuthRequired:moneyMarket.includes('owner.require_auth()')&&
+    moneyMarket.includes('require_testnet(&e)?'),
+  m10NoUnverifiedInterest:moneyMarket.includes('borrowed_e7:0')&&
+    moneyMarket.includes('supply_index_e7:SCALE'),
 
 };
 console.log(JSON.stringify({
@@ -44,6 +53,7 @@ console.log(JSON.stringify({
   M7:"mathematical Soroban preview; atomic enforcement missing",
   M8:"signed matching sandbox; not real fills",
   M9:"compiled contract and signed bilateral SDK operator path; no verified Testnet deployment or real signed settlement",
+  M10:"isolated Soroban money-market supply code with preview-only rate model; no active borrow or genuine Testnet deposit",
  },
  invariants
 },null,2));

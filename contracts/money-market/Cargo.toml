@@ -1,0 +1,15 @@
+[package]
+name = "hoxo-money-market"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Soroban M10 single-asset supply pool, share accounting and disabled borrowing"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+soroban-sdk = "=29.0.1"
+
+[dev-dependencies]
+soroban-sdk = { version = "=29.0.1", features = ["testutils"] }

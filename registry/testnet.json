@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "network": "testnet",
   "passphrase": "Test SDF Network ; September 2015",
-  "note": "M9: Soroban spot settlement source and tests exist, but every HOXO contract is UNDEPLOYED on Stellar Testnet. Do not treat native/Rust tests, M8 sandbox fills or healthy RPC as on-chain trading proof.",
+  "note": "M10 supply-only Soroban money-market source and tests added. All HOXO contracts remain UNDEPLOYED. No real test assets, user deposits, borrowing, APY, or unified margin should be implied.",
   "assets": [
     {
       "key": "XLM",
