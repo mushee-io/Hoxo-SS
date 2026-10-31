@@ -8,7 +8,7 @@ import {
 const ALPHABET="ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 function strKey(version,bytes32){
   const bytes=[version,...bytes32];let crc=0;
-  for(const b of bytes){crc^=b<<8;for(let i=0;i<8;i++)crc=(crc&0x8000)?((crc<<1)^0x1021)&65535:(crc<<1)&65535);}
+  for(const b of bytes){crc^=b<<8;for(let i=0;i<8;i++)crc=(crc&0x8000)?(((crc<<1)^0x1021)&65535):((crc<<1)&65535);}
   bytes.push(crc&255,crc>>8);
   let bits=0,acc=0,out="";
   for(const b of bytes){acc=(acc<<8)|b;bits+=8;while(bits>=5){bits-=5;out+=ALPHABET[(acc>>>bits)&31];acc&=(1<<bits)-1;}}
