@@ -36,8 +36,8 @@ fn long_and_short_linear_pnl() {
     let long=score(&p(&[c(100)],&[],&[perp(2,8,10)],&[],0));
     assert_eq!(long.unrealized_pnl_e7,-4*SCALE);
     assert_eq!(long.perp_notional_e7,16*SCALE);
-    assert_eq!(long.initial_required_e7,1_600_000);
-    assert_eq!(long.maintenance_required_e7,800_000);
+    assert_eq!(long.initial_required_e7,16_000_000);
+    assert_eq!(long.maintenance_required_e7,8_000_000);
     let short=score(&p(&[c(100)],&[],&[perp(-2,12,10)],&[],0));
     assert_eq!(short.unrealized_pnl_e7,-4*SCALE);
 }
