@@ -48,3 +48,15 @@ Native Soroban mock contracts are used to test the oracle/risk interfaces; **the
 7. Audit the smart contract for malicious oracle/risk contracts, TTL/replay archival, signed approvals, contract upgrades, precision/truncation and economic failure modes before permitting third-party funds.
 
 **Do not enable the public terminal's real perp or custody buttons from source-code tests alone. No live Testnet perpetual position or settlement has been claimed.**
+
+## Verified native tests and WASM — 31 October 2026
+
+[GitHub Actions run 41197638913](https://github.com/mushee-io/Hoxo-SS/actions/runs/41197638913) passed **all seven CI jobs** for source commit `7997e1257e6259772f9c236f9b9577ee978480fb`:
+- **M12 native Soroban contract:** 16/16 tests passed.
+- **Other Rust/Soroban:** M7 math 14/14, M6 token vault 5/5, M7 risk preview 2/2, M9 spot settlement 12/12 and M10–M11 supply/borrow 32/32. **81/81 combined native tests**.
+- **JavaScript:** 91/91, including SDK wallet, M8 journal and readiness checks; **Chromium:** 8/8.
+- **Live read-only Stellar Testnet Horizon/RPC:** checks passed. These verify network availability, not any Hoxo contract deployment.
+- Official Stellar CLI v28.1.0 `stellar contract build --package hoxo-perp-clearinghouse` built **16,536 bytes** of optimised WASM with SHA-256 `0526117d9d35d1b2fda5937cc4eb5f052fedd46d8176ba76adde13229163133f`.
+- [Review-only M12 WASM artifact](https://github.com/mushee-io/Hoxo-SS/actions/runs/41197638913/artifacts/13040608388), available according to GitHub retention.
+
+**Do not confuse native mock tests, contract WASM or healthy Stellar RPC with user-signed deployment/trading.** The on-chain M5/M7 integrations and real position/escrow receipts are absent; M13 funding and M14 liquidation/insurance remain unimplemented.
