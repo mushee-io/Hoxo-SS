@@ -1,0 +1,17 @@
+[package]
+name = "hoxo-canonical-risk"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Stellar Testnet spot-only canonical M15 reservation risk; borrowing and perps are deliberately denied"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+soroban-sdk = "=29.0.1"
+
+[dev-dependencies]
+soroban-sdk = { version = "=29.0.1", features = ["testutils"] }
+hoxo-unified-margin = { path = "../unified-margin" }
+hoxo-oracle-adapter = { path = "../oracle-adapter" }
