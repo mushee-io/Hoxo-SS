@@ -51,3 +51,9 @@ The new `tests/indexer.test.mjs` covers network handshake, RPC JSON-RPC identiti
 5. Independent end-to-end Testnet wallet tests and protocol/security audit.
 
 **M19's indexer foundation is not an operational Hoxo market-data feed or exchange.**
+
+## Verified build and security gate — 31 October 2026
+
+[GitHub Actions M19 source/test run #41224344199](https://github.com/mushee-io/Hoxo-SS/actions/runs/41224344199) tests the on-disk ledger journal, RPC protocol handshake/scan, candidate-event checks, REST/SSE stream, ledger pagination, recovery and operator safety gates. All **20/20 dedicated M19 tests** and **144/144 total Node.js tests** passed; the unchanged Rust/Soroban source contracts and pinned Stellar CLI WASM builds also passed. A connected-wallet browser simulation and independent live read-only Stellar checks run in the same CI workflow.
+
+The M19 API does not include a WebSocket server; the implemented streaming transport is **SSE**. The store is a candidate-only **provider-reported XDR event envelope journal**: it does not independently validate the transactions, decode canonical financial state, provide live Hoxo prices or derive account PnL. No Hoxo contract deployments have been verified. Normal operation remains **DISABLED_NO_VERIFIED_DEPLOYMENTS** and cannot be presented as an operational exchange.
