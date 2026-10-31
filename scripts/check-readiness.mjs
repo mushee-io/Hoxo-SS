@@ -117,7 +117,7 @@ const invariants={
     matchingJournal.includes('tickSigner:this.tickSigner'),
   m17NoRealPositions:matchingCore.includes('M8_M17_SIMULATED_MATCHES_NOT_ONCHAIN')&&
     matchingCore.includes('executionPermitted: false'),
-  m17ConditionalOrdersDoNotSignFunds:advanced.includes('not represent a deployed M5 oracle')&&
+  m17ConditionalOrdersDoNotSignFunds:advanced.includes('never represent a deployed M5 oracle')&&
     matchingCore.includes('SIGNED_SANDBOX_OPERATOR_NOT_M5_ORACLE')&&
     !matchingCore.includes('broadcastTransaction('),
   m17ReadinessStillBlocked:registry.deployedVerified===0&&
