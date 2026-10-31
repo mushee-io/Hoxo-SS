@@ -84,7 +84,7 @@ test("canonical-risk immutable binding includes all three separately verified pr
   const b=prepareTestnetRiskBinding(config);
   assert.deepEqual(b.args,[
     "contract","invoke","--id",C(9),"--source-account",
-    "hoxo_operator_external","--network","testnet","--",
+    "hoxo_operator_external","--network","testnet","--send=yes","--",
     "bind_products","--portfolio",C(8),"--lending",C(5),"--perp",C(6)
   ]);
   assert.equal(b.transactionSubmitted,false);

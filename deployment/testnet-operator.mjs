@@ -184,7 +184,7 @@ export function prepareTestnetRiskBinding(config){
       ["perp",perp],["vault",vault],["asset",asset]],"Risk binding");
   }
   const args=["contract","invoke","--id",risk,"--source-account",validated.sourceAlias,
-    "--network","testnet","--","bind_products","--portfolio",portfolio,
+    "--network","testnet","--send=yes","--","bind_products","--portfolio",portfolio,
     "--lending",lending,"--perp",perp];
   return Object.freeze({
     action:"BIND_READ_ONLY_PORTFOLIO_AND_EXISTING_PRODUCT_DEBT_SOURCES",
