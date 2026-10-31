@@ -164,3 +164,11 @@ test("M23 failed Friendbot rate limits or already funded state never claim credi
     fetchImpl:async()=>({ok:false,status:400}),
   }),/did not accept/);
 });
+
+test("M23 public beta page never offers active wallet trading or deposit authorization",async()=>{
+  const html=await readFile(new URL("../beta/index.html",import.meta.url),"utf8");
+  assert.match(html,/public beta is being prepared\. not opened\./i);
+  assert.match(html,/Trading and deposits are disabled/i);
+  assert.match(html,/No verified Hoxo contract deployments/i);
+  assert.doesNotMatch(html,/signAndSend\s*\(|sendTransaction\s*\(|type=["']submit["']/);
+});
