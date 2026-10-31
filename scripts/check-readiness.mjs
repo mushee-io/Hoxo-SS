@@ -10,6 +10,7 @@ const registry=validateRegistry(JSON.parse(await read("registry/testnet.json")))
 const markets=validateMarketRegistry(JSON.parse(await read("registry/market-data.testnet.json")));
 const app=await read("app/index.html");
 const risk=await read("contracts/risk-engine/src/lib.rs");
+const analytics=await read("crates/risk-math/src/m16.rs");
 const vault=await read("contracts/collateral-vault/src/lib.rs");
 const spot=await read("contracts/spot-settlement/src/lib.rs");
 const m9Flow=await read("matching/m9-wallet-settlement.mjs");
@@ -95,6 +96,18 @@ const invariants={
   m15NoFakeYieldOrCrossProductExecution:
     !unified.includes('pub fn borrow(')&&!unified.includes('pub fn open_perp(')&&
     !unified.includes('pub fn atomic_swap('),
+  m16ReadOnlyAnalytics:analytics.includes('pub fn analyze(')&&
+    analytics.includes('pub fn stress(')&&
+    analytics.includes('pub fn check_caps(')&&
+    analytics.includes('pub fn estimate_liquidation('),
+  m16NoCanonicalAuthorization:risk.includes('pub fn authorization_enabled() -> bool { false }')&&
+    risk.includes('execution_permitted:false')&&
+    risk.includes('pub fn preview_analytics(')&&
+    risk.includes('pub fn preview_liquidation('),
+  m16FailClosedStress:analytics.includes('RiskError::StalePrice')||
+    (analytics.includes('evaluate(portfolio,policy,now)?')&&
+    analytics.includes('MAX_STRESS_BPS')),
+
 
 };
 console.log(JSON.stringify({
@@ -115,6 +128,7 @@ console.log(JSON.stringify({
   M13:"bounded Soroban mark-index funding, closed-loop fee reserves and reconciliation; no approved oracle or Testnet funding receipts",
   M14:"isolated keeper liquidation, prefunded insurance and potential bad-debt preview; no verified deployment, historical funding recovery or public trading",
   M15:"canonical single-asset shared reservation ledger for spot, perp and lending; not deployed or linked to M9/M11/M12 and blocked by M7 risk gate",
+  M16:"M7 read-only multi-product fixed-point risk analytics, stress, exposure caps and liquidation thresholds; snapshots untrusted and authorization disabled",
  },
  invariants
 },null,2));

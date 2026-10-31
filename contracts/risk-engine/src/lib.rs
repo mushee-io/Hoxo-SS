@@ -1,5 +1,5 @@
 #![no_std]
-//! HOXO SS M7 — on-chain PREVIEW risk gate, not an exchange.
+//! HOXO SS M7 + M16 — on-chain PREVIEW analytics, not an execution authority.
 //! Inputs are caller-supplied until canonical M5 oracle, M6 vault and
 //! clearinghouse modules can provide authenticated state. As a result,
 //! authorize_trade and authorize_withdrawal ALWAYS FAIL.
@@ -8,6 +8,9 @@ use hoxo_risk_math::{
     evaluate, preview_withdrawal, Collateral as MathCollateral,
     Debt as MathDebt, OrderReservation as MathOrder,
     Perp as MathPerp, Policy, Portfolio, RiskError, RiskReport, RiskState, MAX_ITEMS,
+};
+use hoxo_risk_math::m16::{
+    self, ExposureCaps, StressScenario,
 };
 use soroban_sdk::{contract, contracterror, contractimpl, contracttype, Env, Vec};
 
@@ -64,6 +67,66 @@ pub struct RiskView {
     pub state: u32,
     // NEVER TRUE until canonical state and approved oracle are enforced.
     pub execution_permitted: bool,
+}
+// All limits and shocks are caller provided and illustrate conservative
+// decision support; no M5/M11/M12 authenticated ledger source is wired.
+#[contracttype]
+#[derive(Clone,Debug)]
+pub struct CapsInput {
+    pub max_market_notional_e7:i128,
+    pub max_total_notional_e7:i128,
+    pub max_debt_e7:i128,
+    pub max_order_initial_e7:i128,
+    pub max_leverage_bps:u32,
+    pub max_collateral_concentration_bps:u32,
+}
+impl CapsInput {
+    fn math(self)->ExposureCaps{ExposureCaps{
+        max_market_notional_e7:self.max_market_notional_e7,
+        max_total_notional_e7:self.max_total_notional_e7,
+        max_debt_e7:self.max_debt_e7,
+        max_order_initial_e7:self.max_order_initial_e7,
+        max_leverage_bps:self.max_leverage_bps,
+        max_collateral_concentration_bps:self.max_collateral_concentration_bps,
+    }}
+}
+#[contracttype]
+#[derive(Clone,Debug)]
+pub struct StressInput {
+    pub collateral_price_drop_bps:u32,
+    pub debt_price_rise_bps:u32,
+    pub perp_adverse_mark_bps:u32,
+    pub added_funding_loss_e7:i128,
+}
+impl StressInput {
+    fn math(self)->StressScenario{StressScenario{
+        collateral_price_drop_bps:self.collateral_price_drop_bps,
+        debt_price_rise_bps:self.debt_price_rise_bps,
+        perp_adverse_mark_bps:self.perp_adverse_mark_bps,
+        added_funding_loss_e7:self.added_funding_loss_e7,
+    }}
+}
+#[contracttype]
+#[derive(Clone,Debug)]
+pub struct AnalyticsView {
+    pub baseline:RiskView,
+    pub stressed:RiskView,
+    pub cap_flags:u32,
+    pub largest_market_notional_e7:i128,
+    pub order_reserve_e7:i128,
+    pub leverage_bps:Option<i128>,
+    pub concentration_bps:Option<i128>,
+    pub reduce_only_recommended:bool,
+    pub execution_permitted:bool,
+}
+#[contracttype]
+#[derive(Clone,Debug)]
+pub struct LiquidationView {
+    pub market_id:u32,
+    pub current_mark_e7:i128,
+    pub first_unsafe_mark_e7:Option<i128>,
+    pub already_liquidatable:bool,
+    pub execution_permitted:bool,
 }
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -202,6 +265,55 @@ impl RiskGate {
             env.ledger().timestamp(),asset_id,withdraw_e7)
             .map(view).map_err(Into::into)
     }
+    /// M16 portfolio health, scenario stress and exposure caps. READ ONLY.
+    /// The inputs are NOT authenticated contract account data.
+    pub fn preview_analytics(
+        env:Env,
+        coll:Vec<CollateralInput>,debt:Vec<DebtInput>,
+        perps:Vec<PerpInput>,orders:Vec<OrderInput>,
+        pending_funding_e7:i128,caps:CapsInput,shock:StressInput,
+    )->Result<AnalyticsView,GateError>{
+        let (c,cn,d,dn,p,pn,o,on)=read_inputs(coll,debt,perps,orders)?;
+        let portfolio=Portfolio{
+            collateral:&c[..cn],debts:&d[..dn],perps:&p[..pn],
+            orders:&o[..on],pending_funding_e7,
+        };
+        let result=m16::analyze(&portfolio,Policy::TEST_POLICY,
+            env.ledger().timestamp(),shock.math(),caps.math())?;
+        Ok(AnalyticsView{
+            baseline:view(result.base),
+            stressed:view(result.stressed),
+            cap_flags:result.cap.flags,
+            largest_market_notional_e7:result.cap.largest_market_notional_e7,
+            order_reserve_e7:result.cap.order_initial_reserved_e7,
+            leverage_bps:result.cap.leverage_bps,
+            concentration_bps:result.cap.concentration_bps,
+            reduce_only_recommended:result.reduce_only_recommended,
+            execution_permitted:false,
+        })
+    }
+    /// Approximate first unsafe mark for one market while holding every
+    /// other snapshot price constant. NOT a liquidator trigger/price oracle.
+    pub fn preview_liquidation(
+        env:Env,
+        coll:Vec<CollateralInput>,debt:Vec<DebtInput>,
+        perps:Vec<PerpInput>,orders:Vec<OrderInput>,
+        pending_funding_e7:i128,market_id:u32,
+    )->Result<LiquidationView,GateError>{
+        let (c,cn,d,dn,p,pn,o,on)=read_inputs(coll,debt,perps,orders)?;
+        let portfolio=Portfolio{
+            collateral:&c[..cn],debts:&d[..dn],perps:&p[..pn],
+            orders:&o[..on],pending_funding_e7,
+        };
+        let q=m16::estimate_liquidation(&portfolio,Policy::TEST_POLICY,
+            env.ledger().timestamp(),market_id)?;
+        Ok(LiquidationView{
+            market_id:q.market_id,current_mark_e7:q.current_mark_e7,
+            first_unsafe_mark_e7:q.first_unsafe_mark_e7,
+            already_liquidatable:q.already_liquidatable,
+            execution_permitted:false,
+        })
+    }
     /// Always rejects until canonical live M5/M6/M8/M10/M12 integrations pass audit.
     pub fn authorize_trade() -> Result<(), GateError> { Err(GateError::NotIntegrated) }
     /// Always rejects; no custody transfers are possible from this contract.
@@ -243,4 +355,87 @@ mod tests {
         assert_eq!(report.available_margin_e7,0);
         assert!(!report.execution_permitted);
     }
+    #[test]
+    fn m16_portfolio_analysis_aggregates_multi_product_snapshots_without_execution(){
+        let e=Env::default();
+        let id=e.register(RiskGate,());
+        let cli=RiskGateClient::new(&e,&id);
+        let mut coll=Vec::new(&e);
+        coll.push_back(CollateralInput{asset_id:1,amount_e7:200*10_000_000,
+            price_e7:10_000_000,price_time_sec:0,collateral_factor_bps:9000});
+        let mut debt=Vec::new(&e);
+        debt.push_back(DebtInput{asset_id:1,amount_with_interest_e7:30*10_000_000,
+            price_e7:10_000_000,price_time_sec:0});
+        let mut perps=Vec::new(&e);
+        perps.push_back(PerpInput{market_id:1,signed_size_e7:10*10_000_000,
+            entry_price_e7:10*10_000_000,mark_price_e7:10*10_000_000,
+            mark_time_sec:0,initial_margin_bps:2500,maintenance_margin_bps:1500});
+        let mut orders=Vec::new(&e);
+        orders.push_back(OrderInput{order_id:1,initial_reserve_e7:10*10_000_000,
+            maintenance_reserve_e7:5*10_000_000});
+        let caps=CapsInput{
+            max_market_notional_e7:500*10_000_000,
+            max_total_notional_e7:600*10_000_000,
+            max_debt_e7:500*10_000_000,
+            max_order_initial_e7:100*10_000_000,
+            max_leverage_bps:50_000,
+            max_collateral_concentration_bps:10_000,
+        };
+        let shock=StressInput{
+            collateral_price_drop_bps:2000,debt_price_rise_bps:1000,
+            perp_adverse_mark_bps:1000,added_funding_loss_e7:0,
+        };
+        let x=cli.preview_analytics(&coll,&debt,&perps,&orders,&0,&caps,&shock);
+        assert_eq!(x.baseline.adjusted_collateral_e7,180*10_000_000);
+        assert_eq!(x.baseline.debt_e7,30*10_000_000);
+        assert_eq!(x.baseline.notional_e7,100*10_000_000);
+        assert_eq!(x.cap_flags,0);
+        assert!(x.stressed.equity_e7<x.baseline.equity_e7);
+        assert!(!x.execution_permitted);
+        assert!(!x.baseline.execution_permitted);
+        assert!(!cli.authorization_enabled());
+        assert!(cli.try_authorize_trade().is_err());
+    }
+    #[test]
+    fn m16_liquidation_estimate_is_hypothetical_and_read_only(){
+        let e=Env::default();
+        let id=e.register(RiskGate,());
+        let cli=RiskGateClient::new(&e,&id);
+        let mut coll=Vec::new(&e);
+        coll.push_back(CollateralInput{asset_id:1,amount_e7:35*10_000_000,
+            price_e7:10_000_000,price_time_sec:0,collateral_factor_bps:10_000});
+        let mut perps=Vec::new(&e);
+        perps.push_back(PerpInput{market_id:123,signed_size_e7:10*10_000_000,
+            entry_price_e7:10*10_000_000,mark_price_e7:10*10_000_000,
+            mark_time_sec:0,initial_margin_bps:2500,maintenance_margin_bps:1500});
+        let empty:Vec<DebtInput>=Vec::new(&e);
+        let orders:Vec<OrderInput>=Vec::new(&e);
+        let q=cli.preview_liquidation(&coll,&empty,&perps,&orders,&0,&123);
+        assert!(q.first_unsafe_mark_e7.unwrap()<10*10_000_000);
+        assert!(!q.already_liquidatable);
+        assert!(!q.execution_permitted);
+        assert!(cli.try_preview_liquidation(&coll,&empty,&perps,&orders,&0,&888).is_err());
+    }
+    #[test]
+    fn m16_stale_or_adversarial_input_does_not_turn_on_risk_execution(){
+        let e=Env::default();
+        let id=e.register(RiskGate,());
+        let cli=RiskGateClient::new(&e,&id);
+        let mut coll=Vec::new(&e);
+        coll.push_back(CollateralInput{asset_id:1,amount_e7:100*10_000_000,
+            price_e7:10_000_000,price_time_sec:0,collateral_factor_bps:9000});
+        let caps=CapsInput{
+            max_market_notional_e7:100*10_000_000,max_total_notional_e7:100*10_000_000,
+            max_debt_e7:100*10_000_000,max_order_initial_e7:100*10_000_000,
+            max_leverage_bps:20_000,max_collateral_concentration_bps:10_000};
+        let shock=StressInput{collateral_price_drop_bps:9000,
+            debt_price_rise_bps:0,perp_adverse_mark_bps:0,added_funding_loss_e7:0};
+        let no_debt=Vec::new(&e);
+        let no_perps=Vec::new(&e);
+        let no_orders=Vec::new(&e);
+        assert!(cli.try_preview_analytics(&coll,&no_debt,&no_perps,&no_orders,&0,&caps,&shock).is_err());
+        assert!(!cli.authorization_enabled());
+        assert!(cli.try_authorize_withdrawal().is_err());
+    }
+
 }

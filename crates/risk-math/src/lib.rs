@@ -1,4 +1,5 @@
 #![no_std]
+pub mod m16;
 //! Hoxo SS M7 fixed-point portfolio risk arithmetic.
 //! All numeric values are integer 10^7 units. No floating point, wrapping
 //! arithmetic, heap allocation, unchecked oracle freshness or implicit rounding.

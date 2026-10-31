@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "network": "testnet",
   "passphrase": "Test SDF Network ; September 2015",
-  "note": "M15 single-asset canonical reserve ledger code added (spot/perp/lending roles). All Hoxo contract IDs are null; M7 risk authority remains preview-only, so activating the M15 vault is blocked. Existing M9/M11/M12 isolated products are not connected. No live Testnet unified-margin activity.",
+  "note": "M16 expands M7 with caller-supplied risk analytics (health, multi-product stress, exposure caps, hypothetical liquidation price). No Hoxo contracts have deployed, M7 remains read-only, and canonical oracle/M15+spot/perp/lending adapters are not verified. Never treat previews as execution permission.",
   "assets": [
     {
       "key": "XLM",
