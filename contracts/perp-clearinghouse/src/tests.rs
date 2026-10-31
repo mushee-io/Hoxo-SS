@@ -800,3 +800,45 @@ fn testnet_candidate_oracle_abi_interoperates_without_granting_risk_authority(){
     // A healthy candidate price does not imply authorised financial execution.
     assert!(!o.execution_approved());
 }
+
+
+/// Native Soroban sandbox: actual candidate-oracle ABI drives the isolated
+/// M12 open/close lifecycle with an explicitly TEST-ONLY mock risk approver.
+ /// This is NOT deployed Testnet, authenticated canonical risk, or unified margin.
+#[test]
+fn candidate_oracle_perp_open_close_sandbox_reconciles_two_wallet_collateral(){
+    use hoxo_oracle_adapter::{OracleAdapter,OracleAdapterClient};
+    let (e,market,admin,long,short,asset)=setup();
+    let a=Address::generate(&e);
+    let b=Address::generate(&e);
+    let oracle=e.register(OracleAdapter,(&admin,&1u32,&a,&b));
+    let o=OracleAdapterClient::new(&e,&oracle);
+    o.pause(&false);
+    o.submit(&a,&1,&(10*UNIT),&(10*UNIT));
+    o.submit(&b,&1,&(10*UNIT),&(10*UNIT));
+    let risk=e.register(MockAllowRisk,()); // INSECURE mock, never deploy.
+    let c=PerpClearinghouseClient::new(&e,&market);
+    c.set_controllers(&oracle,&risk);
+    c.set_pause(&false);
+    fund(&e,&market,&long,&short);
+    let pos=c.open(&id(&e,199),&long,&short,&(4*UNIT),
+        &(12*UNIT),&(8*UNIT),&(e.ledger().sequence()+20));
+    assert!(pos.active);
+    assert_eq!(c.market().open_positions,1);
+    assert!(c.reconciliation().solvent);
+    e.ledger().with_mut(|l|{l.sequence_number+=1;l.timestamp+=5;});
+    o.submit(&a,&1,&(11*UNIT),&(11*UNIT));
+    o.submit(&b,&1,&(11*UNIT),&(11*UNIT));
+    let settled=c.close(&id(&e,199));
+    assert!(!settled.active);
+    assert_eq!(settled.close_price_e7,11*UNIT);
+    assert_eq!(settled.long_realised_pnl_e7,4*UNIT);
+    assert_eq!(c.market().open_positions,0);
+    assert_eq!(c.wallet(&long).locked_e7,0);
+    assert_eq!(c.wallet(&short).locked_e7,0);
+    assert_eq!(c.wallet(&long).available_e7+c.wallet(&short).available_e7,200*UNIT);
+    assert_eq!(token::TokenClient::new(&e,&asset).balance(&market),200*UNIT);
+    assert!(c.reconciliation().solvent);
+    assert!(c.try_close(&id(&e,199)).is_err()); // replay prohibited
+    assert!(!o.execution_approved());
+}
