@@ -32,3 +32,16 @@ Native Soroban tests cover independent accounts, supply and partial/final redemp
 Run `cargo test -p hoxo-money-market --lib`; with official Stellar CLI pinned to an SDK-compatible release, run `stellar contract build --package hoxo-money-market`. These run locally without submitting any transactions.
 
 **Safety gate:** all actual deposit, withdraw, borrow, margin and trading controls remain disabled in the public terminal until there is verifiable Stellar Testnet deployment and independent wallet receipts.
+
+## Verified build evidence — 31 October 2026
+
+[GitHub Actions run 41195457096](https://github.com/mushee-io/Hoxo-SS/actions/runs/41195457096) passed **all 7 jobs** against the source commit `6900f5a8f1cfddce0a71da38152e503c18f600c3`:
+
+- M10 native Soroban supply-only tests **16/16 passing**
+- Existing Rust math 14/14, collateral vault 5/5, risk preview 2/2, spot settlement 12/12
+- JavaScript 91/91; Chromium 8/8; M8 and M9 SDK checks; actual read-only Stellar Testnet Horizon/RPC checks
+- Official Stellar CLI v28.1.0 `stellar contract build --package hoxo-money-market` **succeeded** and optimized the WASM to **14,970 bytes**
+- WASM SHA-256: `bb9c232532f3f6a477e2e8243fe43e9080670b0447cd422be2224cac9d9b96e3`
+- [Review-only money-market WASM artifact](https://github.com/mushee-io/Hoxo-SS/actions/runs/41195457096/artifacts/13040750629) (GitHub artifact with limited retention).
+
+**This is compiled/tested code, not a signed on-chain deployment.** The M10 registry entry remains `planned` with `contractId:null`. No asset yield, borrower or real user deposit was produced by these tests.
