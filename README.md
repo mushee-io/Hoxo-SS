@@ -8,7 +8,7 @@ Hoxo-SS is a proposed non-custodial exchange for Stellar. The intended product c
 - **Money markets:** supply, redeem, borrow and repay with risk-controlled collateral usage.
 - **Unified margin:** a single collateral ledger and conservative account-wide risk calculation.
 
-**Status: early development.** M4 read-only Stellar Testnet RPC + Horizon infrastructure is verified in CI; M5 provides read-only market-data adapters; M6–M9 Soroban source is undergoing native contract and Wasm tests, but no HOXO contract is deployed. **No HOXO contracts are deployed, no wallet-controlled spot swaps or deposits have been executed, and there is no audited unified-margin risk engine.** Testnet-first. No synthetic volumes or fake live market data.
+**Status: early development.** M4 read-only Stellar Testnet RPC + Horizon infrastructure is verified in CI; M5 provides read-only market-data adapters; M6–M9 Soroban source passes native contract tests; M9 builds as an optimized WASM artifact using the official Stellar CLI, but no HOXO contract is deployed. **No HOXO contracts are deployed, no wallet-controlled spot swaps or deposits have been executed, and there is no audited unified-margin risk engine.** Testnet-first. No synthetic volumes or fake live market data.
 
 [M1–M8 audited implementation and blockers](docs/m1-m8-audit.md) · `npm run check:readiness` verifies no premature real-trading claims.
 

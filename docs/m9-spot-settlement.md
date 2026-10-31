@@ -1,6 +1,6 @@
 # Milestone 9 — Stellar Testnet bilateral spot settlement
 
-**Status (31 October 2026): contract source and mocked/native Soroban tests implemented. Not deployed. No genuine Testnet DvP transaction hash exists.**
+**Status (31 October 2026): 12/12 native Soroban contract tests, 4/4 JavaScript handoff tests, official Stellar CLI WASM build and GitHub artifact verified. Not deployed. No genuine Testnet DvP transaction hash exists.**
 
 M9 is a deliberately isolated *delivery-versus-payment* (DvP) primitive, not the operational Hoxo exchange. It lets two wallet addresses authorise an **atomic** swap of two approved seven-decimal Soroban token contracts. Both parties must sign the exact same on-chain invocation. **M8's off-chain signed order intent is not a token-spend authority.** No Hoxo vault balance or margin is modified by this standalone contract.
 
@@ -41,3 +41,13 @@ The Rust tests cover both maker-side directions, dual-asset transfer balance acc
 6. **No security audit**: token compatibility, malicious/fee-on-transfer token behaviour, archival replay retention, fuzz tests and contract upgrades require review.
 
 **Safety condition:** keep deposit, swap, spot and perpetual execution controls disabled in the terminal until the independently signed Stellar Testnet acceptance steps and M8 settlement bridge are completed. A passed unit test or healthy Stellar network is not evidence of a settled Hoxo trade.
+
+## CI acceptance and review artifact
+
+[GitHub Actions run #41193442596](https://github.com/mushee-io/Hoxo-SS/actions/runs/41193442596) passed **6/6 jobs** on 31 October 2026: 80/80 JS tests (including four M8→M9 proposal tests), 8/8 Chromium tests, 14 Rust risk-math tests, 5 M6 vault tests, 2 M7 contract tests, and **12 M9 Soroban DvP tests**, plus real read-only Stellar Testnet RPC and Horizon checks. The official Stellar CLI v28.1.0 invoked `stellar contract build --package hoxo-spot-settlement`.
+
+- Optimized WASM: **9,574 bytes**
+- WASM SHA-256: `916917c61fc36a55929201027a98625097f6e8ee74f26de255728f451de4fcc3`
+- [Review-only M9 WASM artifact](https://github.com/mushee-io/Hoxo-SS/actions/runs/41193442596/artifacts/13039538487) — expires per GitHub's artifact retention settings
+
+This proves compile/test readiness only. Until wallet-signed Testnet deployment and independent RPC receipt verification, there is **no on-chain Hoxo-SS spot settlement contract**.
