@@ -334,11 +334,55 @@ fn canonical_owner_marked_pnl_enters_view_but_never_mints_spendable_margin(){
     assert_eq!(a.m12_owner_positions,1);
     assert_eq!(b.m12_owner_positions,1);
     assert!(a.m12_owner_marked_complete);
-    assert!(!a.full_perp_exposure_enumerated); // market-wide still unproven
+    assert!(a.full_perp_exposure_enumerated); // bounded market-wide index verified
+    assert!(a.m12_global_index_complete);
+    assert_eq!(a.m12_global_locked_e7,20*UNIT);
+    assert_eq!(a.m12_global_maint_gap_e7,0);
+    assert_eq!(a.m12_insurance_shortfall_e7,0);
+    assert!(a.m12_insurance_snapshot_ok);
     assert_eq!(a.m12_pending_funding_e7,0);
     assert_eq!(a.m12_owner_mark_pnl_e7+b.m12_owner_mark_pnl_e7,0);
     assert_eq!(a.owner_marked_net_e7,a.owner_net_after_debt_e7);
     assert!(a.nominal_book_covered);
     assert!(!f.p().spot_reservation_safe(&f.alice,&UNIT));
     assert!(!a.unified_leverage_authorized);
+}
+
+#[test]
+fn market_wide_global_positions_reconcile_multiple_owners_without_creating_credit(){
+    let f=F::new();
+    f.router().perp_from_margin(&f.alice,&(50*UNIT));
+    f.router().perp_from_margin(&f.bob,&(50*UNIT));
+    let ids=[
+        BytesN::from_array(&f.e,&[251u8;32]),
+        BytesN::from_array(&f.e,&[252u8;32])
+    ];
+    for id in &ids{
+        f.perps().open(id,&f.alice,&f.bob,&(4*UNIT),
+            &(12*UNIT),&(8*UNIT),&(f.e.ledger().sequence()+20));
+    }
+    let a=f.p().snapshot(&f.alice);
+    let b=f.p().snapshot(&f.bob);
+    assert!(a.full_perp_exposure_enumerated);
+    assert!(a.m12_global_index_complete);
+    assert_eq!(a.m12_global_open_positions,2);
+    assert_eq!(a.m12_global_locked_e7,40*UNIT);
+    assert_eq!(a.m12_global_maint_gap_e7,0);
+    assert_eq!(a.m12_global_insolvency_e7,0);
+    assert!(a.m12_insurance_snapshot_ok);
+    assert_eq!(a.m12_owner_positions,2);
+    assert_eq!(b.m12_owner_positions,2);
+    assert_eq!(a.nominal_book_assets_e7,250*UNIT);
+    assert_eq!(a.nominal_book_liabilities_e7,250*UNIT);
+    assert!(!a.no_open_credit_or_perp_risk);
+    assert!(!a.unified_leverage_authorized);
+    assert!(!f.p().spot_reservation_safe(&f.alice,&UNIT));
+    f.perps().close(&ids[0]);
+    let mid=f.p().snapshot(&f.alice);
+    assert_eq!(mid.m12_global_open_positions,1);
+    assert_eq!(mid.m12_global_locked_e7,20*UNIT);
+    f.perps().close(&ids[1]);
+    assert!(f.p().snapshot(&f.alice).no_open_credit_or_perp_risk);
+    assert_eq!(f.perps().market_position_ids().len(),0);
+    assert!(f.m().solvent()&&f.perps().solvent());
 }
