@@ -109,3 +109,5 @@ jobs:
         run: cargo test -p hoxo-collateral-vault --lib
       - name: Run M7 risk preview contract tests
         run: cargo test -p hoxo-risk-gate --lib
+      - name: Run M9 atomic spot settlement contract tests
+        run: cargo test -p hoxo-spot-settlement --lib

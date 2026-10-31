@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/risk-math", "contracts/risk-engine", "contracts/collateral-vault"]
+members = ["crates/risk-math", "contracts/risk-engine", "contracts/collateral-vault", "contracts/spot-settlement"]
 resolver = "2"
 
 [profile.release]
