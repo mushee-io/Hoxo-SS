@@ -335,3 +335,58 @@ fn m15_keeper_refreshes_open_reservation_and_account_without_crediting_balance()
     assert_eq!(token::TokenClient::new(&e,&tok).balance(&v),holdings);
     assert_eq!(c.reservation(&id).unwrap().remaining_e7,10*UNIT);
 }
+
+
+/// M22: deterministic contract-level stress of 3 distinct product reservations.
+ /// This tests the isolated M15 ledger only; M9/M11/M12 adapters are still absent.
+#[test]
+fn m22_seeded_64_step_reservation_release_and_settlement_conserves_claims(){
+    let (e,v,_,alice,bob,asset)=base();
+    let (spot,perp,lending)=configure(&e,&v);
+    let c=UnifiedMarginClient::new(&e,&v);
+    let token=token::TokenClient::new(&e,&asset);
+    c.deposit(&alice,&(500*UNIT));
+    c.deposit(&bob,&(300*UNIT));
+    let mut seed=0x5EED_2026_22u64;
+    for i in 0u8..64 {
+        seed ^= seed<<13;seed ^= seed>>7;seed ^= seed<<17;
+        let amount=i128::from((seed%8)+1)*UNIT;
+        let (product,adapter)=match i%3 {
+            0=>(Product::Spot,spot.clone()),
+            1=>(Product::Perp,perp.clone()),
+            _=>(Product::Lending,lending.clone()),
+        };
+        let id=test_id(&e,i+40);
+        let before=c.account(&alice);
+        let remaining=c.reserve(&alice,&adapter,&product,&id,&amount);
+        assert_eq!(remaining,before.available_e7-amount);
+        assert_eq!(c.account(&alice).reserved_e7,amount);
+        assert!(c.solvent());
+        let credit=amount/2;
+        let after_settle=c.settle_reserved(&id,&adapter,&bob,&credit);
+        assert_eq!(after_settle,amount-credit);
+        if i%7==0 {
+            c.pause(&true);
+            assert!(c.try_reserve(&alice,&adapter,&product,&test_id(&e,i+150),&UNIT).is_err());
+        }
+        assert_eq!(c.release(&id,&adapter,&(amount-credit)),0);
+        if i%7==0{c.pause(&false);}
+        assert_eq!(c.account(&alice).reserved_e7,0);
+        assert_eq!(c.account(&bob).reserved_e7,0);
+        assert_eq!(c.account(&alice).available_e7+c.account(&bob).available_e7,800*UNIT);
+        assert_eq!(c.totals().user_claims_e7,800*UNIT);
+        assert_eq!(c.totals().active_reservations,0);
+        assert_eq!(token.balance(&v),800*UNIT);
+        assert!(c.solvent());
+        assert!(!c.reservation(&id).unwrap().active);
+        assert!(c.try_reserve(&alice,&adapter,&product,&id,&UNIT).is_err());
+    }
+    // All claims remain backed, so independent withdrawals can finish.
+    let a=c.account(&alice).available_e7;
+    let b=c.account(&bob).available_e7;
+    assert_eq!(c.withdraw(&alice,&a),0);
+    assert_eq!(c.withdraw(&bob,&b),0);
+    assert_eq!(c.totals().user_claims_e7,0);
+    assert_eq!(token.balance(&v),0);
+    assert!(c.solvent());
+}
