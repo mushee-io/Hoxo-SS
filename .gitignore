@@ -10,4 +10,3 @@ coverage/
 
 /target/
 /.data/
-Cargo.lock

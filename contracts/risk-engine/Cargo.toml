@@ -9,8 +9,8 @@ description = "Soroban risk preview contract, execution hard-disabled pending va
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-soroban-sdk = "=29.0.0"
+soroban-sdk = "=29.0.1"
 hoxo-risk-math = { path = "../../crates/risk-math" }
 
 [dev-dependencies]
-soroban-sdk = { version = "=29.0.0", features = ["testutils"] }
+soroban-sdk = { version = "=29.0.1", features = ["testutils"] }

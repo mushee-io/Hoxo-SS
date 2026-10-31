@@ -1,6 +1,6 @@
 # M6 — Soroban Testnet isolated collateral vault
 
-The `hoxo-collateral-vault` package contains an account-isolated Soroban Rust contract pinned to `soroban-sdk =29.0.0` (the Stellar Testnet protocol at the time of implementation is 29). It is **not yet deployed to Testnet**.
+The `hoxo-collateral-vault` package contains an account-isolated Soroban Rust contract pinned to `soroban-sdk =29.0.1` (the Stellar Testnet protocol at the time of implementation is 29). It is **not yet deployed to Testnet**.
 
 Contract invariants:
 - The admin is assigned by a **deployment constructor**, not an unprotected later init call. Admin must authorise allowlist updates, pausing new deposits, and dual-auth admin transfer.
