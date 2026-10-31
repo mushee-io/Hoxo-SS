@@ -1,7 +1,7 @@
 use super::*;
 use hoxo_unified_margin::{UnifiedMargin,UnifiedMarginClient};
 use hoxo_money_market::{MoneyMarket,MoneyMarketClient};
-use hoxo_perp_clearinghouse::{PerpClearinghouse,PerpClearinghouseClient};
+use hoxo_perp_clearinghouse::{PerpClearinghouse,PerpClearinghouseClient,Price};
 use hoxo_spot_settlement::{SpotSettlement,SpotSettlementClient};
 use soroban_sdk::testutils::{Address as _,Ledger as _};
 const UNIT:i128=10_000_000;
@@ -24,6 +24,33 @@ impl TestOnlyPerpDenyRisk{
         _market_id:u32,_signed_size:i128,_margin:i128,_mark:i128
     )->bool{false}
 }
+#[contract]
+struct TestOnlyBorrowAllowRisk;
+#[contractimpl]
+impl TestOnlyBorrowAllowRisk{
+    pub fn approve_borrow(
+        _e:Env,_borrower:Address,_market:Address,_asset:Address,
+        amount:i128,projected:i128
+    )->bool{amount>0&&projected>0&&projected<=100*UNIT}
+}
+#[contract]
+struct TestOnlyPerpAllowRisk;
+#[contractimpl]
+impl TestOnlyPerpAllowRisk{
+    pub fn approve_open(
+        _e:Env,_owner:Address,_clearinghouse:Address,
+        market:u32,_signed_size:i128,margin:i128,mark:i128
+    )->bool{market==1&&margin>0&&margin<=100*UNIT&&mark>0}
+}
+#[contract]
+struct TestOnlyOracle;
+#[contractimpl]
+impl TestOnlyOracle{
+    pub fn current(e:Env,_market_id:u32)->Price{
+        Price{mark_e7:10*UNIT,index_e7:10*UNIT,
+            updated_at_sec:e.ledger().timestamp()}
+    }
+}
 fn id(e:&Env,v:u8)->BytesN<32>{BytesN::from_array(e,&[v;32])}
 struct Fixtures{
     e:Env,admin:Address,buyer:Address,seller:Address,
@@ -31,7 +58,8 @@ struct Fixtures{
     lending:Address,perp:Address,router:Address,
 }
 impl Fixtures{
-    fn new()->Self{
+    fn new()->Self{Self::with_perp_allow(false)}
+    fn with_perp_allow(allow:bool)->Self{
         let e=Env::default();
         e.ledger().set_network_id(TESTNET_ID);
         e.mock_all_auths(); // Local tests are NOT signed Testnet transactions
@@ -64,10 +92,12 @@ impl Fixtures{
         s.set_pause(&false);
         let l=MoneyMarketClient::new(&e,&lending);
         l.pause(&false);
-        let perp_risk=e.register(TestOnlyPerpDenyRisk,());
-        let dummy_oracle=Address::generate(&e);
+        let perp_risk=if allow{
+            e.register(TestOnlyPerpAllowRisk,())
+        }else{e.register(TestOnlyPerpDenyRisk,())};
+        let oracle=e.register(TestOnlyOracle,());
         let p=PerpClearinghouseClient::new(&e,&perp);
-        p.set_controllers(&dummy_oracle,&perp_risk);
+        p.set_controllers(&oracle,&perp_risk);
         p.set_pause(&false);
         Self{e,admin,buyer,seller,asset,base,vault,spot,lending,perp,router}
     }
@@ -311,5 +341,54 @@ fn paused_router_never_removes_independent_product_withdrawal_rights(){
     assert_eq!(p.wallet(&f.buyer).available_e7,0);
     assert_eq!(m.account(&f.buyer).available_e7,180*UNIT);
     assert_eq!(f.quote().balance(&f.buyer),820*UNIT);
+    assert!(m.solvent()&&p.solvent());
+}
+
+#[test]
+fn m11_actual_borrowed_debt_blocks_new_custody_routes_until_repaid(){
+    let f=Fixtures::new();f.open();
+    let r=f.r();let l=f.l();let m=f.m();
+    // Test-only permissive borrower, expressly NOT the reviewed M15 risk.
+    let risk=f.e.register(TestOnlyBorrowAllowRisk,());
+    l.set_risk_authority(&risk);
+    l.set_borrow_policy(&(100*UNIT),&9500u32,&1000u32,&true);
+    let deposited=r.supply_from_margin(&f.buyer,&(100*UNIT));
+    assert_eq!(deposited.tokens_e7,100*UNIT);
+    let debt=l.borrow(&f.buyer,&(5*UNIT));
+    assert!(debt>=5*UNIT);
+    assert!(l.outstanding_debt_e7()>0);
+    let before_claims=m.totals().user_claims_e7;
+    let before_cash=l.pool().cash_e7;
+    assert!(r.try_supply_from_margin(&f.buyer,&UNIT).is_err());
+    assert!(r.try_redeem_to_margin(&f.buyer,&UNIT).is_err());
+    assert_eq!(m.totals().user_claims_e7,before_claims);
+    assert_eq!(l.pool().cash_e7,before_cash);
+    assert!(l.repay(&f.buyer,&f.buyer,&(7*UNIT)).is_ok());
+    assert_eq!(l.outstanding_debt_e7(),0);
+    assert_eq!(r.redeem_to_margin(&f.buyer,&(20*UNIT)).tokens_e7,20*UNIT);
+    assert!(m.solvent()&&l.solvent());
+}
+#[test]
+fn m12_genuine_local_open_position_blocks_custody_routing_and_locked_exits(){
+    let f=Fixtures::with_perp_allow(true);f.open();
+    let r=f.r();let p=f.p();let m=f.m();
+    m.deposit(&f.seller,&(20*UNIT));
+    r.perp_from_margin(&f.buyer,&(40*UNIT));
+    r.perp_from_margin(&f.seller,&(40*UNIT));
+    let pos=p.open(&id(&f.e,91),&f.buyer,&f.seller,
+        &(4*UNIT),&(12*UNIT),&(8*UNIT),
+        &(f.e.ledger().sequence()+20));
+    assert!(pos.active);
+    assert_eq!(p.active_positions(),1);
+    assert!(p.wallet(&f.buyer).locked_e7>0);
+    let original=m.totals().user_claims_e7;
+    assert!(r.try_perp_from_margin(&f.buyer,&UNIT).is_err());
+    assert!(r.try_perp_to_margin(&f.buyer,&UNIT).is_err());
+    assert_eq!(m.totals().user_claims_e7,original);
+    assert_eq!(p.active_positions(),1);
+    assert!(p.solvent());
+    p.close(&id(&f.e,91));
+    assert_eq!(p.active_positions(),0);
+    assert_eq!(r.perp_to_margin(&f.buyer,&(10*UNIT)).tokens_e7,10*UNIT);
     assert!(m.solvent()&&p.solvent());
 }
