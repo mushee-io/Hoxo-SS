@@ -203,13 +203,16 @@ test("M8 serialized concurrent signed writes preserve sequence and replay",async
   assert.equal(reopened.getStatus().sequence,2);
   await reopened.close();
 });
-test("M8 HTTP API is loopback-ready but has no trade/settlement endpoint",async t=>{
+test("M8 HTTP API is loopback-ready but has no trade/settlement endpoint",{timeout:20000},async t=>{
   const file=await temporary(t);
   const journal=await SignedOrderJournal.open(file);
-  t.after(async()=>{await journal.close();});
   const server=createSandboxServer(journal,{now:()=>NOW});
   await new Promise(r=>server.listen(0,"127.0.0.1",r));
-  t.after(()=>new Promise(r=>server.close(r)));
+  t.after(async()=>{
+    server.closeAllConnections();
+    await new Promise(r=>server.close(r));
+    await journal.close();
+  });
   const base="http://127.0.0.1:"+server.address().port;
   const health=await (await fetch(base+"/health")).json();
   assert.equal(health.tradingEnabled,false);
