@@ -93,6 +93,15 @@ jobs:
         run: npm run test:m21
       - name: M21 default unverified deployment/readiness report
         run: npm run m21:readiness
+      - name: M22 deterministic economic/oracle fuzz and RPC/journal fault injection
+        run: npm run test:m22
+      - name: M22 audit readiness remains blocked without external review
+        run: |
+          npm run m22:readiness
+          if npm run m22:readiness -- --require-clearance; then
+            echo "ERROR: independent audit gate incorrectly granted permission"
+            exit 1
+          fi
       - name: M19 default server reports no approved deployments
         run: |
           node --input-type=module -e 'import {createIndexerApi} from "./indexer/api.mjs"; const s=createIndexerApi(); if(!s)process.exit(1); s.close();'
@@ -139,7 +148,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           prefix-key: hoxo-soroban29
-      - name: Run M7 and M16 pure fixed-point risk model and stress tests
+      - name: Run M7, M16 and M22 seeded risk invariants and stress tests
         run: cargo test -p hoxo-risk-math --all-targets
       - name: Run M6 token vault contract tests
         run: cargo test -p hoxo-collateral-vault --lib

@@ -33,6 +33,7 @@ const m19Store=await read("indexer/store.mjs");
 const m19Rpc=await read("indexer/rpc.mjs");
 const m19Api=await read("indexer/api.mjs");
 const m19Runner=await read("scripts/start-indexer.mjs");
+const m22Gate=await read("security/m22-review.mjs");
 const invariants={
   noVerifiedExchangeContracts:registry.deployedVerified===0 && registry.candidateContracts===0,
   noApprovedRiskOracle:markets.oracleStatus.startsWith("HALTED") && markets.configured===0,
@@ -158,6 +159,9 @@ const invariants={
   m19NoFabricatedFinancialHistory:m19Store.includes('financialStateDerived:false')&&
     m19Api.includes('hoxoFinancialAccountingAvailable:false')&&
     !m19Runner.includes('sendTransaction'),
+  m22AuditNotSelfApproved:m22Gate.includes('BLOCKED_EXTERNAL_AUDIT_AND_LIVE_TESTNET_EVIDENCE_REQUIRED')&&
+    m22Gate.includes('mainnetPermitted:false')&&
+    m22Gate.includes('publicBetaPermitted:false'),
 
 
 };
@@ -183,6 +187,9 @@ console.log(JSON.stringify({
   M17:"signed sandbox limit/IOC/TP-SL, reduce-only simulated exposure and hash-chained transitions; no deployed oracle, canonical position or real execution",
   M18:"read-only Horizon Testnet payments and signed sandbox portfolio/order history; authentic HOXO positions, PnL, funding, interest and trades unavailable",
   M19:"read-only candidate-only RPC event journal with ledger hash checkpoints, REST/SSE diagnostics and fail-closed reset/replay; NO deployed contracts or real HOXO event reconciliation",
+  M20:"process-local pause and HTTP controls; no audited on-chain guardian",
+  M21:"read-only signed receipt proof checker; no real Hoxo lifecycle receipts",
+  M22:"seeded off-chain fuzz/chaos tests and blocked external-audit release gate; no independent audit or live on-chain chaos",
  },
  invariants
 },null,2));

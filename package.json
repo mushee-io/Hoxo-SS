@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Stellar spot, perps and money markets unified-margin development foundation",
   "scripts": {
-    "test": "node --test packages/risk-engine/test/*.test.mjs tests/landing.test.mjs tests/terminal.test.mjs tests/wallet.test.mjs tests/infrastructure.test.mjs tests/matching.test.mjs tests/marketdata.test.mjs tests/settlement-preview.test.mjs tests/m9-wallet-settlement.test.mjs tests/advanced-orders.test.mjs tests/portfolio-history.test.mjs tests/indexer.test.mjs tests/security-controls.test.mjs tests/m21-evidence.test.mjs",
+    "test": "node --test packages/risk-engine/test/*.test.mjs tests/landing.test.mjs tests/terminal.test.mjs tests/wallet.test.mjs tests/infrastructure.test.mjs tests/matching.test.mjs tests/marketdata.test.mjs tests/settlement-preview.test.mjs tests/m9-wallet-settlement.test.mjs tests/advanced-orders.test.mjs tests/portfolio-history.test.mjs tests/indexer.test.mjs tests/security-controls.test.mjs tests/m21-evidence.test.mjs tests/m22-risk-stress.test.mjs tests/m22-chaos.test.mjs",
     "check": "npm test",
     "test:landing": "node --test tests/landing.test.mjs",
     "check:testnet": "node scripts/check-testnet.mjs",
@@ -28,7 +28,9 @@
     "test:security": "node --test tests/security-controls.test.mjs",
     "test:m21": "node --test tests/m21-evidence.test.mjs",
     "m21:readiness": "node scripts/check-m21.mjs",
-    "m21:verify": "node scripts/check-m21.mjs"
+    "m21:verify": "node scripts/check-m21.mjs",
+    "test:m22": "node --test tests/m22-risk-stress.test.mjs tests/m22-chaos.test.mjs",
+    "m22:readiness": "node scripts/check-m22.mjs"
   },
   "engines": {
     "node": ">=20"
