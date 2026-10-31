@@ -71,3 +71,10 @@ The native tests cover actual token-backed collateral held in the individual Sor
 6. Only after the independent go/no-go decision, open a valueless **public financial Testnet beta**; mainnet remains **NO-GO**.
 
 **Scope delivered:** current-ledger debt + loan-asset projections, consolidated nominal liability coverage, credit-risk/liquidity distinctions and fail-closed Testnet-only accounting foundations. **Scope NOT delivered:** executable audited shared margin, live public financial Testnet or mainnet.
+
+
+## Subsequent M12 owner-indexed marked exposure and M15 spot enforcement
+
+The updated M12 contract maintains a bounded on-chain **32-position active index per wallet**, updated atomically on open, close and full liquidation. It now calculates real oracle-marked per-wallet PnL, unpaid funding, marked equity, maintenance requirements and insolvency deficits. The portfolio snapshot includes these values and a `m12_owner_marked_complete` flag, while retaining `full_perp_exposure_enumerated:false` for any market-wide open positions (full market liquidation/exposure accounting is still outstanding). Its marked owner net is **not withdrawable collateral**.
+
+The independent `PortfolioAccounting.spot_reservation_safe` check refuses spot preflights while **any** M11 debt or M12 position is open or when on-chain coverage is insufficient. The M15 canonical spot risk contract now requires an irreversible `bind_products(portfolio,lending,perp)` administrative setup while paused. Its preflight reads all three products; its one-time permit consumption rechecks live M11 debt and M12 position count without reentering M15. Both are spot-only checks, not authority to borrow, open perpetuals or run the financial beta. See [M12 risk integration](m12-marked-exposure-and-risk.md).
