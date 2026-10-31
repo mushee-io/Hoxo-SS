@@ -427,7 +427,7 @@ mod tests {
         let caps=CapsInput{
             max_market_notional_e7:100*10_000_000,max_total_notional_e7:100*10_000_000,
             max_debt_e7:100*10_000_000,max_order_initial_e7:100*10_000_000,
-            max_leverage_bps:20_000,max_collateral_concentration_bps:10_000};
+            max_leverage_bps:20_000,max_concentration_bps:10_000};
         let shock=StressInput{collateral_price_drop_bps:9000,
             debt_price_rise_bps:0,perp_adverse_mark_bps:0,added_funding_loss_e7:0};
         let no_debt=Vec::new(&e);
