@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Stellar spot, perps and money markets unified-margin development foundation",
   "scripts": {
-    "test": "node --test packages/risk-engine/test/*.test.mjs tests/landing.test.mjs tests/terminal.test.mjs tests/wallet.test.mjs tests/infrastructure.test.mjs",
+    "test": "node --test packages/risk-engine/test/*.test.mjs tests/landing.test.mjs tests/terminal.test.mjs tests/wallet.test.mjs tests/infrastructure.test.mjs tests/matching.test.mjs",
     "check": "npm test",
     "test:landing": "node --test tests/landing.test.mjs",
     "check:testnet": "node scripts/check-testnet.mjs",
@@ -13,7 +13,9 @@
     "test:browser": "node --test tests/browser-smoke.test.mjs",
     "test:infra": "node --test tests/infrastructure.test.mjs",
     "check:registry": "node scripts/check-registry.mjs",
-    "check:infra": "node scripts/check-infra.mjs"
+    "check:infra": "node scripts/check-infra.mjs",
+    "test:matching": "node --test tests/matching.test.mjs",
+    "dev:matching": "node scripts/start-matching.mjs"
   },
   "engines": {
     "node": ">=20"

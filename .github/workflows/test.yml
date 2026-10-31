@@ -65,3 +65,20 @@ jobs:
         run: npm run check:registry
       - name: Verify RPC getNetwork/getHealth/getLatestLedger and Horizon consensus
         run: npm run check:infra
+
+  matching-engine:
+    name: M8 signed matching journal and HTTP API
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Signed sandbox command and replay tests
+        run: npm run test:matching
+      - name: Verify no executable gateway is enabled
+        run: |
+          node --input-type=module -e 'import {emptyBook,snapshot} from "./matching/core.mjs"; const book=snapshot(emptyBook(),"xlm-usdc-spot"); if(book.tradingEnabled||book.settleable||book.onchain) process.exit(1);'
