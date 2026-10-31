@@ -4,7 +4,7 @@
  * invokes NO RPC method, and NEVER returns an executable order.
  */
 import {createHash} from "node:crypto";
-import {decimalUnits,formatUnits} from "./core.mjs";
+import {decimalUnits} from "./core.mjs";
 import {isStellarGAddress} from "../app/wallet-core.mjs";
 import {isStellarContractId,validateRegistry} from "../infra/registry.mjs";
 
@@ -58,10 +58,10 @@ export function settlementPreview(fill,{registry,tokenPair=null,expiryLedger=nul
     maker_order_id:hash("HOXO-M9-ORDER-V1",fill.makerOrderId),
     taker_order_id:hash("HOXO-M9-ORDER-V1",fill.takerOrderId),
     maker:fill.maker,taker:fill.taker,
-    market_id:fill.marketId,
+    // Contract MatchTerms uses *integer minimal units*, not UI decimals.
     maker_side:fill.makerSide==="sell"?0:1,
-    base_amount:formatUnits(base),quote_amount:formatUnits(quote),
-    maker_limit_e7:fill.makerLimitE7,taker_limit_e7:fill.takerLimitE7,
+    base_amount:base.toString(),quote_amount:quote.toString(),
+    maker_limit_e7:makerLimit.toString(),taker_limit_e7:takerLimit.toString(),
     base_token:null,quote_token:null,expires_at_ledger:null
   };
   if(!registry)return blocked("No Testnet contract registry.",terms);

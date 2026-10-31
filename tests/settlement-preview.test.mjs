@@ -40,9 +40,12 @@ test("M9 sandbox matching fill yields deterministic non-executable DvP proposal"
  assert.match(p.reason,/No verified M9/);
  assert.equal(p.executionPermitted,false);
  assert.equal(p.walletAuthorisationsRequired,2);
- assert.equal(p.terms.quote_amount,"3");
- assert.equal(p.terms.base_amount,"1.5");
+ assert.equal(p.terms.quote_amount,"30000000");
+ assert.equal(p.terms.base_amount,"15000000");
  assert.equal(p.terms.maker_side,0);
+ assert.equal(p.terms.maker_limit_e7,"20000000");
+ assert.equal(p.terms.taker_limit_e7,"21000000");
+ assert.equal(Object.hasOwn(p.terms,"market_id"),false);
  assert.equal(p.terms.match_id.length,64);
  assert.deepEqual(p,settlementPreview(f,{registry:r}));
 });
