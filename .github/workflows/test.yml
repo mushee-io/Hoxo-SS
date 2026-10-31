@@ -82,3 +82,28 @@ jobs:
       - name: Verify no executable gateway is enabled
         run: |
           node --input-type=module -e 'import {emptyBook,snapshot} from "./matching/core.mjs"; const book=snapshot(emptyBook(),"xlm-usdc-spot"); if(book.tradingEnabled||book.settleable||book.onchain) process.exit(1);'
+
+  rust-contracts:
+    name: M6 vault and M7 Soroban risk Rust tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    permissions:
+      contents: read
+    env:
+      CARGO_BUILD_JOBS: "2"
+      CARGO_INCREMENTAL: "0"
+      RUSTFLAGS: "-C debuginfo=0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: hoxo-soroban29
+      - name: Run pure risk model tests
+        run: cargo test -p hoxo-risk-math --all-targets
+      - name: Run M6 token vault contract tests
+        run: cargo test -p hoxo-collateral-vault --lib
+      - name: Run M7 risk preview contract tests
+        run: cargo test -p hoxo-risk-gate --lib

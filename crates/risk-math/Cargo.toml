@@ -1,0 +1,9 @@
+[package]
+name = "hoxo-risk-math"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "No-std deterministic conservative portfolio risk mathematics for Hoxo SS"
+
+[lib]
+path = "src/lib.rs"

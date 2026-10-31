@@ -8,7 +8,7 @@ Hoxo-SS is a proposed non-custodial exchange for Stellar. The intended product c
 - **Money markets:** supply, redeem, borrow and repay with risk-controlled collateral usage.
 - **Unified margin:** a single collateral ledger and conservative account-wide risk calculation.
 
-**Status: early development.** M4 read-only Stellar Testnet RPC + Horizon infrastructure has been verified in GitHub CI, but this repository is not a deployed exchange. No exchange smart contracts, user funds, production trading, or audited risk model should be assumed. Testnet-first. No synthetic volumes or fake live market data.
+**Status: early development.** M4 read-only Stellar Testnet RPC + Horizon infrastructure is verified in CI; M5 provides read-only market-data adapters; M6/M7 contain unverified Rust source code (vault and risk-preview). **No HOXO contracts are deployed, no wallet-controlled deposits have been executed, and there is no audited unified-margin risk engine.** Testnet-first. No synthetic volumes or fake live market data.
 
 ## Technical direction
 
@@ -21,6 +21,8 @@ Stellar smart contracts (Rust `soroban-sdk`) for vaults, settlement and enforcem
 - [M3 wallet verification and manual acceptance plan](docs/m3-wallet.md): strict Testnet validation, wallet-session lifecycle, guarded Friendbot and real-extension test criteria.
 - [M4 Testnet infrastructure](docs/m4-infrastructure.md): verified Horizon + Stellar RPC, configurable HTTPS endpoints, read-only diagnostic terminal and undeployed contract registry.
 - [M5 Testnet market-data adapters](docs/m5-market-data.md): live independent SDEX network observations, canonical issuer-pair parser, fixed-point OHLC and fail-closed, non-executable oracle review.
+- [M6 Soroban collateral vault](docs/m6-vault.md): token allowlist, owner-signed deposits/withdrawals and isolated wallet balances. Requires Rust compilation, contract deployment and real Testnet tests.
+- [M7 Risk-preview contract](docs/m7-risk.md): deterministic Rust portfolio risk and read-only Soroban previews; execution authorization remains hard-disabled pending authenticated state.
 - [M8 Sandbox Matching Engine](docs/m8-matching.md): signed off-chain testnet-domain order intents, price/time matching, self-trade prevention, cancellation and deterministic restart replay. **No orders are settled or risk-authorised.**
 - [Full development roadmap — M0–M24](docs/milestones.md): 25 stages from product design to audited mainnet readiness, with verifiable acceptance gates.
 - [Architecture](docs/architecture.md), [risk model](docs/risk-model.md), [delivery gates](docs/delivery.md).
