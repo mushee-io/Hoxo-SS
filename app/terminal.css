@@ -23,3 +23,15 @@
 @media(max-width:650px){.market-picker{width:205px}.market-trigger{padding:0 9px;gap:8px}.market-current b{font-size:13px}.market-current small{font-size:8px}.market-stat{min-width:72px;padding:0 7px}.market-stat small{font-size:9px}.market-stat b{font-size:13px}.market-menu{left:3px;width:min(345px,calc(100vw - 12px))}.alternate-cards{grid-template-columns:1fr}.alternate{padding:45px 14px}.chart-tool-label{font-size:9px}}
 @media(max-width:380px){.market-stat:nth-of-type(4){display:none}.timeframes{gap:6px}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important}}
+
+/* Mobile M2 trading workspace: avoid horizontal overflow in top bars. */
+@media(max-width:650px){
+.global-header{height:auto;min-height:55px;flex-wrap:wrap;gap:0;padding:8px 10px}
+.header-right{order:2;margin-left:auto}
+.topnav{order:3;display:flex;justify-content:space-evenly;height:38px;width:100%;margin-top:7px;border-top:1px solid var(--edge);gap:18px}
+.toplink{font-size:11px}.toplink.external{display:none}
+.market-line{justify-content:space-between}
+.market-line .market-stat:not(.ledger){display:none}
+.market-line .market-stat.ledger{margin-left:auto;min-width:130px}
+.announcement{gap:10px}
+}

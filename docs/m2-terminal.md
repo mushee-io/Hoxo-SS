@@ -28,3 +28,7 @@ Develop one coherent trading workspace for Stellar spot, perpetuals, and money m
 
 ## Pending
 Hosted preview/browser visual verification remains blocked by the Vercel 403 project-creation permission. M3 real-wallet QA and M5–M14 network markets, clearing and margin contracts are separate milestones.
+
+## Browser smoke suite
+
+The independent CI job **M2 Chromium trading terminal smoke** starts a local static server and launches headless Chromium, tests Spot/Perp deep links, market filters, chart/order-book tabs, limit-price drafts, mobile Escape-to-close, disabled execution and 375px horizontal-overflow. It intentionally blocks third-party requests, while the separate real Testnet Horizon check verifies external network reachability. A hosted Vercel visual review is still required.
