@@ -168,7 +168,7 @@ fn unrelated_token_donation_is_not_accounted_as_pool_yield_or_mint(){
     assert!(m.solvent()); // no admin sweep of the unsolicited surplus
 }
 #[test]
-fn wrong_network_denies_real supply_and_redemption(){
+fn wrong_network_denies_real_supply_and_redemption(){
     let (e,id,_,alice,_,_)=setup();
     open(&e,&id);
     let m=MoneyMarketClient::new(&e,&id);
