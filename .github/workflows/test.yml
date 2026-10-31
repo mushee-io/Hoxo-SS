@@ -111,9 +111,18 @@ jobs:
         run: cargo test -p hoxo-risk-gate --lib
       - name: Run M9 atomic spot settlement contract tests
         run: cargo test -p hoxo-spot-settlement --lib
-      - name: Install Stellar Soroban wasm32v1-none target
+      - uses: stellar/stellar-cli@v28.1.0
+      - name: Install official Stellar Soroban WASM target
         run: rustup target add wasm32v1-none
-      - name: Compile M9 Wasm smoke artifact (not a deployable release claim)
+      - name: Build M9 WASM with official stellar contract build
         run: |
-          cargo build --release --target wasm32v1-none -p hoxo-spot-settlement
+          stellar --version
+          stellar contract build --package hoxo-spot-settlement
           test -s target/wasm32v1-none/release/hoxo_spot_settlement.wasm
+          sha256sum target/wasm32v1-none/release/hoxo_spot_settlement.wasm
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hoxo-m9-wasm-review-only
+          path: target/wasm32v1-none/release/hoxo_spot_settlement.wasm
+          if-no-files-found: error
+          retention-days: 7

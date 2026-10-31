@@ -4,7 +4,7 @@
 
 ## Prerequisites
 - A reviewed and funded Stellar **Testnet** operator account and admin address, managed through external secure key storage; never commit seeds or secret keys.
-- Stellar CLI **major version >= Soroban SDK major 29**. The published CLI 28.1.0 cannot be asserted compatible with SDK29 builds by the official SDK guidance.
+- Official Stellar CLI version **at least 25.2.0** is required by Soroban SDK build scripts; current CI uses pinned `stellar/stellar-cli@v28.1.0` and must pass a real `stellar contract build` against SDK 29.0.1 before compatibility is considered verified.
 - Rust >=1.84 with `wasm32v1-none` target, audit-approved contract build configuration and reproducible dependency lock.
 - A dedicated valueless test asset with issuer and token contract address independently verified on Stellar Testnet; do not assume USDC or BTC exists at a given issuer.
 - A permanent storage TTL keeper/archival runbook for per-user balances, totals and allowlist records. Without it, a long-inactive balance can become archived.
@@ -12,7 +12,7 @@
 ## Required evidence before enabling deposits
 
 1. Run `cargo test --workspace --all-targets` and sign off outstanding invariants and audit findings.
-2. With a compatible CLI, run `stellar contract build`; record final WASM checksum and size, source revision, CLI version, and `Cargo.lock`.
+2. With a compatible CLI, run `stellar contract build --package hoxo-spot-settlement`; record final WASM checksum and size, source revision, CLI version, and `Cargo.lock`.
 3. Use only `--network testnet` and an approved operator identity. Invoke constructor with authorised admin. Do not deploy a contract with an unowned, disposable admin key.
 4. Fetch the transaction receipt and finalised ledger, verify its success and independently query the contract instance via Stellar RPC.
 5. Register the resulting valid `C...` contract ID as **candidate** in `registry/testnet.json`, with actual deployment hash/ledger; the registry does not assert on-chain verification by itself.
