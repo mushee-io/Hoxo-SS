@@ -74,7 +74,7 @@ test("M23 plan requires real fixed-name valid WASM bytes and preserves SHA256 wi
   assert.equal(plan.deploymentConfirmed,false);
   assert.equal(plan.signerStored,false);
   assert.deepEqual(plan.missingArtifacts,[]);
-  assert.throws(()=>m23DeploymentPlan({wasmDirectory:dir,registry:r,
+  await assert.rejects(()=>m23DeploymentPlan({wasmDirectory:dir,registry:r,
     sourceRevision:"not-a-full-commit"}),/revision/);
   await writeFile(join(dir,M23_PACKAGES[0].wasm),"NOT WASM");
   await assert.rejects(()=>m23DeploymentPlan({wasmDirectory:dir,registry:r}),/WASM header/);
