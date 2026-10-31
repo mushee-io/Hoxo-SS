@@ -32,3 +32,17 @@ Reconciliation now requires actual token holdings to cover **user claims + tradi
 Run `cargo test -p hoxo-perp-clearinghouse --lib`, `stellar contract build --package hoxo-perp-clearinghouse`, and `npm run check:readiness`.
 
 Release requires reviewed genuine Testnet oracle/risk contracts, independent signed wallet liquidation tests, pre-funded on-chain insurance, authenticated historical funding recovery, keeper operations, bad debt/reorg/TTL handling, and an external security and economic audit. **No public perp trading or custody must be enabled on these source tests alone.**
+
+## Verified build evidence — 31 October 2026
+
+[GitHub Actions run #41199287473](https://github.com/mushee-io/Hoxo-SS/actions/runs/41199287473) passed **all seven jobs** for commit `fe83feac619c47e4c999b05d4cd721bb2c43e4e7`:
+
+- Soroban M12–M14 clearinghouse tests **39/39** (including 12 new M14 insurance/liquidation scenarios).
+- All native Rust/Soroban crates **104/104**: 14 risk math, 5 M6 vault, 2 M7 gate, 12 M9 settlement, 32 M10–M11 lending, 39 M12–M14 perpetual.
+- JavaScript **91/91**, Chromium **8/8**, signed matching and non-broadcast M9 SDK tests green.
+- Real *read-only* Stellar Testnet RPC/Horizon connectivity checks passed. **No Hoxo contract deploy or real user trading occurred.**
+- Pinned official Stellar CLI v28.1.0 `stellar contract build --package hoxo-perp-clearinghouse` optimized a valid `wasm32v1-none` artifact to **36,911 bytes**.
+- M12–M14 WASM SHA-256: `89ad6bf1e7d8b6e47019b8ca2d7c2f0e727638ec66cad764418034cd86ff9c68`.
+- [Review-only compiled M12–M14 WASM artifact](https://github.com/mushee-io/Hoxo-SS/actions/runs/41199287473/artifacts/13042086517), subject to GitHub artifact retention.
+
+The **source/build milestone is verified**. Release remains blocked: no independently audited oracle, on-chain canonical M7 risk-controller contract, approved valueless token, signed Testnet positions, verified insurance funding, liquidations, historical funding recovery, long-running keeper, public beta or external security/economic audit.
