@@ -363,7 +363,7 @@ fn m11_actual_borrowed_debt_blocks_new_custody_routes_until_repaid(){
     assert!(r.try_redeem_to_margin(&f.buyer,&UNIT).is_err());
     assert_eq!(m.totals().user_claims_e7,before_claims);
     assert_eq!(l.pool().cash_e7,before_cash);
-    assert!(l.repay(&f.buyer,&f.buyer,&(7*UNIT)).is_ok());
+    assert_eq!(l.repay(&f.buyer,&f.buyer,&(7*UNIT)),5*UNIT);
     assert_eq!(l.outstanding_debt_e7(),0);
     assert_eq!(r.redeem_to_margin(&f.buyer,&(20*UNIT)).tokens_e7,20*UNIT);
     assert!(m.solvent()&&l.solvent());
