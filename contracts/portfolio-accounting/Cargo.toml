@@ -1,0 +1,19 @@
+[package]
+name = "hoxo-portfolio-accounting"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Testnet-only read-only M15/M11/M12 consolidated nominal asset/liability reconciliation; never a leverage oracle"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+soroban-sdk = "=29.0.1"
+
+[dev-dependencies]
+soroban-sdk = { version = "=29.0.1", features = ["testutils"] }
+hoxo-unified-margin = { path = "../unified-margin" }
+hoxo-money-market = { path = "../money-market" }
+hoxo-perp-clearinghouse = { path = "../perp-clearinghouse" }
+hoxo-custody-router = { path = "../custody-router" }

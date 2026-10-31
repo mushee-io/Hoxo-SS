@@ -21,6 +21,8 @@ const funding=await read("contracts/perp-clearinghouse/src/m13.rs");
 const liquidation=await read("contracts/perp-clearinghouse/src/m14.rs");
 const unified=await read("contracts/unified-margin/src/lib.rs");
 const custodyRouter=await read("contracts/custody-router/src/lib.rs");
+const portfolioAccounting=await read("contracts/portfolio-accounting/src/lib.rs");
+const lendingAccounting=await read("contracts/money-market/src/lib.rs");
 const chainRisk=await read("contracts/canonical-risk/src/lib.rs");
 const sandbox=snapshot(emptyBook(),"xlm-usdc-spot");
 const advanced=await read("matching/advanced.mjs");
@@ -195,6 +197,14 @@ const invariants={
     custodyRouter.includes('fn ensure_perp(')&&
     custodyRouter.includes('financial_beta_approved:false')&&
     custodyRouter.includes('isolated_not_shared:true'),
+  crossProductLiabilitiesReadOnly:portfolioAccounting.includes('pub fn snapshot(')&&
+    portfolioAccounting.includes('m11_projected_receivables_e7')&&
+    portfolioAccounting.includes('full_perp_exposure_enumerated')&&
+    portfolioAccounting.includes('unified_leverage_authorized:false')&&
+    portfolioAccounting.includes('financial_beta_authorized:false')&&
+    lendingAccounting.includes('pub fn projected_portfolio(')&&
+    lendingAccounting.includes('pub fn current_outstanding_debt_e7(')&&
+    custodyRouter.includes('l.current_outstanding_debt_e7()'),
   m24NoMainnetApproval:m24Gate.includes('NO_GO_INDEPENDENT_APPROVAL_AND_LIVE_PROOF_MISSING')&&
     m24Gate.includes('mainnetLaunchApproved:false')&&
     m24Gate.includes('mainnetOperationsEnabled:false'),
