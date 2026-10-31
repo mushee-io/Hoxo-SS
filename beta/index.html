@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#101316">
+<meta name="description" content="Hoxo SS Stellar Testnet beta readiness. Read-only developer preview; no live Hoxo deposits, trading, borrowing or liquidity.">
+<title>HOXO SS | Testnet beta readiness</title>
+<link rel="icon" href="../assets/icon.svg" type="image/svg+xml">
+<style>
+:root{color-scheme:dark;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#101316;color:#edf1ee;font-synthesis:none}
+*{box-sizing:border-box}body{margin:0;line-height:1.6}a{color:inherit}a:focus-visible{outline:2px solid #b4f1aa;outline-offset:4px}
+header{border-bottom:1px solid #303936}nav{max-width:1080px;margin:auto;padding:20px 25px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.logo{text-decoration:none;font-size:17px;font-weight:850;letter-spacing:-.7px}.logo b{color:#b4f1aa}.top{display:flex;gap:24px;font-size:13px;color:#aebeb6}
+main{max-width:1080px;margin:auto;padding:76px 25px 90px}
+.eyebrow{display:inline-block;color:#b4f1aa;letter-spacing:2px;text-transform:uppercase;font-size:11px;font-weight:800}
+h1{font-size:clamp(39px,6vw,72px);letter-spacing:-.055em;line-height:1.06;margin:23px 0;max-width:870px}
+.lead{max-width:690px;font-size:18px;color:#b3c0bb}
+.warning{border:1px solid #64553a;background:#241f18;padding:18px 22px;border-radius:12px;margin:32px 0 45px;display:flex;gap:15px;align-items:flex-start}
+.warning strong{color:#efcf94}.warning p{margin:4px 0 0;color:#d0c1a7;font-size:14px}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:22px 0 35px}
+.panel{background:#1a2020;border:1px solid #35413c;padding:23px;border-radius:13px;min-height:190px}
+.panel .count{color:#a7f5a9;font-size:27px;font-weight:800;letter-spacing:-1px}
+.panel h2{font-size:18px;margin:8px 0}.panel p{font-size:14px;color:#aebeb6;margin:9px 0}
+.section{margin:44px 0 16px;font-weight:750;font-size:23px;letter-spacing:-.03em}
+ul{margin:0;padding:0;list-style:none}li{padding:13px 0;border-bottom:1px solid #323c39;font-size:14px;color:#c4cdc8}li span{color:#ebbd80;margin-right:13px;font-weight:800}
+.links{display:flex;flex-wrap:wrap;gap:12px;margin-top:35px}.link{border:1px solid #526c5a;border-radius:7px;padding:12px 20px;text-decoration:none;font-size:13px;font-weight:750}.link:hover{border-color:#b4f1aa}.link.primary{background:#b4f1aa;color:#102016}
+footer{padding:25px;border-top:1px solid #303936;text-align:center;color:#8da298;font-size:12px}
+@media(max-width:720px){main{padding-top:46px}.grid{grid-template-columns:1fr}.top{gap:12px;flex-wrap:wrap}.warning{padding:16px}}
+</style>
+</head>
+<body>
+<header><nav aria-label="Main navigation"><a class="logo" href="../">✳ HOXO<b>/</b>SS</a><div class="top"><a href="../">Home</a><a href="../app/">Terminal</a><a href="https://github.com/mushee-io/Hoxo-SS" target="_blank" rel="noopener noreferrer">Source</a></div></nav></header>
+<main id="main">
+<span class="eyebrow">M23 · Stellar Testnet development</span>
+<h1>The public beta is being prepared. Not opened.</h1>
+<p class="lead">Hoxo SS is building a unified spot, perpetuals and lending workspace. This page describes development readiness, not a deployed financial exchange or an invitation to deposit assets.</p>
+<div class="warning" role="status" aria-label="Public beta not live"><div aria-hidden="true">⚠</div><div><strong>Trading and deposits are disabled</strong><p>No verified Hoxo contract deployments, audited price oracle, real M21 end-to-end transaction proofs or independent M22 audit are available. Do not transfer funds to any alleged Hoxo contract address.</p></div></div>
+<div class="grid">
+<section class="panel"><div class="count">01</div><h2>Read-only terminal</h2><p>Explore the interface and supported Stellar Testnet network diagnostics without Hoxo order execution.</p></section>
+<section class="panel"><div class="count">02</div><h2>Valueless test gas</h2><p>Developer wallets may use Stellar's official Testnet Friendbot. This is not an exchange token, trading balance or Hoxo incentive programme.</p></section>
+<section class="panel"><div class="count">03</div><h2>Independent verification</h2><p>Real contract deployments, four-wallet transaction proofs, security audit and incident drills must be completed before opening.</p></section>
+</div>
+<h2 class="section">Release requirements</h2>
+<ul aria-label="Outstanding release gates">
+<li><span>OPEN</span> Audited Stellar Testnet contract deployments and verified compiled WASM hashes</li>
+<li><span>OPEN</span> Authorised canonical oracle, risk controls and integrated M15 collateral</li>
+<li><span>OPEN</span> Real M21 deposit, settlement, borrow, perp, repay and withdrawal receipts</li>
+<li><span>OPEN</span> Independent M22 audit, remediation and actual on-chain fault recovery</li>
+<li><span>OPEN</span> Production-grade status alerts, isolated beta asset and approved launch procedures</li>
+</ul>
+<div class="links"><a class="link primary" href="../app/">View read-only terminal</a><a class="link" href="https://github.com/mushee-io/Hoxo-SS/blob/main/docs/m23-beta-readiness.md" rel="noopener noreferrer" target="_blank">Developer runbook</a><a class="link" href="https://developers.stellar.org/" rel="noopener noreferrer" target="_blank">Stellar developer tools</a><a class="link" href="https://stellar.expert/explorer/testnet" rel="noopener noreferrer" target="_blank">Testnet explorer</a></div>
+<p style="margin-top:35px;color:#899f94;font-size:12px">This static readiness snapshot does not report live network status or certify security. Technical checks and current release blockers are maintained in the repository; a green CI run does not constitute an external audit.</p>
+</main>
+<footer>HOXO SS · Stellar Testnet development · No mainnet assets · No public trading</footer>
+</body>
+</html>
