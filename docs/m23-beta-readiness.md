@@ -77,3 +77,8 @@ See [SECURITY.md](../SECURITY.md). Privately alert maintainers via GitHub's priv
 ### M5 candidate oracle in source
 
 `contracts/oracle-adapter` now implements a single-market two-publisher Testnet price candidate with 120s freshness and fail-closed pause; it is neither deployed nor independently audited. The M23 WASM inventory now expects seven packages including `hoxo_oracle_adapter.wasm`. See [the operator handoff](testnet-execution-handoff.md).
+
+
+### M15 spot-risk contract candidate (after M24)
+
+The deployment inventory's `risk-engine` role has been upgraded from the standalone M7 analytical preview artifact to the new `hoxo_canonical_risk.wasm`. It provides **two-operation owner-signed, token-backed SPOT-only reservation approval** based on M15 and two-source Testnet candidate oracle. M11 borrowing and M12 perpetuals are still hard denied, and M9 two-token spot DvP remains separate. This source integration does not change the M23 release gate: public financial beta stays CLOSED. See [two-step permit and re-entry analysis](m15-chain-backed-risk.md).

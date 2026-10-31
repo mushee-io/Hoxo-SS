@@ -91,3 +91,10 @@ For each real Testnet deployment, collect **actual** source revision, CI build a
 | Mainnet | **NO-GO** |
 
 Reference: official [Stellar CLI deployment documentation](https://developers.stellar.org/docs/tools/cli/cookbook/upload-deploy). The network may upgrade/reset; always revalidate current protocol compatibility, storage TTLs and installed WASM before each deployment.
+
+
+## M15 chain-backed risk change
+
+The Testnet `risk-engine` role now maps to **`hoxo_canonical_risk.wasm`** (the original M7 `hoxo_risk_gate.wasm` remains a separate *preview-only* analytical contract). Its constructor must receive operator-verified `riskVaultContract`, `valuelessTokenContract`, `riskOracleContract`, `marketId` and a fixed bounded `maxOwnerReservedE7` of at most 1,000,000,000,000 base units (100,000 tokens). This operator config uses **public C-addresses only**, never private keys, and still requires admin authorisation.
+
+Use the new two-stage protocol with genuine wallet permissions: `CanonicalRisk.prepare_spot_reservation(owner,id,amount_e7)` first, then `UnifiedMargin.reserve(owner,bound_adapter,Spot,id,amount_e7)` within 20 ledgers. M15's own free-token, ownership and adapter checks stay authoritative. A prior native Soroban integration test exposed a forbidden recursive call to M15, and the new permit approach removes it. The resulting contract can only reserve existing collateral; **no M9 two-token DvP, lending borrow, perp open or real M21 lifecycle** is authorised. See [M15 risk design](m15-chain-backed-risk.md).

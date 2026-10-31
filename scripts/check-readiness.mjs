@@ -20,6 +20,7 @@ const perp=await read("contracts/perp-clearinghouse/src/lib.rs");
 const funding=await read("contracts/perp-clearinghouse/src/m13.rs");
 const liquidation=await read("contracts/perp-clearinghouse/src/m14.rs");
 const unified=await read("contracts/unified-margin/src/lib.rs");
+const chainRisk=await read("contracts/canonical-risk/src/lib.rs");
 const sandbox=snapshot(emptyBook(),"xlm-usdc-spot");
 const advanced=await read("matching/advanced.mjs");
 const matchingCore=await read("matching/core.mjs");
@@ -174,6 +175,16 @@ const invariants={
   m23NoUnattendedFaucet:m23Faucet.includes('M23_FAUCET_ACK')&&
     m23Faucet.includes('probeInfrastructure')&&
     !m23Faucet.includes('sendTransaction('),
+  m15ChainRiskTwoStageNoReentry:chainRisk.includes('prepare_spot_reservation(')&&
+    chainRisk.includes('e.storage().persistent().remove(&key)')&&
+    chainRisk.includes('pub fn approve_reservation(')&&
+    unified.includes('pub fn collateral_asset(e:Env)->Address')&&
+    chainRisk.includes('pub fn approve_borrow(')&&
+    chainRisk.includes('pub fn approve_open('),
+  m15ChainRiskPerpsStillDenied:chainRisk.includes('_proposed_signed_base_e7:i128,_requested_margin_e7:i128,_mark_e7:i128')&&
+    chainRisk.includes('_proposed_amount_e7:i128,_projected_debt_e7:i128')&&
+    chainRisk.includes('cross_product_margin_active:false')&&
+    !chainRisk.includes('fn sendTransaction('),
   m24NoMainnetApproval:m24Gate.includes('NO_GO_INDEPENDENT_APPROVAL_AND_LIVE_PROOF_MISSING')&&
     m24Gate.includes('mainnetLaunchApproved:false')&&
     m24Gate.includes('mainnetOperationsEnabled:false'),

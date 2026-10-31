@@ -40,3 +40,8 @@ Use `cargo test -p hoxo-unified-margin --lib` and `stellar contract build --pack
 - [Review-only M15 compiled WASM artifact](https://github.com/mushee-io/Hoxo-SS/actions/runs/41201917116/artifacts/13042892690), subject to GitHub artifact retention.
 
 **Result:** canonical reservation/settlement source and contract build verified. **Not achieved:** deployed canonical margin, approved real risk authority, protocol-specific M9/M11/M12 custody integration, cross-asset pricing and haircuts, on-chain debt/position risk netting, independently signed Testnet reservation/settlement receipts, or external security/economic audit. Do not call this a live unified-margin exchange.
+
+
+## New on-chain risk integration (subsequent work)
+
+The new `hoxo-canonical-risk` contract implements a **spot-only**, chain-backed M15 reservation guard. Due to Soroban's prohibition on contract re-entry, it uses a two-operation, owner-signed, exact-ID permit instead of attempting `M15.reserve → Risk.approve → M15.account`. The risk contract checks real M15 state, backing token and live two-source candidate oracle at preflight, then consumes the immutable short-lived permit without recursing from M15. Borrowing and perpetual approvals are intentionally hard-denied. The generic role-enabled flags in M15 are NOT evidence of an integrated leveraged product. See [full chain-backed risk design](m15-chain-backed-risk.md). **No real Testnet financial transactions have been completed, and M9/M11/M12 escrow remains separate.**
