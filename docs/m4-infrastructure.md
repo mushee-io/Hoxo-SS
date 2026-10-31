@@ -41,3 +41,9 @@ Custom providers are not trusted by hostname alone: `getNetwork` must return `Te
 2. CI's live Testnet job independently contacts the genuine SDF public RPC and Horizon. Network downtime reports a failed check, not a green badge.
 3. Chromium tests open `/app/?market=xlm-usdc-spot#network`, confirm the registry shows zero verified contracts and ensure the disabled trade/deposit controls remain disabled.
 4. Hosted browser and actual Freighter acceptance remain pending due to existing Vercel project creation HTTP 403. No user funds have been moved.
+
+## Verification result — 31 October 2026
+
+[GitHub Actions run 41189342330](https://github.com/mushee-io/Hoxo-SS/actions/runs/41189342330) completed successfully with **four passing jobs**: 51/51 unit/integration tests, 8/8 headless Chromium tests, Horizon Testnet smoke, and read-only RPC/Horizon/registry verification. The live infrastructure job observed Horizon ledger **5,483,142** and Stellar RPC ledger **5,483,143** (lag 1, within tolerance) with exact Testnet passphrase and healthy RPC. These are a **point-in-time** check, not a claim of ongoing uptime or contract deployment.
+
+M4 code and automated tests are complete. Hosted visual verification still requires permission to create/deploy the Vercel project (previous HTTP 403). M3 real Freighter extension acceptance also remains pending. All six Hoxo contract roles are still marked **planned** with no contract IDs.

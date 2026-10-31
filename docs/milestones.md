@@ -12,7 +12,7 @@ This plan deliberately distinguishes a rendered interface, a read-only wallet in
 | M1 | Nado-inspired landing page | Responsive landing, responsive menu, terminal navigation, live Horizon passphrase/ledger check that fails closed, no misleading market data | Implemented; automated tests added; deployment and visual verification pending |
 | M2 | Trading terminal skeleton | Searchable reference markets, Spot/Perp context, chart/book/timeframes, input-only order drafts, portfolio/account views; no fake market activity | Implemented in code; browser preview verification still pending |
 | M3 | Freighter wallet and balances | Freighter extension API, strict Testnet/StrKey checks, verified Horizon holdings, refresh/disconnect and guarded Friendbot; no signing | Implemented; 38/38 unit and 7/7 Chromium tests passed, real Freighter acceptance and hosted preview pending |
-| M4 | Stellar Testnet infrastructure | Strict Testnet RPC/Horizon handshake, health/ledger reconciliation, public HTTPS configuration, Friendbot safeguard, registry, browser diagnostics and CI | Code implemented; live RPC CI + browser acceptance to verify; no exchange contracts deployed |
+| M4 | Stellar Testnet infrastructure | Strict Testnet RPC/Horizon handshake, health/ledger reconciliation, public HTTPS configuration, Friendbot safeguard, registry, browser diagnostics and CI | Implemented; 51/51 tests, 8/8 Chromium, live RPC + Horizon verified in CI; hosted visual acceptance pending |
 
 ## Phase 2 — Protocol core
 
