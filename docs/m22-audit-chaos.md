@@ -13,6 +13,8 @@
 - Loss-making long/short price shocks reduce equity; invalid/stale/future oracle values and overflow fail closed.
 - Deterministic seeds make a failing case reproducible; **this is property-based testing of a reference risk model, not an independent formal proof**.
 
+**Soroban M15 deterministic state-transition stress** (source: `contracts/unified-margin/src/tests.rs`) exercises 64 seeded deposit-backed spot/perp/lending reservations in the test environment, partial settlement, cancellation/release, pause/unpause, replay denial, per-wallet claim conservation, exact token-vault solvency, and final zero-liability withdrawals. This uses a mock permissive risk authority and is **not connected to live M9/M11/M12 adapters** or authenticated real Testnet collateral.
+
 **JavaScript economic stress/mutation tests** (source: `tests/m22-risk-stress.test.mjs`) exercise 2,000 account/debt/withdrawal scenarios, 1,000 perp shock scenarios and 1,000 oracle mutation scenarios. Candidate prices must never produce trade authorisation, even when samples are mathematically plausible.
 
 **Storage and infrastructure chaos** (source: `tests/m22-chaos.test.mjs`) injects disk exhaustion before a checkpoint append, truncates/checksum-tampers checkpoint history, breaks RPC event ingestion, changes a ledger hash during a scan, trips the oracle operator circuit breaker, stresses the bounded request limiter, and refuses write-capable RPC methods in M21. All tests are isolated and make **zero real transfers, spot settlements, borrowings or perpetual trades**.
