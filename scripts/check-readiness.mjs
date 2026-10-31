@@ -36,6 +36,9 @@ const m19Runner=await read("scripts/start-indexer.mjs");
 const m22Gate=await read("security/m22-review.mjs");
 const m23Gate=await read("beta/readiness.mjs");
 const m23Faucet=await read("beta/faucet.mjs");
+const m24Gate=await read("mainnet/readiness.mjs");
+const m24Evidence=await read("mainnet/evidence.mjs");
+const m24Incident=await read("mainnet/incident.mjs");
 const invariants={
   noVerifiedExchangeContracts:registry.deployedVerified===0 && registry.candidateContracts===0,
   noApprovedRiskOracle:markets.oracleStatus.startsWith("HALTED") && markets.configured===0,
@@ -171,6 +174,14 @@ const invariants={
   m23NoUnattendedFaucet:m23Faucet.includes('M23_FAUCET_ACK')&&
     m23Faucet.includes('probeInfrastructure')&&
     !m23Faucet.includes('sendTransaction('),
+  m24NoMainnetApproval:m24Gate.includes('NO_GO_INDEPENDENT_APPROVAL_AND_LIVE_PROOF_MISSING')&&
+    m24Gate.includes('mainnetLaunchApproved:false')&&
+    m24Gate.includes('mainnetOperationsEnabled:false'),
+  m24EvidenceIsNotAuditorApproval:m24Evidence.includes('independentAuditorSignatureVerified:false')&&
+    m24Evidence.includes('launchPermitted:false'),
+  m24IncidentDrillsNotOnchain:m24Incident.includes('mode:"OFFLINE_TABLETOP_SIMULATION_ONLY"')&&
+    m24Incident.includes('onchainPauseExecuted:false')&&
+    m24Incident.includes('fundsMoved:false'),
 
 
 };
@@ -200,6 +211,7 @@ console.log(JSON.stringify({
   M21:"read-only signed receipt proof checker; no real Hoxo lifecycle receipts",
   M22:"seeded off-chain fuzz/chaos tests and blocked external-audit release gate; no independent audit or live on-chain chaos",
   M23:"read-only beta status page, reviewed WASM SHA inventory, operator-only Testnet Friendbot, one-shot endpoint monitor; financial beta NOT OPEN",
+  M24:"12-point mainnet NO-GO; offline governance/liquidity/audit evidence packet, proposed risk stress and tabletop response; NO mainnet operations",
  },
  invariants
 },null,2));
