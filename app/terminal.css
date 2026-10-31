@@ -35,3 +35,14 @@
 .market-line .market-stat.ledger{margin-left:auto;min-width:130px}
 .announcement{gap:10px}
 }
+
+/* M3 — wallet connection + testnet funding controls */
+.wallet-status{font:10px/1.5 var(--mono);color:var(--lime);border:1px solid #3f5732;background:#1d291e;padding:9px 10px;margin:12px 0 2px;overflow-wrap:anywhere}
+.wallet-status.warning{color:#e6c37a;border-color:#65583c;background:#2c2b20}.wallet-status.error{color:#f39e9e;border-color:#7e4b4b;background:#2e2327}
+.wallet-toolbar{display:flex;gap:6px;margin:0 0 14px}.wallet-toolbar button{flex:1;min-width:0;background:#252e30;color:#c0dbd0;border:1px solid #3e4d47;padding:9px 4px;border-radius:2px;font:9px var(--mono)}
+.wallet-toolbar button:disabled{opacity:.4;cursor:not-allowed}.wallet-explorer{display:block;margin:0 0 17px;color:#c1ff62;font:10px/1.5 var(--mono);text-decoration:underline;text-underline-offset:4px}
+.faucet-confirm{padding:11px;margin:10px 0;background:#28281c;border:1px solid #71683c;color:#e4d5a0}.faucet-confirm p{font:10px/1.6 var(--mono);margin:0 0 12px}
+.faucet-confirm>div{display:flex;gap:6px}.faucet-confirm button{flex:1;background:#49503a;color:#eef1e1;border:1px solid #707d53;border-radius:2px;padding:10px 4px;font:9px var(--mono)}
+.faucet-confirm #cancelFaucet{background:transparent;border-color:#63665c}
+.wallet-help{display:flex;flex-direction:column;gap:7px;margin-top:14px;font:10px var(--mono);color:#788b88}.wallet-help a{color:#c1ff62;text-decoration:underline;text-underline-offset:3px}
+.balance-grid>div{overflow-wrap:anywhere}.balance-grid{max-width:900px}.portfolio-body .balance-head{color:#aab4ba}.wallet-balance-meta{font:10px var(--mono);color:#9ba4ac;margin-top:10px!important}.wallet-account-link{color:var(--lime);text-decoration:underline}

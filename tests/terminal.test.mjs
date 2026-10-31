@@ -67,7 +67,9 @@ test("M2 terminal exposes market selection, sections and disabled contract actio
   assert.match(css,/@media\(max-width:650px\)/);
   assert.match(ui,/new URLSearchParams\(window.location.search\)/);
   assert.doesNotMatch(ui,/signTransaction|submitTransaction|sendTransaction|contract\.call/);
-  assert.match(wallet,/data.network_passphrase !== NETWORK_PASSPHRASE/);
+  assert.match(wallet,/probeTestnet/);
+  const walletUi=await readFile(resolve(root,"app/wallet-ui.mjs"),"utf8");
+  assert.match(walletUi,/createWalletSession/);
 });
 test("M2 browser entrypoints parse without syntax errors",()=>{
   for(const path of ["app/terminal-state.mjs","app/terminal-ui.mjs","app/terminal.js"]){
