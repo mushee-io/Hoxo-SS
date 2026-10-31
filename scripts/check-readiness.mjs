@@ -22,6 +22,7 @@ const liquidation=await read("contracts/perp-clearinghouse/src/m14.rs");
 const unified=await read("contracts/unified-margin/src/lib.rs");
 const custodyRouter=await read("contracts/custody-router/src/lib.rs");
 const portfolioAccounting=await read("contracts/portfolio-accounting/src/lib.rs");
+const perpPositionRisk=await read("contracts/perp-clearinghouse/src/lib.rs");
 const lendingAccounting=await read("contracts/money-market/src/lib.rs");
 const chainRisk=await read("contracts/canonical-risk/src/lib.rs");
 const sandbox=snapshot(emptyBook(),"xlm-usdc-spot");
@@ -205,6 +206,17 @@ const invariants={
     lendingAccounting.includes('pub fn projected_portfolio(')&&
     lendingAccounting.includes('pub fn current_outstanding_debt_e7(')&&
     custodyRouter.includes('l.current_outstanding_debt_e7()'),
+  m12OwnerExposureIndexedRisk:perpPositionRisk.includes('pub fn owner_exposure(')&&
+    perpPositionRisk.includes('pub fn owner_position_ids(')&&
+    perpPositionRisk.includes('remove_position_owner(&e,&p.long,&id)')&&
+    perpPositionRisk.includes('MAX_OWNER_POSITIONS:u32=32')&&
+    portfolioAccounting.includes('pub fn spot_reservation_safe(')&&
+    portfolioAccounting.includes('m12_owner_marked_complete')&&
+    portfolioAccounting.includes('unified_leverage_authorized:false')&&
+    chainRisk.includes('pub fn bind_products(')&&
+    chainRisk.includes('SpotPortfolioClient::new(&e,&portfolio).spot_reservation_safe(')&&
+    chainRisk.includes('CreditLedgerClient::new(&e,&lend).current_outstanding_debt_e7()!=0')&&
+    chainRisk.includes('PerpPositionsClient::new(&e,&perp).active_positions()!=0'),
   m24NoMainnetApproval:m24Gate.includes('NO_GO_INDEPENDENT_APPROVAL_AND_LIVE_PROOF_MISSING')&&
     m24Gate.includes('mainnetLaunchApproved:false')&&
     m24Gate.includes('mainnetOperationsEnabled:false'),

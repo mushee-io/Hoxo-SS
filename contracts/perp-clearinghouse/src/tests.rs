@@ -842,3 +842,105 @@ fn candidate_oracle_perp_open_close_sandbox_reconciles_two_wallet_collateral(){
     assert!(c.try_close(&id(&e,199)).is_err()); // replay prohibited
     assert!(!o.execution_approved());
 }
+
+
+#[test]
+fn m12_position_index_tracks_two_sides_and_marked_zero_sum_pnl(){
+    let (e,market,_,long,short,_)=setup();
+    let oracle=configure(&e,&market);
+    fund(&e,&market,&long,&short);
+    let c=PerpClearinghouseClient::new(&e,&market);
+    assert_eq!(c.owner_position_ids(&long).len(),0);
+    open(&e,&market,&long,&short,191);
+    assert_eq!(c.owner_position_ids(&long).len(),1);
+    assert_eq!(c.owner_position_ids(&short).get(0),Some(id(&e,191)));
+    let initial=c.owner_exposure(&long);
+    assert_eq!(initial.active_positions,1);
+    assert_eq!(initial.mark_pnl_e7,0);
+    assert_eq!(initial.initial_locked_e7,10*UNIT);
+    assert_eq!(initial.marked_equity_e7,10*UNIT);
+    assert!(initial.index_complete);
+    assert!(!initial.executable_margin_approved);
+    MockOracleClient::new(&e,&oracle).set(&(11*UNIT),&(11*UNIT),&e.ledger().timestamp());
+    let l=c.owner_exposure(&long);
+    let s=c.owner_exposure(&short);
+    assert_eq!(l.signed_base_e7,4*UNIT);
+    assert_eq!(s.signed_base_e7,-4*UNIT);
+    assert_eq!(l.mark_pnl_e7,4*UNIT);
+    assert_eq!(s.mark_pnl_e7,-4*UNIT);
+    assert_eq!(l.marked_net_pnl_e7+s.marked_net_pnl_e7,0);
+    assert_eq!(l.marked_equity_e7,14*UNIT);
+    assert_eq!(s.marked_equity_e7,6*UNIT);
+    assert!(s.any_liquidation_required);
+    assert!(s.maintenance_deficit_e7>0);
+    assert_eq!(s.insolvency_deficit_e7,0);
+    c.close(&id(&e,191));
+    assert_eq!(c.owner_position_ids(&long).len(),0);
+    assert_eq!(c.owner_position_ids(&short).len(),0);
+    assert_eq!(c.owner_exposure(&long).marked_net_pnl_e7,0);
+    assert!(c.owner_exposure(&long).index_complete);
+}
+
+#[test]
+fn m12_marks_pending_funding_by_wallet_and_fails_closed_when_overdue(){
+    let (e,market,_,long,short,_)=setup();
+    let oracle=configure(&e,&market);
+    fund(&e,&market,&long,&short);
+    let c=PerpClearinghouseClient::new(&e,&market);
+    open(&e,&market,&long,&short,192);
+    e.ledger().with_mut(|l|{l.timestamp+=3600;l.sequence_number+=1;});
+    // 1% index spread, 1/8 funding interval: 4*0.1/8 = 0.05 tokens.
+    MockOracleClient::new(&e,&oracle).set(&(101*UNIT/10),&(10*UNIT),&e.ledger().timestamp());
+    let l=c.owner_exposure(&long);
+    let s=c.owner_exposure(&short);
+    assert_eq!(l.mark_pnl_e7,4*UNIT/10);
+    assert_eq!(l.pending_funding_e7,UNIT/20);
+    assert_eq!(s.pending_funding_e7,-UNIT/20);
+    assert_eq!(l.marked_net_pnl_e7,7*UNIT/20);
+    assert_eq!(l.marked_net_pnl_e7+s.marked_net_pnl_e7,0);
+    assert!(l.price_current);
+    e.ledger().with_mut(|x|{x.timestamp+=28_801;x.sequence_number+=1;});
+    MockOracleClient::new(&e,&oracle).set(&(101*UNIT/10),&(10*UNIT),&e.ledger().timestamp());
+    assert!(c.try_owner_exposure(&long).is_err());
+    assert_eq!(c.owner_position_ids(&long).len(),1);
+}
+
+#[test]
+fn m12_full_liquidation_unindexes_both_wallets_and_never_leaves_ghost_liabilities(){
+    let (e,market,_,long,short,_)=setup();
+    let oracle=configure(&e,&market);
+    fund(&e,&market,&long,&short);
+    let c=PerpClearinghouseClient::new(&e,&market);
+    open(&e,&market,&long,&short,193);
+    MockOracleClient::new(&e,&oracle).set(&(82*UNIT/10),&(82*UNIT/10),&e.ledger().timestamp());
+    assert!(c.owner_exposure(&long).any_liquidation_required);
+    let keeper=Address::generate(&e);
+    assert!(c.liquidate(&id(&e,193),&keeper,&(4*UNIT)).fully_closed);
+    assert_eq!(c.market().open_positions,0);
+    assert_eq!(c.owner_position_ids(&long).len(),0);
+    assert_eq!(c.owner_position_ids(&short).len(),0);
+    assert_eq!(c.owner_exposure(&long).locked_e7,0);
+    assert_eq!(c.owner_exposure(&short).locked_e7,0);
+    assert!(c.solvent());
+}
+
+#[test]
+fn m12_owner_index_capacity_fails_before_reserving_an_unenumerated_position(){
+    let (e,market,_,long,short,_)=setup();
+    configure(&e,&market);
+    let c=PerpClearinghouseClient::new(&e,&market);
+    c.deposit(&long,&(500*UNIT));
+    c.deposit(&short,&(500*UNIT));
+    for i in 0..32u8{
+        open(&e,&market,&long,&short,100+i);
+    }
+    assert_eq!(c.owner_position_ids(&long).len(),32);
+    assert_eq!(c.owner_position_ids(&short).len(),32);
+    assert_eq!(c.market().open_positions,32);
+    assert_eq!(c.owner_exposure(&long).initial_locked_e7,320*UNIT);
+    assert!(c.try_open(&id(&e,150),&long,&short,&(4*UNIT),
+        &(12*UNIT),&(8*UNIT),&(e.ledger().sequence()+20)).is_err());
+    assert_eq!(c.market().open_positions,32);
+    assert_eq!(c.wallet(&long).locked_e7,320*UNIT);
+    assert!(c.solvent());
+}

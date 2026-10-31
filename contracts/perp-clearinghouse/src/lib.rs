@@ -8,7 +8,7 @@
 //! M5 oracle/M7 canonical risk are NOT deployed. Never present as live.
 use soroban_sdk::{
     contract,contractclient,contracterror,contractevent,contractimpl,
-    contracttype,token,Address,BytesN,Env,
+    contracttype,token,Address,BytesN,Env,Vec,
 };
 mod m13;
 mod m14;
@@ -22,6 +22,9 @@ const INITIAL_MARGIN_BPS:i128=2500; // 4x max illustrative leverage
 const MAINT_MARGIN_BPS:i128=1500;
 const MAX_NOTIONAL_E7:i128=1_000_000*SCALE;
 const MAX_OPEN_POSITIONS:u32=1000;
+// Bounded on-chain per-owner index. Existing Testnet contracts are not deployed;
+// any future migration from an older schema needs explicit on-chain verification.
+const MAX_OWNER_POSITIONS:u32=32;
 const TTL_THRESHOLD:u32=100_000;
 const TTL_TARGET:u32=400_000;
 const TESTNET_ID:[u8;32]=[
@@ -57,7 +60,7 @@ pub trait CanonicalRisk {
 #[derive(Clone)]
 pub enum Key {
     Admin, Token, Market, Paused, Oracle, Risk, Totals, Fees, Insurance,
-    Wallet(Address), Position(BytesN<32>),
+    Wallet(Address), Position(BytesN<32>),OwnerPositions(Address),
 }
 #[contracttype]
 #[derive(Clone,Debug,PartialEq,Eq)]
@@ -93,6 +96,28 @@ pub struct Position {
     pub close_price_e7:i128,
     pub long_realised_pnl_e7:i128,
     pub active:bool,
+}
+#[contracttype]
+#[derive(Clone,Debug,PartialEq,Eq)]
+pub struct OwnerExposure {
+    pub owner:Address,
+    pub as_of_sec:u64,
+    pub active_positions:u32,
+    pub signed_base_e7:i128,
+    pub initial_locked_e7:i128,
+    pub mark_pnl_e7:i128,
+    pub pending_funding_e7:i128,
+    pub marked_net_pnl_e7:i128,
+    pub marked_equity_e7:i128,
+    pub maintenance_req_e7:i128,
+    pub maintenance_deficit_e7:i128,
+    pub insolvency_deficit_e7:i128,
+    pub available_e7:i128,
+    pub locked_e7:i128,
+    pub index_complete:bool,
+    pub price_current:bool,
+    pub any_liquidation_required:bool,
+    pub executable_margin_approved:bool,
 }
 #[contracttype]
 #[derive(Clone,Debug,PartialEq,Eq)]
@@ -182,6 +207,36 @@ fn save_wallet(e:&Env,owner:&Address,w:&Wallet){
     let key=Key::Wallet(owner.clone());
     e.storage().persistent().set(&key,w);
     e.storage().persistent().extend_ttl(&key,TTL_THRESHOLD,TTL_TARGET);
+}
+fn positions(e:&Env,owner:&Address)->Vec<BytesN<32>>{
+    e.storage().persistent().get(&Key::OwnerPositions(owner.clone()))
+        .unwrap_or(Vec::new(e))
+}
+fn save_positions(e:&Env,owner:&Address,ids:&Vec<BytesN<32>>){
+    let key=Key::OwnerPositions(owner.clone());
+    e.storage().persistent().set(&key,ids);
+    e.storage().persistent().extend_ttl(&key,TTL_THRESHOLD,TTL_TARGET);
+}
+fn add_position_owner(e:&Env,owner:&Address,id:&BytesN<32>)->Result<(),PerpError>{
+    let mut ids=positions(e,owner);
+    if ids.len()>=MAX_OWNER_POSITIONS{return Err(PerpError::Capacity);}
+    if ids.iter().any(|x|x==*id){return Err(PerpError::DuplicatePosition);}
+    ids.push_back(id.clone());
+    save_positions(e,owner,&ids);
+    Ok(())
+}
+fn remove_position_owner(e:&Env,owner:&Address,id:&BytesN<32>)->Result<(),PerpError>{
+    let mut ids=positions(e,owner);
+    let mut index:u32=0;
+    while index<ids.len(){
+        if ids.get(index)==Some(id.clone()){
+            ids.remove(index);
+            save_positions(e,owner,&ids);
+            return Ok(());
+        }
+        index+=1;
+    }
+    Err(PerpError::Insolvent)
 }
 fn save_position(e:&Env,p:&Position){
     let key=Key::Position(p.id.clone());
@@ -280,6 +335,90 @@ impl PerpClearinghouse {
     /// free canonical margin. Exposes only actual stored open position count.
     pub fn active_positions(e:Env)->u32{totals(&e).open_positions}
     pub fn wallet(e:Env,owner:Address)->Wallet {wallet(&e,&owner)}
+    /// Canonical owner-only active position identifiers. List is bounded,
+    /// updated atomically on open/close/full liquidation and never delegated
+    /// to an off-chain indexer for cross-product risk calculation.
+    pub fn owner_position_ids(e:Env,owner:Address)->Result<Vec<BytesN<32>>,PerpError>{
+        require_testnet(&e)?;
+        Ok(positions(&e,&owner))
+    }
+    /// Positions marked against the current on-chain oracle. This is a
+    /// read-only, one-ledger net PnL + unpaid funding assessment, not a risk
+    /// permission. If oracle is stale, funding is overdue, or any active
+    /// position escapes the owner's index, the read FAILS CLOSED.
+    pub fn owner_exposure(e:Env,owner:Address)->Result<OwnerExposure,PerpError>{
+        require_testnet(&e)?;
+        let ids=positions(&e,&owner);
+        if ids.len()>MAX_OWNER_POSITIONS{return Err(PerpError::Capacity);}
+        let w=wallet(&e,&owner);
+        if w.available_e7<0||w.locked_e7<0{return Err(PerpError::Insolvent);}
+        // Empty indexed accounts cannot infer positions from an absent
+        // ledger. Compare actual locked balance to indexed positions.
+        let q=if ids.is_empty(){None}else{Some(require_price(&e)?)};
+        let mut locked=0i128;
+        let mut signed_base=0i128;
+        let mut pnl=0i128;
+        let mut funding=0i128;
+        let mut marked=0i128;
+        let mut equity=0i128;
+        let mut maintenance=0i128;
+        let mut maintenance_gap=0i128;
+        let mut deficit=0i128;
+        let mut liquidatable=false;
+        for id in ids.iter(){
+            let p:Position=e.storage().persistent().get(&Key::Position(id))
+                .ok_or(PerpError::PositionNotFound)?;
+            if !p.active|| (p.long!=owner&&p.short!=owner){
+                return Err(PerpError::Insolvent);
+            }
+            let price=q.as_ref().ok_or(PerpError::NotConfigured)?;
+            let (gross,f,net)=m14::marked(&p,price,e.ledger().timestamp())?;
+            let quote=m14::quote(&p,price,e.ledger().timestamp(),&m14::insurance(&e))?;
+            let is_long=p.long==owner;
+            let m=if is_long{p.long_margin_e7}else{p.short_margin_e7};
+            let signed=if is_long{p.base_quantity_e7}else{
+                p.base_quantity_e7.checked_neg().ok_or(PerpError::Overflow)?
+            };
+            let side_pnl=if is_long{gross}else{gross.checked_neg().ok_or(PerpError::Overflow)?};
+            let side_funding=if is_long{f}else{f.checked_neg().ok_or(PerpError::Overflow)?};
+            let side_net=if is_long{net}else{net.checked_neg().ok_or(PerpError::Overflow)?};
+            let side_equity=m.checked_add(side_net).ok_or(PerpError::Overflow)?;
+            locked=locked.checked_add(m).ok_or(PerpError::Overflow)?;
+            signed_base=signed_base.checked_add(signed).ok_or(PerpError::Overflow)?;
+            pnl=pnl.checked_add(side_pnl).ok_or(PerpError::Overflow)?;
+            funding=funding.checked_add(side_funding).ok_or(PerpError::Overflow)?;
+            marked=marked.checked_add(side_net).ok_or(PerpError::Overflow)?;
+            equity=equity.checked_add(side_equity).ok_or(PerpError::Overflow)?;
+            maintenance=maintenance.checked_add(quote.maintenance_e7)
+                .ok_or(PerpError::Overflow)?;
+            if side_equity<quote.maintenance_e7 {
+                liquidatable=true;
+                maintenance_gap=maintenance_gap.checked_add(
+                    quote.maintenance_e7.checked_sub(side_equity)
+                        .ok_or(PerpError::Overflow)?).ok_or(PerpError::Overflow)?;
+            }
+            if side_equity<0{
+                deficit=deficit.checked_add(
+                    side_equity.checked_neg().ok_or(PerpError::Overflow)?
+                ).ok_or(PerpError::Overflow)?;
+            }
+        }
+        // A missing or duplicated position in a wallet's index must not
+        // grant capacity or show real locked collateral as available.
+        if locked!=w.locked_e7{return Err(PerpError::Insolvent);}
+        Ok(OwnerExposure{
+            owner,as_of_sec:e.ledger().timestamp(),
+            active_positions:ids.len(),signed_base_e7:signed_base,
+            initial_locked_e7:locked,mark_pnl_e7:pnl,
+            pending_funding_e7:funding,marked_net_pnl_e7:marked,
+            marked_equity_e7:equity,maintenance_req_e7:maintenance,
+            maintenance_deficit_e7:maintenance_gap,
+            insolvency_deficit_e7:deficit,available_e7:w.available_e7,
+            locked_e7:w.locked_e7,index_complete:true,price_current:true,
+            any_liquidation_required:liquidatable,
+            executable_margin_approved:false
+        })
+    }
     pub fn reconciliation(e:Env)->Result<Reconciliation,PerpError>{
         require_testnet(&e)?;
         m13::reconcile(&e)
@@ -512,6 +651,8 @@ impl PerpClearinghouse {
             closed_at_sec:0,close_price_e7:0,long_realised_pnl_e7:0,
             active:true,
         };
+        add_position_owner(&e,&long,&id)?;
+        add_position_owner(&e,&short,&id)?;
         save_position(&e,&pos);
         keep_instance(&e);
         Opened{id,long,short,base_quantity_e7:quantity_e7,
@@ -590,6 +731,8 @@ impl PerpClearinghouse {
         pos.total_fees_paid_e7=pos.total_fees_paid_e7
             .checked_add(assessed).ok_or(PerpError::Overflow)?;
         pos.active=false;pos.close_price_e7=q.mark_e7;
+        remove_position_owner(&e,&pos.long,&id)?;
+        remove_position_owner(&e,&pos.short,&id)?;
         pos.closed_at_sec=e.ledger().timestamp();pos.long_realised_pnl_e7=pnl;
         pos.cumulative_realised_pnl_e7=pos.cumulative_realised_pnl_e7
             .checked_add(pnl).ok_or(PerpError::Overflow)?;
@@ -647,6 +790,8 @@ impl PerpClearinghouse {
             totals.open_positions=totals.open_positions.checked_sub(1).ok_or(PerpError::Insolvent)?;
             f.cumulative_funding_to_short_e7=f.cumulative_funding_to_short_e7
                 .checked_add(funding).ok_or(PerpError::Overflow)?;
+            remove_position_owner(&e,&p.long,&id)?;
+            remove_position_owner(&e,&p.short,&id)?;
             save_position(&e,&next);
             LiquidationResult {
                 position_id:id.clone(),fully_closed:true,

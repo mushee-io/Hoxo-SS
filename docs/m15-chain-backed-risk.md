@@ -63,3 +63,8 @@ Passing the tests means **native source contracts passed**, not that an external
 ## Subsequent M9/M11/M12 custody-routing integration
 
 An additional isolated **atomic custody router** now connects M15's *FREE* quote collateral to the M9 two-token DvP path, and can migrate actual token units and claims between M15 and M11/M12 when those product escrows have zero debt/open positions. It checks that no user can hold both M15 spendable credit and duplicate isolated custody for the same token units. This does not yet execute against M15's **reserved** spot orders or provide common leveraged collateral. Read [actual custody integration and remaining blockers](m15-m9-m11-m12-custody-routing.md). No independently verified live Testnet actions or security audit.
+
+
+### Updated source binding for cross-product spot risk
+
+Risk now requires an admin-approved one-time `bind_products(portfolio,lending,perp)` while paused before any spot reservation gate can unpause. Its first phase reads live cross-product coverage and the owner's marked M12 account; the consumption phase atomically rechecks M11 accrued debt and M12 open positions without forbidden M15 re-entry. New M11 debt or M12 positions between the two phases invalidate the existing permit without taking collateral. **No leveraged borrowing/perps are authorised; M12 unrealised equity is never made spendable.** See [on-chain M12 exposure](m12-marked-exposure-and-risk.md).
