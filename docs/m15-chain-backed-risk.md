@@ -58,3 +58,8 @@ npm run m24:readiness
 ```
 
 Passing the tests means **native source contracts passed**, not that an external audit, public Stellar Testnet deployment, real signed economic transactions or the M23 financial beta were completed. Any real Testnet deployment requires reviewed source/WASM, independent local signing keys, separately funded valueless wallets, verified external RPC evidence and explicit operator governance. No mainnet/financial beta privileges are conferred.
+
+
+## Subsequent M9/M11/M12 custody-routing integration
+
+An additional isolated **atomic custody router** now connects M15's *FREE* quote collateral to the M9 two-token DvP path, and can migrate actual token units and claims between M15 and M11/M12 when those product escrows have zero debt/open positions. It checks that no user can hold both M15 spendable credit and duplicate isolated custody for the same token units. This does not yet execute against M15's **reserved** spot orders or provide common leveraged collateral. Read [actual custody integration and remaining blockers](m15-m9-m11-m12-custody-routing.md). No independently verified live Testnet actions or security audit.
