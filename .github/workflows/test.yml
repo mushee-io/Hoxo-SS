@@ -83,6 +83,8 @@ jobs:
         run: npm run test:matching
       - name: M17 advanced-order signatures, TP/SL triggers, reduce-only and hash-chain replay
         run: npm run test:advanced
+      - name: M18 public Testnet payment provenance, signed-journal portfolios and history isolation
+        run: npm run test:portfolio
       - name: Verify no executable gateway is enabled
         run: |
           node --input-type=module -e 'import {emptyBook,snapshot} from "./matching/core.mjs"; const book=snapshot(emptyBook(),"xlm-usdc-spot"); if(book.tradingEnabled||book.settleable||book.onchain) process.exit(1);'

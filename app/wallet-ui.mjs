@@ -1,5 +1,6 @@
 /** Hoxo-SS M3 wallet presentation. No wallet secrets or signing. */
 import {createWalletSession,FRIENDBOT} from "./wallet-core.mjs";
+import {loadStellarWalletActivity} from "../portfolio/stellar-history.mjs";
 const $=id=>document.getElementById(id);
 const status=$("walletStatus");
 const button=$("walletButton");
@@ -12,6 +13,85 @@ const explorer=$("walletExplorer");
 const body=$("portfolioBody");
 let activeTab="Balances";
 let busy=false;
+let transferState={owner:null,rows:[],nextCursor:null,loading:false,error:null,ledger:null};
+let transferRequest=0;
+async function fetchTransfers(owner,{more=false}={}){
+  if(!owner)return;
+  if(transferState.loading)return;
+  const request=++transferRequest;
+  transferState={...transferState,owner,loading:true,error:null};
+  renderBalances(controller.snapshot());
+  try{
+    const next=await loadStellarWalletActivity(owner,{
+      fetchImpl:(...args)=>fetch(...args),
+      cursor:more?transferState.nextCursor:null,
+      limit:20,
+    });
+    if(request!==transferRequest||controller.snapshot().address!==owner)return;
+    transferState={
+      owner,rows:more?[...transferState.rows,...next.payments]:next.payments,
+      nextCursor:next.nextCursor,ledger:next.observedLedger,
+      loading:false,error:null,
+    };
+  }catch(error){
+    if(request!==transferRequest)return;
+    transferState={...transferState,loading:false,error:String(error?.message||error)};
+  }
+  renderBalances(controller.snapshot());
+}
+function showTransferHistory(){
+  const section=document.createElement("div");
+  section.className="wallet-transfer-history";
+  const heading=document.createElement("strong");
+  heading.textContent="PUBLIC STELLAR TESTNET PAYMENTS · NOT HOXO TRADES";
+  const note=document.createElement("p");
+  note.textContent="Horizon-reported payments only. Wallet ownership was checked locally by Freighter. These records are NOT exchange settlements, deposits, PnL, interest or funding.";
+  section.append(heading,note);
+  if(transferState.loading){
+    const pending=document.createElement("p");pending.textContent="Verifying Stellar Testnet ledger and public payment history…";section.append(pending);
+  }
+  if(transferState.error){
+    const err=document.createElement("p");
+    err.textContent="TRANSFER HISTORY UNAVAILABLE · "+transferState.error;
+    section.append(err);
+  }
+  if(transferState.rows.length){
+    const rows=document.createElement("div");
+    rows.className="balance-grid wallet-payment-grid";
+    for(const heading of ["DIRECTION","AMOUNT / ASSET","LEDGER / TX"]){
+      const cell=document.createElement("div");
+      cell.className="balance-head";cell.textContent=heading;rows.append(cell);
+    }
+    for(const payment of transferState.rows){
+      const direction=document.createElement("span");
+      direction.textContent=payment.direction;
+      const amount=document.createElement("span");
+      amount.textContent=payment.amount+" "+payment.code;
+      const link=document.createElement("a");
+      link.textContent="#"+payment.ledger+" · VIEW TX";
+      link.href="https://stellar.expert/explorer/testnet/tx/"+payment.txHash;
+      link.target="_blank";link.rel="noopener noreferrer";
+      rows.append(direction,amount,link);
+    }
+    section.append(rows);
+  }else if(!transferState.loading&&!transferState.error){
+    const noRows=document.createElement("p");
+    noRows.textContent=transferState.owner?"NO PAYMENT RECORDS ON THIS HORIZON PAGE.":"TRANSFER HISTORY NOT LOADED.";
+    section.append(noRows);
+  }
+  if(transferState.nextCursor&&!transferState.loading){
+    const more=document.createElement("button");
+    more.type="button";more.textContent="LOAD MORE HORIZON PAYMENTS";
+    more.addEventListener("click",()=>fetchTransfers(transferState.owner,{more:true}));
+    section.append(more);
+  }
+  const footer=document.createElement("p");
+  footer.className="wallet-balance-meta";
+  footer.textContent="PUBLIC NETWORK INDEXER · "+(transferState.ledger?"LEDGER "+transferState.ledger:"UNVERIFIED")+
+    " · NO HOXO CONTRACT TRANSACTIONS";
+  section.append(footer);
+  body.append(section);
+}
 
 const controller=createWalletSession({
   api:window.freighterApi,
@@ -29,6 +109,16 @@ const short=str=>str.slice(0,8)+"…"+str.slice(-8);
 function renderBalances(state){
   body.replaceChildren();
   const heading=document.createElement("strong"),description=document.createElement("p");
+  if(activeTab==="Transfers"){
+    if(state.status!=="connected"&&state.status!=="unfunded"){
+      heading.textContent="CONNECT A VERIFIED TESTNET WALLET";
+      description.textContent="Transfers can only be queried here for the verified connected Freighter account.";
+      body.append(heading,description);
+      return;
+    }
+    showTransferHistory();
+    return;
+  }
   if(activeTab!=="Balances"){
     heading.textContent=activeTab.toUpperCase()+" · NOT DEPLOYED";
     description.textContent="Trading positions, lending, margin and order history require verified on-chain protocol deployments.";
@@ -68,6 +158,10 @@ function renderBalances(state){
 }
 function render(state){
   const connected=["connected","unfunded"].includes(state.status);
+  if(state.address!==transferState.owner){
+    transferRequest++;
+    transferState={owner:null,rows:[],nextCursor:null,loading:false,error:null,ledger:null};
+  }
   const pending=["connecting","loading","funding"].includes(state.status);
   const hasAddress=typeof state.address==="string"&&state.address.startsWith("G");
   const hasVerified=connected&&hasAddress;
@@ -122,6 +216,9 @@ document.querySelectorAll("[data-portfolio-tab]").forEach(tab=>tab.addEventListe
   activeTab=tab.dataset.portfolioTab;
   document.querySelectorAll("[data-portfolio-tab]").forEach(button=>button.classList.toggle("active",button===tab));
   renderBalances(controller.snapshot());
+  const s=controller.snapshot();
+  if(activeTab==="Transfers"&&["connected","unfunded"].includes(s.status)&&
+     transferState.owner!==s.address)void fetchTransfers(s.address);
 }));
 window.addEventListener("focus",()=>{const s=controller.snapshot();if(s.address&&!busy)withButton("Wallet recheck",()=>controller.refresh());});
 document.addEventListener("visibilitychange",()=>{

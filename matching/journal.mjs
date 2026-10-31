@@ -11,6 +11,7 @@ import { dirname } from "node:path";
 import { createHash } from "node:crypto";
 import { verifySignedCommand } from "./auth.mjs";
 import { emptyBook, projectCommand, snapshot, orderById, advancedOrderById, orderTransitions, simulatedPosition } from "./core.mjs";
+import {projectSandboxHistory} from "../portfolio/sandbox-history.mjs";
 
 const START_HASH = "0".repeat(64);
 function hashRecord(record) {
@@ -89,6 +90,10 @@ export class SignedOrderJournal {
     const result = this.queue.then(operation);
     this.queue = result.then(() => {}, () => {});
     return result;
+  }
+  getPortfolioHistory(owner,options={}) {
+    // Valid only after signed, hashed journal replay at open().
+    return projectSandboxHistory(this.state,owner,options);
   }
   getBook(marketId, depth = 20) {
     return snapshot(this.state, marketId, depth);

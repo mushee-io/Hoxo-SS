@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Stellar spot, perps and money markets unified-margin development foundation",
   "scripts": {
-    "test": "node --test packages/risk-engine/test/*.test.mjs tests/landing.test.mjs tests/terminal.test.mjs tests/wallet.test.mjs tests/infrastructure.test.mjs tests/matching.test.mjs tests/marketdata.test.mjs tests/settlement-preview.test.mjs tests/m9-wallet-settlement.test.mjs tests/advanced-orders.test.mjs",
+    "test": "node --test packages/risk-engine/test/*.test.mjs tests/landing.test.mjs tests/terminal.test.mjs tests/wallet.test.mjs tests/infrastructure.test.mjs tests/matching.test.mjs tests/marketdata.test.mjs tests/settlement-preview.test.mjs tests/m9-wallet-settlement.test.mjs tests/advanced-orders.test.mjs tests/portfolio-history.test.mjs",
     "check": "npm test",
     "test:landing": "node --test tests/landing.test.mjs",
     "check:testnet": "node scripts/check-testnet.mjs",
@@ -21,7 +21,8 @@
     "test:spot-preview": "node --test tests/settlement-preview.test.mjs",
     "test:m9-wallet": "node --test tests/m9-wallet-settlement.test.mjs",
     "m9:preflight": "node scripts/m9-testnet-settle.mjs",
-    "test:advanced": "node --test tests/advanced-orders.test.mjs"
+    "test:advanced": "node --test tests/advanced-orders.test.mjs",
+    "test:portfolio": "node --test tests/portfolio-history.test.mjs"
   },
   "engines": {
     "node": ">=20"

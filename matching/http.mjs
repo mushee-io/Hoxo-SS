@@ -6,6 +6,8 @@
 import { createServer } from "node:http";
 import { URL } from "node:url";
 import { SANDBOX_MARKETS } from "./core.mjs";
+import {isStellarGAddress} from "../app/wallet-core.mjs";
+import {loadStellarWalletActivity} from "../portfolio/stellar-history.mjs";
 
 const MAX_BODY = 16_384;
 function respond(res, status, body) {
@@ -42,7 +44,7 @@ const number = (value, defaultValue) => {
   if (!/^[0-9]{1,3}$/.test(value)) throw Error("Invalid limit/depth");
   return Number(value);
 };
-export function createSandboxServer(journal, { now = Date.now, rateLimit = 60 } = {}) {
+export function createSandboxServer(journal,{now=Date.now,rateLimit=60,fetchImpl=fetch}={}) {
   const visitorHits = new Map();
   return createServer(async (req, res) => {
     const ip = req.socket.remoteAddress || "unknown";
@@ -101,6 +103,30 @@ export function createSandboxServer(journal, { now = Date.now, rateLimit = 60 } 
         const owner=url.searchParams.get("owner");
         if(!owner||!/^G[A-Z2-7]{55}$/.test(owner))throw Error("Invalid sandbox account");
         respond(res,200,journal.getSimulatedPosition(owner,marketId));
+        return;
+      }
+      if (req.method==="GET" && url.pathname==="/v1/portfolio/sandbox") {
+        const owner=url.searchParams.get("owner");
+        if(!isStellarGAddress(owner))throw Error("Invalid portfolio address");
+        const limit=number(url.searchParams.get("limit"),25);
+        const cursor=number(url.searchParams.get("cursor"),0);
+        respond(res,200,journal.getPortfolioHistory(owner,{limit,cursor}));
+        return;
+      }
+      if (req.method==="GET" && url.pathname==="/v1/portfolio/wallet") {
+        const owner=url.searchParams.get("owner");
+        if(!isStellarGAddress(owner))throw Error("Invalid portfolio address");
+        const limit=number(url.searchParams.get("limit"),25);
+        const cursor=url.searchParams.get("cursor");
+        const data=await loadStellarWalletActivity(owner,{
+          fetchImpl,nowMs:time,limit,cursor,
+        });
+        respond(res,200,{...data,
+          hoxoPositions:"UNAVAILABLE_CONTRACT_NOT_DEPLOYED",
+          hoxoPnl:"UNAVAILABLE_NO_VERIFIED_SETTLEMENT",
+          hoxoFunding:"UNAVAILABLE_NO_VERIFIED_EVENTS",
+          hoxoInterest:"UNAVAILABLE_NO_VERIFIED_LENDING",
+          hoxoTrades:"UNAVAILABLE_NO_HOXO_SETTLEMENT_RECEIPTS"});
         return;
       }
       if (req.method === "POST" && url.pathname === "/v1/commands") {

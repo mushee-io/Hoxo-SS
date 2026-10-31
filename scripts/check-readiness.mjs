@@ -25,6 +25,10 @@ const advanced=await read("matching/advanced.mjs");
 const matchingCore=await read("matching/core.mjs");
 const advancedAuth=await read("matching/auth.mjs");
 const matchingJournal=await read("matching/journal.mjs");
+const walletHistory=await read("portfolio/stellar-history.mjs");
+const sandboxHistory=await read("portfolio/sandbox-history.mjs");
+const portfolioUI=await read("app/wallet-ui.mjs");
+const portfolioServer=await read("matching/http.mjs");
 const invariants={
   noVerifiedExchangeContracts:registry.deployedVerified===0 && registry.candidateContracts===0,
   noApprovedRiskOracle:markets.oracleStatus.startsWith("HALTED") && markets.configured===0,
@@ -122,6 +126,21 @@ const invariants={
     !matchingCore.includes('broadcastTransaction('),
   m17ReadinessStillBlocked:registry.deployedVerified===0&&
     app.includes('id="tradeButton" class="trade-disabled" disabled'),
+  m18HorizonNotSettlement:walletHistory.includes('HORIZON_REPORTED_SUCCESS')&&
+    walletHistory.includes('hoxoTrade:false,hoxoDeposit:false')&&
+    walletHistory.includes('validateHorizonRoot('),
+  m18NoFakeProtocolHistory:sandboxHistory.includes('NO_VERIFIED_SETTLEMENT_OR_COST_BASIS')&&
+    sandboxHistory.includes('NO_AUTHENTICATED_FUNDING_EVENTS')&&
+    sandboxHistory.includes('NO_VERIFIED_LENDING_CONTRACT_STATE')&&
+    sandboxHistory.includes('NO_ONCHAIN_HOXO_TRADE_RECEIPTS'),
+  m18SandboxProvenance:sandboxHistory.includes('M8_M17_SIMULATED_MATCHES_NOT_ONCHAIN')&&
+    matchingJournal.includes('getPortfolioHistory(owner,options={})'),
+  m18ReadOnlyWalletUI:portfolioUI.includes('loadStellarWalletActivity')&&
+    portfolioUI.includes('NOT HOXO TRADES')&&
+    portfolioServer.includes('/v1/portfolio/wallet')&&
+    !portfolioServer.includes('/v1/portfolio/execute'),
+  m18NoLiveContracts:registry.deployedVerified===0&&
+    registry.statuses.every(x=>x.status==="planned"&&x.contractId===null),
 
 
 };
@@ -145,6 +164,7 @@ console.log(JSON.stringify({
   M15:"canonical single-asset shared reservation ledger for spot, perp and lending; not deployed or linked to M9/M11/M12 and blocked by M7 risk gate",
   M16:"M7 read-only multi-product fixed-point risk analytics, stress, exposure caps and liquidation thresholds; snapshots untrusted and authorization disabled",
   M17:"signed sandbox limit/IOC/TP-SL, reduce-only simulated exposure and hash-chained transitions; no deployed oracle, canonical position or real execution",
+  M18:"read-only Horizon Testnet payments and signed sandbox portfolio/order history; authentic HOXO positions, PnL, funding, interest and trades unavailable",
  },
  invariants
 },null,2));
