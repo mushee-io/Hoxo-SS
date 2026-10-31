@@ -5,6 +5,7 @@
  */
 import { createServer } from "node:http";
 import { URL } from "node:url";
+import { createRequestLimiter } from "../security/controls.mjs";
 import { SANDBOX_MARKETS } from "./core.mjs";
 import {isStellarGAddress} from "../app/wallet-core.mjs";
 import {loadStellarWalletActivity} from "../portfolio/stellar-history.mjs";
@@ -44,24 +45,25 @@ const number = (value, defaultValue) => {
   if (!/^[0-9]{1,3}$/.test(value)) throw Error("Invalid limit/depth");
   return Number(value);
 };
-export function createSandboxServer(journal,{now=Date.now,rateLimit=60,fetchImpl=fetch}={}) {
-  const visitorHits = new Map();
+export function createSandboxServer(journal,{now=Date.now,rateLimit=60,fetchImpl=fetch,security=null}={}) {
+  const limiter=createRequestLimiter({perKeyLimit:rateLimit,globalLimit:3000,maxKeys:1024});
   return createServer(async (req, res) => {
     const ip = req.socket.remoteAddress || "unknown";
     const time = now();
-    const window = visitorHits.get(ip);
-    if (!window || time - window.start >= 60_000) visitorHits.set(ip, {start:time,count:1});
-    else window.count += 1;
-    if (visitorHits.get(ip).count > rateLimit) {
-      respond(res, 429, {error:"Rate limit exceeded",settlement:"DISABLED"});return;
+    const budget=limiter.take(ip,time);
+    if (!budget.allowed) {
+      res.setHeader("Retry-After",String(budget.retryAfterSeconds));
+      respond(res,429,{error:"Rate limit exceeded",settlement:"DISABLED"});return;
     }
     try {
+      if (req.url.length>2048) {respond(res,414,{error:"URI too long"});return;}
       const url = new URL(req.url, "http://127.0.0.1");
       if (req.method === "GET" && url.pathname === "/health") {
         respond(res,200,{
           ...journal.getStatus(),
           tradingEnabled:false,riskEngineIntegrated:false,
           onchainOrders:false,marketDataSource:"NONE",
+          security:security?.status()??null,
         });
         return;
       }
@@ -132,11 +134,14 @@ export function createSandboxServer(journal,{now=Date.now,rateLimit=60,fetchImpl
       if (req.method === "POST" && url.pathname === "/v1/commands") {
         // No CORS support for state-changing commands. Integration proxy needs a
         // separate audited backend with authentication/rate controls.
-        if (req.headers.origin) throw Error("Browser-origin write requests are disabled");
+        if (req.headers.origin || (req.headers["sec-fetch-site"] &&
+            !["none","same-origin"].includes(req.headers["sec-fetch-site"])))
+          throw Error("Browser-origin write requests are disabled");
         if (req.headers["x-hoxo-sandbox-ack"] !== "UNSETTLED") {
           throw Error("Explicit UNSETTLED sandbox acknowledgement required");
         }
         const {command,signature} = await readJSON(req);
+        security?.assertSandboxCommand(command);
         const result = await journal.submit(command,signature,time);
         respond(res,201,{...result,network:"STELLAR_TESTNET_REFERENCE_ONLY"});
         return;
@@ -145,7 +150,7 @@ export function createSandboxServer(journal,{now=Date.now,rateLimit=60,fetchImpl
     } catch (error) {
       const message=String(error.message||error);
       const conflict=/nonce|duplicate|self-trade|not found|expired/i.test(message);
-      respond(res,conflict?409:400,{error:message,settlement:"DISABLED",tradingEnabled:false});
+      respond(res,error.httpStatus??(conflict?409:400),{error:message,settlement:"DISABLED",tradingEnabled:false});
     }
   });
 }
