@@ -239,7 +239,7 @@ fn m15_role_bindings_once_only_reconfiguration_fails_under_any_pause(){
     assert!(c.try_bind_adapter(&Product::Spot,&other).is_err());
     c.enable_role(&Product::Spot,&false);
     assert!(!c.role_enabled(&Product::Spot));
-    assert_eq!(c.adapter(&Product::Spot),Some(spot));
+    assert_eq!(c.adapter(&Product::Spot),Some(spot.clone()));
     assert!(c.try_reserve(&alice,&spot,&Product::Spot,&test_id(&e,20),&UNIT).is_err());
 }
 #[test]
