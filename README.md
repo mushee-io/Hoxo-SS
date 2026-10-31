@@ -65,3 +65,5 @@ The JS reference engine is **not smart-contract authorization** and must not be 
 ## Security
 Do not fund unreviewed contracts. No admin or private keys in this repo. Avoid unauthenticated oracle writes and off-chain-only enforcement.
 **M10 build evidence:** [7/7 CI jobs passed](https://github.com/mushee-io/Hoxo-SS/actions/runs/41195457096), including 16/16 Soroban money-market tests and [the review-only M10 WASM artifact](https://github.com/mushee-io/Hoxo-SS/actions/runs/41195457096/artifacts/13040750629). No mainnet or Testnet asset-deposit activation is implied.
+
+**M11 verification:** [7/7 CI jobs passed](https://github.com/mushee-io/Hoxo-SS/actions/runs/41197119204), including 32/32 Soroban money-market tests and [the 27,471-byte review-only WASM artifact](https://github.com/mushee-io/Hoxo-SS/actions/runs/41197119204/artifacts/13041143590). Live on-chain lending is **not** enabled; an audited M5/M7 canonical risk authority and verified independent Testnet transactions remain required.

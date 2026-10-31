@@ -31,3 +31,17 @@ The actual compiled `wasm32v1-none` artifact is built with `stellar contract bui
 5. Keep the public terminal's real custody, borrow and trading controls disabled until independent on-chain receipts and tests establish safety. Do not report theoretical supply APR as paid or earned interest.
 
 **No real Stellar Testnet loan, repayment, contract deployment or audited risk authority is claimed by M11 source code.**
+
+## Verified CI build — 31 October 2026
+
+[GitHub Actions run 41197119204](https://github.com/mushee-io/Hoxo-SS/actions/runs/41197119204) passed all **seven** jobs with full M11 source and verification:
+
+- **32/32** combined M10/M11 native Soroban money-market contract tests, including 16 original supply tests, 13 borrowing/interest/repayment tests and three additional conservation tests.
+- **91/91** JavaScript tests and **8/8** Chromium smoke tests.
+- Other native Rust/Soroban tests: M0/M7 math **14/14**, M6 vault **5/5**, M7 preview **2/2**, M9 spot-settlement **12/12**.
+- Live **read-only** Stellar Testnet Horizon and RPC handshake checks passed.
+- Official Stellar CLI v28.1.0 `stellar contract build --package hoxo-money-market` produced a **27,471-byte optimized M10–M11 WASM**.
+- WASM SHA-256: `11e469ab406cb2dc016e5dd9f825ae249280a146806dfa2712b4cac090394d13`.
+- [Review-only compiled M10–M11 WASM artifact](https://github.com/mushee-io/Hoxo-SS/actions/runs/41197119204/artifacts/13041143590), subject to GitHub artifact retention.
+
+**Deployment gate:** the on-chain risk-authority contract is STILL ABSENT, all Hoxo contract IDs in `registry/testnet.json` are null, borrowing defaults to a zero cap and paused state, and no owner-signed funded Testnet loan or repayment receipt is verified. No public money-market supply, borrow, transfer or trading buttons should be activated on the basis of these test results.
