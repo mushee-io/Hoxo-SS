@@ -301,15 +301,15 @@ fn thirty_two_deterministic_cross_product_round_trips_never_duplicate_claims(){
             assert_eq!(receipt.base_amount,4*UNIT);
             fills+=1;
         }else if i%4==1{
-            let x=r.supply_from_margin(&f.buyer,&(1+((i as i128)%6))*UNIT);
+            let x=r.supply_from_margin(&f.buyer,&((1+((i as i128)%6))*UNIT));
             let y=r.redeem_to_margin(&f.buyer,&x.share_units_e7);
             assert_eq!(y.tokens_e7,x.tokens_e7);
         }else if i%4==2{
-            let x=r.perp_from_margin(&f.seller,&(1+((i as i128)%5))*UNIT);
+            let x=r.perp_from_margin(&f.seller,&((1+((i as i128)%5))*UNIT));
             let y=r.perp_to_margin(&f.seller,&x.tokens_e7);
             assert_eq!(y.tokens_e7,x.tokens_e7);
         }else{
-            let x=r.supply_from_margin(&f.seller,&(1+((i as i128)%4))*UNIT);
+            let x=r.supply_from_margin(&f.seller,&((1+((i as i128)%4))*UNIT));
             let y=r.redeem_to_margin(&f.seller,&x.share_units_e7);
             assert_eq!(y.tokens_e7,x.tokens_e7);
         }
