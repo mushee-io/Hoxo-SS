@@ -8,7 +8,7 @@ impl ApprovedCanonicalRisk {
     pub fn authorization_enabled()->bool{true}
     pub fn approve_reservation(
         _env:Env,_owner:Address,_vault:Address,_asset:Address,
-        product:u32,amount:i128
+        product:u32,_id:BytesN<32>,amount:i128
     )->bool{(1..=3).contains(&product)&&amount>0&&amount<=60*UNIT}
 }
 #[contract]
@@ -18,7 +18,7 @@ impl UnreadyRisk {
     pub fn authorization_enabled()->bool{false}
     pub fn approve_reservation(
         _env:Env,_owner:Address,_vault:Address,_asset:Address,
-        _product:u32,_amount:i128
+        _product:u32,_id:BytesN<32>,_amount:i128
     )->bool{false}
 }
 #[contract]
@@ -28,7 +28,7 @@ impl DenyingRisk {
     pub fn authorization_enabled()->bool{true}
     pub fn approve_reservation(
         _env:Env,_owner:Address,_vault:Address,_asset:Address,
-        _product:u32,_amount:i128
+        _product:u32,_id:BytesN<32>,_amount:i128
     )->bool{false}
 }
 fn test_id(e:&Env,n:u8)->BytesN<32>{

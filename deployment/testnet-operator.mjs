@@ -60,9 +60,23 @@ export function prepareTestnetDeployment(config,role){
   const args=["contract","deploy","--wasm",
     "target/wasm32v1-none/release/"+item.wasm,
     "--source-account",config.sourceAlias,"--network","testnet"];
-  if(role!=="risk-engine"){
+  {
     args.push("--");
-    if(role==="oracle-adapter"){
+    if(role==="risk-engine"){
+      const vault=requiredC(config.riskVaultContract,"riskVaultContract");
+      const token=requiredC(config.valuelessTokenContract,"valuelessTokenContract");
+      const oracle=requiredC(config.riskOracleContract,"riskOracleContract");
+      if(vault===oracle||vault===token||oracle===token)
+        throw Error("Canonical risk requires separate on-chain vault, oracle and token addresses");
+      if(!Number.isSafeInteger(config.marketId)||config.marketId<1||config.marketId>4294967295)
+        throw Error("Invalid canonical marketId");
+      if(!Number.isSafeInteger(config.maxOwnerReservedE7)||
+         config.maxOwnerReservedE7<1||config.maxOwnerReservedE7>100000*10000000)
+        throw Error("Spot-only reservation cap must be a bounded integer in 7 decimals");
+      args.push("--admin",owner,"--vault",vault,"--asset",token,
+        "--oracle",oracle,"--market-id",String(config.marketId),
+        "--max-owner-reserved-e7",String(config.maxOwnerReservedE7));
+    }else if(role==="oracle-adapter"){
       const a=requiredG(config.publisherA,"publisherA");
       const b=requiredG(config.publisherB,"publisherB");
       if(owner===a||owner===b||a===b)throw Error("Oracle requires distinct admin and two independent publishers");

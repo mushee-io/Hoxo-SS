@@ -176,6 +176,8 @@ jobs:
         run: cargo test -p hoxo-risk-gate --lib
       - name: Verify two-publisher oracle contract with fail-closed approval and stale-source tests
         run: cargo test -p hoxo-oracle-adapter --lib
+      - name: Run chain-backed M15 spot-only canonical risk and oracle integration tests
+        run: cargo test -p hoxo-canonical-risk --lib
       - name: Run M9 atomic spot settlement contract tests
         run: cargo test -p hoxo-spot-settlement --lib
       - name: Run M10–M11 supply, interest, guarded borrow and repayment contract tests
@@ -197,6 +199,11 @@ jobs:
           stellar contract build --package hoxo-oracle-adapter
           test -s target/wasm32v1-none/release/hoxo_oracle_adapter.wasm
           sha256sum target/wasm32v1-none/release/hoxo_oracle_adapter.wasm
+      - name: Build M15 spot-only chain-backed risk WASM for external review
+        run: |
+          stellar contract build --package hoxo-canonical-risk
+          test -s target/wasm32v1-none/release/hoxo_canonical_risk.wasm
+          sha256sum target/wasm32v1-none/release/hoxo_canonical_risk.wasm
       - name: Build M9 WASM with official stellar contract build
         run: |
           stellar --version
@@ -218,6 +225,12 @@ jobs:
           stellar contract build --package hoxo-unified-margin
           test -s target/wasm32v1-none/release/hoxo_unified_margin.wasm
           sha256sum target/wasm32v1-none/release/hoxo_unified_margin.wasm
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hoxo-m15-chain-backed-spot-only-risk-wasm-review-only
+          path: target/wasm32v1-none/release/hoxo_canonical_risk.wasm
+          if-no-files-found: error
+          retention-days: 7
       - uses: actions/upload-artifact@v4
         with:
           name: hoxo-m5-oracle-adapter-wasm-review-only
