@@ -9,7 +9,7 @@ function key(version,byte){
   const data=[version,...Array(32).fill(byte)];
   let crc=0;
   for(const n of data){crc^=n<<8;for(let i=0;i<8;i++)
-    crc=crc&32768?((crc<<1)^0x1021)&65535:(crc<<1)&65535);}
+    crc=(crc&32768)?(((crc<<1)^0x1021)&65535):((crc<<1)&65535);}
   data.push(crc&255,crc>>8);
   let v=0,bits=0,out="";
   for(const n of data){
