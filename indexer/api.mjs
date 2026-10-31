@@ -5,6 +5,7 @@
  */
 import {createServer} from "node:http";
 import {URL} from "node:url";
+import {createRequestLimiter} from "../security/controls.mjs";
 const DEFAULT_STATUS={
   state:"DISABLED_NO_VERIFIED_DEPLOYMENTS",
   latestScannedLedger:null,reportedEvents:0,
@@ -31,20 +32,20 @@ function boundedNumber(value,fallback,{min,max}){
   return number;
 }
 export function createIndexerApi({
-  store=null,scanner=null,now=Date.now,rateLimit=120,
+  store=null,scanner=null,now=Date.now,rateLimit=120,security=null,
 }={}){
   let streams=0;
-  const visitorHits=new Map();
+  const limiter=createRequestLimiter({perKeyLimit:rateLimit,globalLimit:3000,maxKeys:1024});
   return createServer((req,res)=>{
     const ip=req.socket.remoteAddress||"unknown",at=now();
-    const window=visitorHits.get(ip);
-    if(!window||at-window.at>=60_000)visitorHits.set(ip,{at,count:1});
-    else window.count+=1;
-    if(visitorHits.get(ip).count>rateLimit){
+    const budget=limiter.take(ip,at);
+    if(!budget.allowed){
+      res.setHeader("Retry-After",String(budget.retryAfterSeconds));
       reply(res,429,{error:"Rate limited",tradingEnabled:false});
       return;
     }
     try{
+      if(req.url.length>2048){reply(res,414,{error:"URI too long"});return;}
       const url=new URL(req.url,"http://127.0.0.1");
       if(req.method!=="GET"){
         reply(res,405,{error:"M19 indexer API is READ_ONLY",tradingEnabled:false});
@@ -54,7 +55,7 @@ export function createIndexerApi({
       if(["/health","/v1/indexer/status"].includes(url.pathname)){
         reply(res,200,{...status(),api:"READ_ONLY_SSE_NO_WEBSOCKET",
           network:"STELLAR_TESTNET",contractEventsIndexed:!!store,
-          noSyntheticMarketData:true});
+          noSyntheticMarketData:true,security:security?.status()??null});
         return;
       }
       if(url.pathname==="/v1/indexer/events"){
@@ -106,7 +107,8 @@ export function createIndexerApi({
           "x-content-type-options":"nosniff",
         });
         const send=(event,data)=>{
-          if(!res.destroyed)res.write("event: "+event+"\ndata: "+JSON.stringify(data)+"\n\n");
+          if(!res.destroyed&&!res.write("event: "+event+"\ndata: "+JSON.stringify(data)+"\n\n"))
+            res.destroy(); // Disconnect slow SSE subscribers; do not buffer without bound.
         };
         send("status",{...status(),tradingEnabled:false});
         const unsubscribe=store.subscribe(batch=>send("checkpoint",batch));

@@ -11,6 +11,7 @@ import {validateRegistry} from "../infra/registry.mjs";
 import {DurableEventIndex} from "../indexer/store.mjs";
 import {RpcLedgerScanner,makeRpcClient} from "../indexer/rpc.mjs";
 import {createIndexerApi} from "../indexer/api.mjs";
+import {createM20Controls} from "../security/controls.mjs";
 const registry=JSON.parse(await readFile(
   new URL("../registry/testnet.json",import.meta.url),"utf8"));
 const summary=validateRegistry(registry);
@@ -31,16 +32,21 @@ if(enabled){
   const startLedger=requested?Number(requested):null;
   scanner=new RpcLedgerScanner({store,rpc:makeRpcClient(),startLedger});
 }
-const api=createIndexerApi({store,scanner});
+const {gate}=createM20Controls({
+  sandboxPaused:true,oraclePaused:true,
+  indexerPaused:process.env.HOXO_M20_INDEXER_PAUSED!=="NO",
+});
+const api=createIndexerApi({store,scanner,security:gate});
 api.listen(port,"127.0.0.1",()=>{
   console.log("HOXO M19 read-only Testnet indexer at http://127.0.0.1:"+port);
   console.log(store?
     "EXPLICIT CANDIDATE OBSERVATION — NOT VERIFIED Hoxo activity":
     "DISABLED — no approved deployed Hoxo contracts; zero event ingestion");
+  console.log("M20 process-local controls: "+JSON.stringify(gate.status()));
 });
 if(scanner){
   const poll=async()=>{
-    if(scanner.halted)return;
+    if(scanner.halted||!gate.canObserve())return;
     try{await scanner.poll();}
     catch(error){console.error("M19 HALTED:",String(error.message||error));}
   };
