@@ -81,7 +81,7 @@ fn m12_starts_paused_without_oracle_risk_or_claimed_margin(){
     assert_eq!(state.open_positions,0);
     assert!(c.try_set_pause(&false).is_err());
     assert!(c.try_deposit(&long,&UNIT).is_err());
-    assert!(c.try_open(&id(&e,1),&long,&short,&UNIT,&(12*UNIT),&(8*UNIT),
+    assert!(c.try_open(&self::id(&e,1),&long,&short,&UNIT,&(12*UNIT),&(8*UNIT),
         &(e.ledger().sequence()+10)).is_err());
 }
 #[test]
@@ -124,7 +124,7 @@ fn m12_bilateral_flat_close_unreserves_both_and_prevents_id_reuse(){
     fund(&e,&market,&long,&short);
     let c=PerpClearinghouseClient::new(&e,&market);
     open(&e,&market,&long,&short,12);
-    let p=c.close(&id(&e,12));
+    let p=c.close(&self::id(&e,12));
     assert!(!p.active);
     assert_eq!(p.long_realised_pnl_e7,0);
     assert_eq!(c.wallet(&long).available_e7,100*UNIT);
@@ -132,8 +132,8 @@ fn m12_bilateral_flat_close_unreserves_both_and_prevents_id_reuse(){
     assert_eq!(c.wallet(&long).locked_e7,0);
     assert_eq!(c.wallet(&short).locked_e7,0);
     assert_eq!(c.market().open_positions,0);
-    assert!(c.try_close(&id(&e,12)).is_err());
-    assert!(c.try_open(&id(&e,12),&long,&short,&(4*UNIT),&(12*UNIT),&(8*UNIT),
+    assert!(c.try_close(&self::id(&e,12)).is_err());
+    assert!(c.try_open(&self::id(&e,12),&long,&short,&(4*UNIT),&(12*UNIT),&(8*UNIT),
         &(e.ledger().sequence()+10)).is_err());
 }
 #[test]
@@ -144,7 +144,7 @@ fn m12_profit_and_loss_reconcile_exactly_from_locked_margin_without_minting(){
     let c=PerpClearinghouseClient::new(&e,&market);
     open(&e,&market,&long,&short,13);
     MockOracleClient::new(&e,&oracle).set(&(12*UNIT),&(12*UNIT),&e.ledger().timestamp());
-    let p=c.close(&id(&e,13));
+    let p=c.close(&self::id(&e,13));
     assert_eq!(p.long_realised_pnl_e7,8*UNIT);
     assert_eq!(c.wallet(&long).available_e7,108*UNIT);
     assert_eq!(c.wallet(&short).available_e7,92*UNIT);
@@ -163,7 +163,7 @@ fn m12_short_profit_burns_no_user_margin_and_is_zero_sum(){
     open(&e,&market,&long,&short,14);
     let c=PerpClearinghouseClient::new(&e,&market);
     MockOracleClient::new(&e,&oracle).set(&(9*UNIT),&(9*UNIT),&e.ledger().timestamp());
-    let p=c.close(&id(&e,14));
+    let p=c.close(&self::id(&e,14));
     assert_eq!(p.long_realised_pnl_e7,-4*UNIT);
     assert_eq!(c.wallet(&long).available_e7,96*UNIT);
     assert_eq!(c.wallet(&short).available_e7,104*UNIT);
@@ -179,10 +179,10 @@ fn m12_wrong_network_rejects_deposit_open_and_close(){
     let c=PerpClearinghouseClient::new(&e,&market);
     assert!(c.try_deposit(&long,&UNIT).is_err());
     assert!(c.try_withdraw(&long,&UNIT).is_err());
-    assert!(c.try_open(&id(&e,16),&long,&short,&UNIT,&(12*UNIT),&(8*UNIT),
+    assert!(c.try_open(&self::id(&e,16),&long,&short,&UNIT,&(12*UNIT),&(8*UNIT),
         &(e.ledger().sequence()+10)).is_err());
-    assert!(c.try_close(&id(&e,15)).is_err());
-    assert!(c.position(&id(&e,15)).unwrap().active);
+    assert!(c.try_close(&self::id(&e,15)).is_err());
+    assert!(c.position(&self::id(&e,15)).unwrap().active);
 }
 #[test]
 fn m12_rejects_stale_future_and_divergent_oracle_before_opening(){
@@ -191,14 +191,14 @@ fn m12_rejects_stale_future_and_divergent_oracle_before_opening(){
     fund(&e,&market,&long,&short);
     let c=PerpClearinghouseClient::new(&e,&market);
     e.ledger().with_mut(|l|l.timestamp+=125);
-    assert!(c.try_open(&id(&e,17),&long,&short,&UNIT,&(12*UNIT),&(8*UNIT),
+    assert!(c.try_open(&self::id(&e,17),&long,&short,&UNIT,&(12*UNIT),&(8*UNIT),
         &(e.ledger().sequence()+10)).is_err());
     let o=MockOracleClient::new(&e,&oracle);
     o.set(&(10*UNIT),&(10*UNIT),&(e.ledger().timestamp()+1));
-    assert!(c.try_open(&id(&e,17),&long,&short,&UNIT,&(12*UNIT),&(8*UNIT),
+    assert!(c.try_open(&self::id(&e,17),&long,&short,&UNIT,&(12*UNIT),&(8*UNIT),
         &(e.ledger().sequence()+10)).is_err());
     o.set(&(11*UNIT),&(10*UNIT),&e.ledger().timestamp());
-    assert!(c.try_open(&id(&e,17),&long,&short,&UNIT,&(12*UNIT),&(8*UNIT),
+    assert!(c.try_open(&self::id(&e,17),&long,&short,&UNIT,&(12*UNIT),&(8*UNIT),
         &(e.ledger().sequence()+10)).is_err());
     assert_eq!(c.market().open_positions,0);
 }
@@ -210,13 +210,13 @@ fn m12_execution_limit_and_expiry_violation_halt_position_creation(){
     // The default native ledger sequence can be 0; establish a positive
     // sequence before testing a *past* expiration.
     e.ledger().with_mut(|l|l.sequence_number=50);
-    assert!(c.try_open(&id(&e,18),&long,&short,&UNIT,&(9*UNIT),&(8*UNIT),
+    assert!(c.try_open(&self::id(&e,18),&long,&short,&UNIT,&(9*UNIT),&(8*UNIT),
         &(e.ledger().sequence()+10)).is_err());
-    assert!(c.try_open(&id(&e,18),&long,&short,&UNIT,&(12*UNIT),&(11*UNIT),
+    assert!(c.try_open(&self::id(&e,18),&long,&short,&UNIT,&(12*UNIT),&(11*UNIT),
         &(e.ledger().sequence()+10)).is_err());
-    assert!(c.try_open(&id(&e,18),&long,&short,&UNIT,&(12*UNIT),&(8*UNIT),
+    assert!(c.try_open(&self::id(&e,18),&long,&short,&UNIT,&(12*UNIT),&(8*UNIT),
         &(e.ledger().sequence()+101)).is_err());
-    assert!(c.try_open(&id(&e,18),&long,&short,&UNIT,&(12*UNIT),&(8*UNIT),
+    assert!(c.try_open(&self::id(&e,18),&long,&short,&UNIT,&(12*UNIT),&(8*UNIT),
         &(e.ledger().sequence()-1)).is_err());
 }
 #[test]
@@ -224,13 +224,13 @@ fn m12_position_size_margin_and_distinct_counterparties_required(){
     let (e,market,_,long,short,_)=setup();
     configure(&e,&market);fund(&e,&market,&long,&short);
     let c=PerpClearinghouseClient::new(&e,&market);
-    assert!(c.try_open(&id(&e,19),&long,&long,&UNIT,&(12*UNIT),&(8*UNIT),
+    assert!(c.try_open(&self::id(&e,19),&long,&long,&UNIT,&(12*UNIT),&(8*UNIT),
         &(e.ledger().sequence()+10)).is_err());
-    assert!(c.try_open(&id(&e,19),&long,&short,&0,&(12*UNIT),&(8*UNIT),
+    assert!(c.try_open(&self::id(&e,19),&long,&short,&0,&(12*UNIT),&(8*UNIT),
         &(e.ledger().sequence()+10)).is_err());
-    assert!(c.try_open(&id(&e,19),&long,&short,&(1000*UNIT),&(12*UNIT),&(8*UNIT),
+    assert!(c.try_open(&self::id(&e,19),&long,&short,&(1000*UNIT),&(12*UNIT),&(8*UNIT),
         &(e.ledger().sequence()+10)).is_err());
-    assert!(c.try_open(&id(&e,19),&long,&short,&i128::MAX,&(12*UNIT),&(8*UNIT),
+    assert!(c.try_open(&self::id(&e,19),&long,&short,&i128::MAX,&(12*UNIT),&(8*UNIT),
         &(e.ledger().sequence()+10)).is_err());
     assert_eq!(c.market().open_positions,0);
 }
@@ -242,9 +242,9 @@ fn m12_administrator_pause_blocks_new_positions_but_allows_safe_close_and_withdr
     let c=PerpClearinghouseClient::new(&e,&market);
     c.set_pause(&true);
     assert!(c.try_deposit(&long,&UNIT).is_err());
-    assert!(c.try_open(&id(&e,21),&long,&short,&UNIT,&(12*UNIT),&(8*UNIT),
+    assert!(c.try_open(&self::id(&e,21),&long,&short,&UNIT,&(12*UNIT),&(8*UNIT),
         &(e.ledger().sequence()+10)).is_err());
-    c.close(&id(&e,20));
+    c.close(&self::id(&e,20));
     assert_eq!(c.withdraw(&long,&(100*UNIT)),0);
 }
 #[test]
@@ -257,10 +257,10 @@ fn m12_unauthorised_wallet_cannot_deposit_withdraw_open_or_close(){
     e.set_auths(&[]);
     assert!(c.try_deposit(&long,&UNIT).is_err());
     assert!(c.try_withdraw(&long,&UNIT).is_err());
-    assert!(c.try_open(&id(&e,23),&long,&short,&UNIT,&(12*UNIT),&(8*UNIT),
+    assert!(c.try_open(&self::id(&e,23),&long,&short,&UNIT,&(12*UNIT),&(8*UNIT),
         &(e.ledger().sequence()+10)).is_err());
-    assert!(c.try_close(&id(&e,22)).is_err());
-    assert!(c.position(&id(&e,22)).unwrap().active);
+    assert!(c.try_close(&self::id(&e,22)).is_err());
+    assert!(c.position(&self::id(&e,22)).unwrap().active);
     assert_eq!(token::TokenClient::new(&e,&asset).balance(&market),before);
 }
 #[test]
@@ -286,7 +286,7 @@ fn m12_risk_denial_reverts_margin_reservation(){
     let c=PerpClearinghouseClient::new(&e,&market);
     c.set_controllers(&oracle,&risk);c.set_pause(&false);
     fund(&e,&market,&long,&short);
-    assert!(c.try_open(&id(&e,24),&long,&short,&(4*UNIT),&(12*UNIT),&(8*UNIT),
+    assert!(c.try_open(&self::id(&e,24),&long,&short,&(4*UNIT),&(12*UNIT),&(8*UNIT),
         &(e.ledger().sequence()+20)).is_err());
     assert_eq!(c.wallet(&long).locked_e7,0);
     assert_eq!(c.wallet(&short).locked_e7,0);
@@ -300,10 +300,10 @@ fn m12_loss_beyond_margin_reverts_close_and_retains_replay_record(){
     open(&e,&market,&long,&short,25);
     let c=PerpClearinghouseClient::new(&e,&market);
     MockOracleClient::new(&e,&oracle).set(&(6*UNIT),&(6*UNIT),&0);
-    assert!(c.try_close(&id(&e,25)).is_err());
+    assert!(c.try_close(&self::id(&e,25)).is_err());
     assert_eq!(c.wallet(&long).locked_e7,10*UNIT);
     assert_eq!(c.wallet(&short).locked_e7,10*UNIT);
-    assert!(c.position(&id(&e,25)).unwrap().active);
+    assert!(c.position(&self::id(&e,25)).unwrap().active);
     assert_eq!(c.market().open_positions,1);
 }
 #[test]
@@ -313,9 +313,9 @@ fn m12_keeper_refreshes_account_and_id_without_mutating_balances(){
     open(&e,&market,&long,&short,26);
     let c=PerpClearinghouseClient::new(&e,&market);
     let before=c.wallet(&long);
-    c.keepalive(&long,&short,&id(&e,26));
+    c.keepalive(&long,&short,&self::id(&e,26));
     assert_eq!(c.wallet(&long),before);
-    assert!(c.position(&id(&e,26)).unwrap().active);
+    assert!(c.position(&self::id(&e,26)).unwrap().active);
 }
 
 
@@ -350,7 +350,7 @@ fn m13_fees_are_booked_as_protocol_claim_not_user_shares(){
     assert_eq!(c.wallet(&long).available_e7,90*UNIT-per_side_fee);
     assert_eq!(c.wallet(&long).locked_e7,10*UNIT);
     assert_eq!(c.reconciliation().user_claims_e7,200*UNIT-2*per_side_fee);
-    let closed=c.close(&id(&e,50));
+    let closed=c.close(&self::id(&e,50));
     assert_eq!(closed.total_fees_paid_e7,4*per_side_fee);
     assert_eq!(c.market().accrued_fees_e7,4*per_side_fee);
     assert_eq!(c.wallet(&long).available_e7,100*UNIT-2*per_side_fee);
@@ -391,17 +391,17 @@ fn m13_one_hour_positive_funding_moves_escrow_long_to_short_without_minting(){
     e.ledger().with_mut(|l|l.timestamp+=3600);
     MockOracleClient::new(&e,&oracle).set(&(101*UNIT/10),&(10*UNIT),&e.ledger().timestamp());
     let c=PerpClearinghouseClient::new(&e,&id);
-    let transferred=c.settle_funding(&id(&e,52));
+    let transferred=c.settle_funding(&self::id(&e,52));
     assert_eq!(transferred,500_000); // 4 * .1 * 1/8 = .05
-    let p=c.position(&id(&e,52)).unwrap();
+    let p=c.position(&self::id(&e,52)).unwrap();
     assert_eq!(p.cumulative_funding_to_short_e7,500_000);
     assert_eq!(p.long_margin_e7,10*UNIT-500_000);
     assert_eq!(p.short_margin_e7,10*UNIT+500_000);
     assert_eq!(c.wallet(&long).locked_e7,10*UNIT-500_000);
     assert_eq!(c.wallet(&short).locked_e7,10*UNIT+500_000);
     assert_eq!(c.reconciliation().user_claims_e7,200*UNIT);
-    assert_eq!(c.settle_funding(&id(&e,52)),0); // same timestamp
-    let settled=c.close(&id(&e,52));
+    assert_eq!(c.settle_funding(&self::id(&e,52)),0); // same timestamp
+    let settled=c.close(&self::id(&e,52));
     assert_eq!(settled.long_realised_pnl_e7,4*UNIT/10);
     assert_eq!(c.wallet(&long).available_e7,100*UNIT+3_500_000);
     assert_eq!(c.wallet(&short).available_e7,100*UNIT-3_500_000);
@@ -417,8 +417,8 @@ fn m13_negative_funding_paid_by_short_can_offset_negative_price_pnl(){
     e.ledger().with_mut(|l|l.timestamp+=28_800);
     MockOracleClient::new(&e,&oracle).set(&(99*UNIT/10),&(10*UNIT),&e.ledger().timestamp());
     let c=PerpClearinghouseClient::new(&e,&id);
-    assert_eq!(c.settle_funding(&id(&e,53)),-4_000_000);
-    let closed=c.close(&id(&e,53));
+    assert_eq!(c.settle_funding(&self::id(&e,53)),-4_000_000);
+    let closed=c.close(&self::id(&e,53));
     assert_eq!(closed.long_realised_pnl_e7,-4_000_000);
     assert_eq!(closed.cumulative_funding_to_short_e7,-4_000_000);
     assert_eq!(c.wallet(&long).available_e7,100*UNIT);
@@ -432,9 +432,9 @@ fn m13_stale_funding_over_eight_hours_blocks_close_not_fabricates_catchup(){
     e.ledger().with_mut(|l|l.timestamp+=28_801);
     MockOracleClient::new(&e,&oracle).set(&(101*UNIT/10),&(10*UNIT),&e.ledger().timestamp());
     let c=PerpClearinghouseClient::new(&e,&id);
-    assert!(c.try_settle_funding(&id(&e,54)).is_err());
-    assert!(c.try_close(&id(&e,54)).is_err());
-    assert!(c.position(&id(&e,54)).unwrap().active);
+    assert!(c.try_settle_funding(&self::id(&e,54)).is_err());
+    assert!(c.try_close(&self::id(&e,54)).is_err());
+    assert!(c.position(&self::id(&e,54)).unwrap().active);
     assert_eq!(c.wallet(&long).locked_e7,10*UNIT);
 }
 #[test]
@@ -444,10 +444,10 @@ fn m13_oracle_deviation_and_staleness_block_funding(){
     open(&e,&id,&long,&short,55);
     e.ledger().with_mut(|l|l.timestamp+=3600);
     let c=PerpClearinghouseClient::new(&e,&id);
-    assert!(c.try_settle_funding(&id(&e,55)).is_err());
+    assert!(c.try_settle_funding(&self::id(&e,55)).is_err());
     MockOracleClient::new(&e,&oracle).set(&(103*UNIT/10),&(10*UNIT),&e.ledger().timestamp());
-    assert!(c.try_settle_funding(&id(&e,55)).is_err());
-    assert_eq!(c.position(&id(&e,55)).unwrap().last_funding_sec,0);
+    assert!(c.try_settle_funding(&self::id(&e,55)).is_err());
+    assert_eq!(c.position(&self::id(&e,55)).unwrap().last_funding_sec,0);
 }
 #[test]
 fn m13_permissionless_funding_cannot_remove_unowned_escrow(){
@@ -460,10 +460,10 @@ fn m13_permissionless_funding_cannot_remove_unowned_escrow(){
     let c=PerpClearinghouseClient::new(&e,&id);
     let before=token::TokenClient::new(&e,&asset).balance(&id);
     e.set_auths(&[]); // no caller wallet auth needed for immutable oracle formula
-    assert_eq!(c.settle_funding(&id(&e,56)),500_000);
+    assert_eq!(c.settle_funding(&self::id(&e,56)),500_000);
     assert_eq!(token::TokenClient::new(&e,&asset).balance(&id),before);
     assert_eq!(c.reconciliation().surplus_e7,0);
-    assert!(c.try_close(&id(&e,56)).is_err()); // close still needs BOTH
+    assert!(c.try_close(&self::id(&e,56)).is_err()); // close still needs BOTH
 }
 #[test]
 fn m13_maintenance_breach_prevents_funding_from_draining_escrow(){
@@ -475,13 +475,13 @@ fn m13_maintenance_breach_prevents_funding_from_draining_escrow(){
     for _ in 0..5 {
         e.ledger().with_mut(|l|l.timestamp+=28_800);
         MockOracleClient::new(&e,&oracle).set(&(102*UNIT/10),&(10*UNIT),&e.ledger().timestamp());
-        assert_eq!(c.settle_funding(&id(&e,57)),800_000*10);
+        assert_eq!(c.settle_funding(&self::id(&e,57)),800_000*10);
     }
-    let before=c.position(&id(&e,57)).unwrap();
+    let before=c.position(&self::id(&e,57)).unwrap();
     e.ledger().with_mut(|l|l.timestamp+=28_800);
     MockOracleClient::new(&e,&oracle).set(&(102*UNIT/10),&(10*UNIT),&e.ledger().timestamp());
-    assert!(c.try_settle_funding(&id(&e,57)).is_err());
-    assert_eq!(c.position(&id(&e,57)).unwrap().long_margin_e7,before.long_margin_e7);
+    assert!(c.try_settle_funding(&self::id(&e,57)).is_err());
+    assert_eq!(c.position(&self::id(&e,57)).unwrap().long_margin_e7,before.long_margin_e7);
 }
 #[test]
 fn m13_unsolicited_token_donation_is_surplus_not_user_equity_or_fees(){
@@ -505,9 +505,9 @@ fn m13_closed_id_cannot_claim_funding_again_or_reopen(){
     configure(&e,&id);fund(&e,&id,&long,&short);
     open(&e,&id,&long,&short,58);
     let c=PerpClearinghouseClient::new(&e,&id);
-    c.close(&id(&e,58));
-    assert!(c.try_settle_funding(&id(&e,58)).is_err());
-    assert!(c.try_close(&id(&e,58)).is_err());
-    assert!(c.try_open(&id(&e,58),&long,&short,&(4*UNIT),&(12*UNIT),&(8*UNIT),
+    c.close(&self::id(&e,58));
+    assert!(c.try_settle_funding(&self::id(&e,58)).is_err());
+    assert!(c.try_close(&self::id(&e,58)).is_err());
+    assert!(c.try_open(&self::id(&e,58),&long,&short,&(4*UNIT),&(12*UNIT),&(8*UNIT),
         &(e.ledger().sequence()+10)).is_err());
 }
