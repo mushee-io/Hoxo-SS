@@ -188,7 +188,8 @@ test("M9 defaults to simulation and does not sign or send either wallet",async()
 });
 test("M9 refuses submission without explicit send acknowledgement",async()=>{
   const server=mockServer(),{sdk,source,other,events}=fakeSdk(server);
-  await assert.rejects(()=>m9TwoWalletSettlement({sdk,sourceKeypair:source,otherKeypair:other,server,terms:terms(),registry:await registry(),contractId:C1,send:true}),/Explicit/);
+  const registered=await registry();
+  await assert.rejects(()=>m9TwoWalletSettlement({sdk,sourceKeypair:source,otherKeypair:other,server,terms:terms(),registry:registered,contractId:C1,send:true}),/Explicit/);
   assert.equal(events.includes("signAndSend"),false);
 });
 test("M9 dual-wallet signing uses taker auth first, maker envelope last, then confirms exact chain receipt",async()=>{
