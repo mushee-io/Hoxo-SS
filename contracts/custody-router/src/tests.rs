@@ -351,7 +351,7 @@ fn m11_actual_borrowed_debt_blocks_new_custody_routes_until_repaid(){
     // Test-only permissive borrower, expressly NOT the reviewed M15 risk.
     let risk=f.e.register(TestOnlyBorrowAllowRisk,());
     l.set_risk_authority(&risk);
-    l.set_borrow_policy(&(100*UNIT),&9500u32,&1000u32,&true);
+    l.set_borrow_policy(&(100*UNIT),&9000u32,&1000u32,&true);
     let deposited=r.supply_from_margin(&f.buyer,&(100*UNIT));
     assert_eq!(deposited.tokens_e7,100*UNIT);
     let debt=l.borrow(&f.buyer,&(5*UNIT));
