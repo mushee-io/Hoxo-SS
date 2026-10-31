@@ -242,7 +242,12 @@ fn actual_open_perp_position_makes_unrealised_account_liabilities_explicitly_inc
     assert!(a.nominal_book_covered);
     assert_eq!(a.nominal_book_surplus_e7,0);
     assert!(!a.no_open_credit_or_perp_risk);
-    assert!(!a.full_perp_exposure_enumerated);
+    assert!(a.full_perp_exposure_enumerated);
+    assert!(a.m12_global_index_complete);
+    assert_eq!(a.m12_global_locked_e7,20*UNIT);
+    assert_eq!(a.m12_global_insolvency_e7,0);
+    assert!(a.m12_insurance_snapshot_ok);
+    assert!(!a.unified_leverage_authorized);
     assert!(!a.liquidity_only_coverage);
     assert!(!a.unified_leverage_authorized);
     assert!(!f.p().approve_open(&f.alice,&f.perp,&1,&UNIT,&UNIT,&UNIT));
