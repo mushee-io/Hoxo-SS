@@ -33,10 +33,13 @@ Stellar smart contracts (Rust `soroban-sdk`) for vaults, settlement and enforcem
 
 **Important:** the terminal is a testnet development UI, **not** a deployed trading protocol. It does not submit orders, transfer collateral or show invented order-book/price data. The reference risk library is not contract enforcement.
 
-## Local risk-engine checks
+## Verification
 ```sh
-npm test
+npm test                   # Deterministic M0 risk tests + M1 landing tests
+npm run check:testnet      # Live read-only Stellar Testnet Horizon check
 ```
+
+The live check requires internet access and **does not** prove deployed exchange contracts.
 
 The JS reference engine is **not smart-contract authorization** and must not be used to safeguard funds on its own.
 

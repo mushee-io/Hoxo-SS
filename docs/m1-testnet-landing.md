@@ -17,3 +17,11 @@ This is a **read-only testnet-aware front door**, not an operational exchange. I
 5. Test Freighter and Friendbot separately under **M3/M4**; they are not acceptance evidence for M1.
 
 **Testnet policy:** mainnet passphrase is rejected; no testnet ledger activity is represented as genuine trading volume or liquidity.
+
+## Automated live Testnet check
+
+Run `npm run check:testnet` to contact the real Horizon Testnet URL. The `testnet-horizon` CI job is separate from deterministic unit tests. It fails on a wrong passphrase, missing ledger, stale data or failed request. The result proves only current Horizon read-only availability. Browser CORS and actual Freighter wallet connection still require separate deployed-page verification.
+
+## Hosting gate
+
+A separate Vercel project `hoxo-ss` was requested, but Vercel returned **403 forbidden** on project creation. No other Hoxo project was changed. Preview deployment and visual browser checks remain pending until project-create access is granted or another authorised deployment option is available.

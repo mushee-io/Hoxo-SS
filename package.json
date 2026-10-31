@@ -7,7 +7,8 @@
   "scripts": {
     "test": "node --test packages/risk-engine/test/*.test.mjs tests/*.test.mjs",
     "check": "npm test",
-    "test:landing": "node --test tests/landing.test.mjs"
+    "test:landing": "node --test tests/landing.test.mjs",
+    "check:testnet": "node scripts/check-testnet.mjs"
   },
   "engines": {
     "node": ">=20"

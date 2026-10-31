@@ -14,3 +14,17 @@ jobs:
         with:
           node-version: '22'
       - run: npm test
+
+  testnet-horizon:
+    name: Live Stellar Testnet (read-only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check Stellar Testnet passphrase, latest ledger and freshness
+        run: npm run check:testnet
