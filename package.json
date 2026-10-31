@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Stellar spot, perps and money markets unified-margin development foundation",
   "scripts": {
-    "test": "node --test packages/risk-engine/test/*.test.mjs tests/landing.test.mjs tests/terminal.test.mjs tests/wallet.test.mjs tests/infrastructure.test.mjs tests/matching.test.mjs tests/marketdata.test.mjs tests/settlement-preview.test.mjs tests/m9-wallet-settlement.test.mjs tests/advanced-orders.test.mjs tests/portfolio-history.test.mjs tests/indexer.test.mjs tests/security-controls.test.mjs tests/m21-evidence.test.mjs tests/m22-risk-stress.test.mjs tests/m22-chaos.test.mjs tests/m23-beta.test.mjs tests/m24-mainnet.test.mjs tests/testnet-operator.test.mjs",
+    "test": "node --test packages/risk-engine/test/*.test.mjs tests/landing.test.mjs tests/terminal.test.mjs tests/wallet.test.mjs tests/infrastructure.test.mjs tests/matching.test.mjs tests/marketdata.test.mjs tests/settlement-preview.test.mjs tests/m9-wallet-settlement.test.mjs tests/advanced-orders.test.mjs tests/portfolio-history.test.mjs tests/indexer.test.mjs tests/security-controls.test.mjs tests/m21-evidence.test.mjs tests/m22-risk-stress.test.mjs tests/m22-chaos.test.mjs tests/m23-beta.test.mjs tests/m24-mainnet.test.mjs tests/testnet-operator.test.mjs tests/testnet-activation.test.mjs",
     "check": "npm test",
     "test:landing": "node --test tests/landing.test.mjs",
     "check:testnet": "node scripts/check-testnet.mjs",
@@ -42,7 +42,9 @@
     "m24:risk": "node scripts/m24-risk.mjs",
     "m24:drill": "node scripts/m24-drill.mjs",
     "test:testnet-operator": "node --test tests/testnet-operator.test.mjs",
-    "testnet:deploy": "node scripts/deploy-testnet-operator.mjs"
+    "testnet:deploy": "node scripts/deploy-testnet-operator.mjs",
+    "testnet:bind-risk": "node scripts/bind-testnet-risk.mjs",
+    "test:testnet-activation": "node --test tests/testnet-activation.test.mjs"
   },
   "engines": {
     "node": ">=20"

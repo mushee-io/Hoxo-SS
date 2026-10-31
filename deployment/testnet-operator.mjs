@@ -10,6 +10,13 @@ import {probeInfrastructure} from "../infra/network.mjs";
 import {TESTNET_CONFIG} from "../config/testnet.mjs";
 
 export const DEPLOY_ACK="I_UNDERSTAND_HOXO_TESTNET_UNAUDITED_NO_FINANCIAL_BETA";
+export const AUXILIARY_TESTNET_PACKAGES=Object.freeze([
+  Object.freeze({role:"portfolio-accounting",package:"hoxo-portfolio-accounting",
+    wasm:"hoxo_portfolio_accounting.wasm",kind:"READ_ONLY_CROSS_PRODUCT_RISK_OBSERVER"}),
+  Object.freeze({role:"custody-router",package:"hoxo-custody-router",
+    wasm:"hoxo_custody_router.wasm",kind:"ISOLATED_ONLY_NO_SHARED_LEVERAGE"}),
+]);
+export const ALL_TESTNET_OPERATOR_PACKAGES=Object.freeze([...M23_PACKAGES,...AUXILIARY_TESTNET_PACKAGES]);
 const ALPHABET="ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 function decodeBase32(s){
   if(typeof s!=="string"||!/^C[A-Z2-7]{55}$/.test(s))return null;
@@ -45,7 +52,14 @@ function requiredC(v,label){
   if(!isStellarCAddress(v))throw Error("Invalid checksum-valid Stellar contract address: "+label);
   return v;
 }
-export function prepareTestnetDeployment(config,role){
+function requireDistinctContracts(pairs,label){
+  const seen=new Set();
+  for(const [name,address] of pairs){
+    if(seen.has(address))throw Error(label+": duplicate contract address "+name);
+    seen.add(address);
+  }
+}
+export function validateTestnetOperatorConfig(config){
   if(!config||typeof config!=="object"||Array.isArray(config))
     throw Error("Reviewed external deployment configuration required");
   if(config.network!=="testnet"||config.networkPassphrase!==TESTNET_CONFIG.passphrase)
@@ -54,20 +68,41 @@ export function prepareTestnetDeployment(config,role){
      !/^[a-zA-Z][a-zA-Z0-9_-]{1,50}$/.test(config.sourceAlias)||
      config.sourceAlias.startsWith("S"))
     throw Error("Only a short externally managed Stellar CLI identity ALIAS is supported, never a seed");
-  const item=M23_PACKAGES.find(x=>x.role===role);
+  return Object.freeze({
+    sourceAlias:config.sourceAlias,
+    adminPublicKey:requiredG(config.adminPublicKey,"adminPublicKey"),
+    network:"testnet",
+  });
+}
+export function prepareTestnetDeployment(config,role){
+  const validated=validateTestnetOperatorConfig(config);
+  const item=ALL_TESTNET_OPERATOR_PACKAGES.find(x=>x.role===role);
   if(!item)throw Error("Unrecognised Hoxo Testnet contract role");
-  const owner=requiredG(config.adminPublicKey,"adminPublicKey");
+  const owner=validated.adminPublicKey;
   const args=["contract","deploy","--wasm",
     "target/wasm32v1-none/release/"+item.wasm,
     "--source-account",config.sourceAlias,"--network","testnet"];
   {
     args.push("--");
-    if(role==="risk-engine"){
+    if(role==="portfolio-accounting"||role==="custody-router"){
+      const vault=requiredC(config.riskVaultContract,"riskVaultContract");
+      const lending=requiredC(config.moneyMarketContract,"moneyMarketContract");
+      const perp=requiredC(config.perpClearinghouseContract,"perpClearinghouseContract");
+      const asset=requiredC(config.valuelessTokenContract,"valuelessTokenContract");
+      const deps=[["vault",vault],["lending",lending],["perp",perp],["asset",asset]];
+      if(role==="custody-router"){
+        deps.push(["spot",requiredC(config.spotSettlementContract,"spotSettlementContract")]);
+      }
+      requireDistinctContracts(deps,role);
+      args.push("--admin",owner,"--vault",vault);
+      if(role==="custody-router")args.push("--spot",requiredC(config.spotSettlementContract,"spotSettlementContract"));
+      args.push("--lending",lending,"--perp",perp,"--asset",asset);
+    }else if(role==="risk-engine"){
       const vault=requiredC(config.riskVaultContract,"riskVaultContract");
       const token=requiredC(config.valuelessTokenContract,"valuelessTokenContract");
       const oracle=requiredC(config.riskOracleContract,"riskOracleContract");
-      if(vault===oracle||vault===token||oracle===token)
-        throw Error("Canonical risk requires separate on-chain vault, oracle and token addresses");
+      requireDistinctContracts([["vault",vault],["oracle",oracle],["asset",token]],
+        "Canonical risk");
       if(!Number.isSafeInteger(config.marketId)||config.marketId<1||config.marketId>4294967295)
         throw Error("Invalid canonical marketId");
       if(!Number.isSafeInteger(config.maxOwnerReservedE7)||
@@ -126,5 +161,58 @@ export async function operatorDeployTestnet({
     ...prepared,transactionSubmitted:"CLI_REPORTED_SUCCESS_NOT_INDEPENDENTLY_VERIFIED",
     receiptVerified:false,contractId:null,
     next:"Independently verify contract C-address, ledger/hash, admins, code hash and paused state; do not change registry until verified.",
+  });
+}
+
+/**
+ * Mandatory immutable post-deployment step for the canonical spot-risk
+ * controller. This invokes ONLY bind_products, never unpauses the market
+ * or enables M11 borrow/M12 perps. Never returns a fabricated receipt.
+ */
+export function prepareTestnetRiskBinding(config){
+  const validated=validateTestnetOperatorConfig(config);
+  const risk=requiredC(config.riskEngineContract,"riskEngineContract");
+  const portfolio=requiredC(config.portfolioAccountingContract,"portfolioAccountingContract");
+  const lending=requiredC(config.moneyMarketContract,"moneyMarketContract");
+  const perp=requiredC(config.perpClearinghouseContract,"perpClearinghouseContract");
+  requireDistinctContracts([["risk",risk],["portfolio",portfolio],["lending",lending],["perp",perp]],
+    "Risk binding");
+  if(config.riskVaultContract&&config.valuelessTokenContract){
+    const vault=requiredC(config.riskVaultContract,"riskVaultContract");
+    const asset=requiredC(config.valuelessTokenContract,"valuelessTokenContract");
+    requireDistinctContracts([["risk",risk],["portfolio",portfolio],["lending",lending],
+      ["perp",perp],["vault",vault],["asset",asset]],"Risk binding");
+  }
+  const args=["contract","invoke","--id",risk,"--source-account",validated.sourceAlias,
+    "--network","testnet","--send=yes","--","bind_products","--portfolio",portfolio,
+    "--lending",lending,"--perp",perp];
+  return Object.freeze({
+    action:"BIND_READ_ONLY_PORTFOLIO_AND_EXISTING_PRODUCT_DEBT_SOURCES",
+    network:"testnet",sourceAlias:validated.sourceAlias,
+    args,operatorMustAuthorizeAdmin:true,
+    transactionSubmitted:false,receiptVerified:false,financialBetaApproved:false,
+    leverageApproved:false,mainnetApproved:false,
+    note:"Operator must verify risk is paused and admin signer authorises exact one-time binding. CLI success is not an independent ledger receipt.",
+  });
+}
+export async function operatorBindTestnetRisk({
+  config,acknowledgement,interactive=false,isCI=false,
+  executor,probe=probeInfrastructure,
+}={}){
+  const prepared=prepareTestnetRiskBinding(config);
+  if(acknowledgement!==DEPLOY_ACK||!interactive||isCI)
+    throw Error("Operator-only binding denied: interactive acknowledgement required, CI prohibited");
+  if(typeof executor!=="function"||typeof probe!=="function")
+    throw Error("Operator CLI executor and read-only network preflight required");
+  const health=await probe({config:TESTNET_CONFIG,timeoutMs:12000});
+  if(health?.state!=="verified"||health.horizon?.state!=="verified"||
+     health.rpc?.state!=="verified")
+    throw Error("Stellar Testnet Horizon/RPC independent preflight failed, no binding submitted");
+  const exitCode=await executor("stellar",prepared.args);
+  if(exitCode!==0)throw Error("Stellar CLI bind_products failed; check chain state before retry");
+  return Object.freeze({
+    ...prepared,transactionSubmitted:"CLI_REPORTED_SUCCESS_NOT_INDEPENDENTLY_VERIFIED",
+    receiptVerified:false,
+    next:"Independently verify actual Testnet invoke receipt, risk paused state, all contract IDs and deployed WASM hashes; do not enable trading.",
   });
 }

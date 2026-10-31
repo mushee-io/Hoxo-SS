@@ -22,6 +22,8 @@ const liquidation=await read("contracts/perp-clearinghouse/src/m14.rs");
 const unified=await read("contracts/unified-margin/src/lib.rs");
 const custodyRouter=await read("contracts/custody-router/src/lib.rs");
 const portfolioAccounting=await read("contracts/portfolio-accounting/src/lib.rs");
+const testnetOperator=await read("deployment/testnet-operator.mjs");
+const testnetBinding=await read("scripts/bind-testnet-risk.mjs");
 const perpPositionRisk=await read("contracts/perp-clearinghouse/src/lib.rs");
 const lendingAccounting=await read("contracts/money-market/src/lib.rs");
 const chainRisk=await read("contracts/canonical-risk/src/lib.rs");
@@ -217,6 +219,14 @@ const invariants={
     chainRisk.includes('SpotPortfolioClient::new(&e,&portfolio).spot_reservation_safe(')&&
     chainRisk.includes('CreditLedgerClient::new(&e,&lend).current_outstanding_debt_e7()!=0')&&
     chainRisk.includes('PerpPositionsClient::new(&e,&perp).active_positions()!=0'),
+  m25OperatorRiskBindingStillNoLiveApproval:testnetOperator.includes('AUXILIARY_TESTNET_PACKAGES')&&
+    testnetOperator.includes('export function prepareTestnetRiskBinding(')&&
+    testnetOperator.includes('export async function operatorBindTestnetRisk(')&&
+    testnetOperator.includes('"--send=yes"')&&
+    testnetBinding.includes('mode:"DRY_RUN_ONLY"')&&
+    testnetBinding.includes('interactive:Boolean(process.stdin.isTTY)')&&
+    testnetOperator.includes('receiptVerified:false')&&
+    testnetOperator.includes('financialBetaApproved:false'),
   m12GlobalExposureSnapshotOnly:perpPositionRisk.includes('pub fn market_exposure(')&&
     perpPositionRisk.includes('pub fn market_position_ids(')&&
     perpPositionRisk.includes('MAX_OPEN_POSITIONS:u32=64')&&
