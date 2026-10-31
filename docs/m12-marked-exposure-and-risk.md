@@ -48,3 +48,8 @@ npm run check:readiness
 Before any actual Stellar Testnet use, operator deployment review must validate the newly required `bind_products` transaction, contract code hashes, source identities, market/oracle configuration, admin signer, token mint/decimals, and complete receipt hashes. No automatic deployment, real transaction hash, independent audit finding or public beta has been claimed.
 
 **Not complete:** audited market-wide position/liquidation solvency including all wallet offsets; shared M15 leveraged borrowing/perpetual margin, settlement and bad-debt waterfall; independent reviewer approval; real public Testnet signed transactions. Mainnet stays NO-GO.
+
+
+## Subsequent market-wide bounded risk snapshot
+
+In addition to owner snapshots, the clearinghouse now records every open position in a bounded market-wide index and verifies both counterparty wallet locks, funding and mark PnL. The global view sums potential maintenance deficits and gross insurance shortfalls across **all** currently open positions rather than treating a single position's prefunded insurance reserve as market-wide coverage. It enforces at most 64 active open positions in this review-only Testnet source, to bound Soroban computation. The cross-product portfolio now consumes this complete index. **This remains source-level accounting, not a verified audited liquidation engine or approval to leverage.** See [global market solvency](m12-market-wide-solvency.md).

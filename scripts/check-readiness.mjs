@@ -217,6 +217,17 @@ const invariants={
     chainRisk.includes('SpotPortfolioClient::new(&e,&portfolio).spot_reservation_safe(')&&
     chainRisk.includes('CreditLedgerClient::new(&e,&lend).current_outstanding_debt_e7()!=0')&&
     chainRisk.includes('PerpPositionsClient::new(&e,&perp).active_positions()!=0'),
+  m12GlobalExposureSnapshotOnly:perpPositionRisk.includes('pub fn market_exposure(')&&
+    perpPositionRisk.includes('pub fn market_position_ids(')&&
+    perpPositionRisk.includes('MAX_OPEN_POSITIONS:u32=64')&&
+    perpPositionRisk.includes('add_market_position(&e,&id)?')&&
+    perpPositionRisk.includes('remove_market_position(&e,&id)?')&&
+    perpPositionRisk.includes('insurance_snapshot_covered:insurance>=bankrupt')&&
+    perpPositionRisk.includes('system_risk_approved:false')&&
+    perpPositionRisk.includes('financial_beta_approved:false')&&
+    portfolioAccounting.includes('let global=p.market_exposure()')&&
+    portfolioAccounting.includes('m12_insurance_shortfall_e7')&&
+    portfolioAccounting.includes('unified_leverage_authorized:false'),
   m24NoMainnetApproval:m24Gate.includes('NO_GO_INDEPENDENT_APPROVAL_AND_LIVE_PROOF_MISSING')&&
     m24Gate.includes('mainnetLaunchApproved:false')&&
     m24Gate.includes('mainnetOperationsEnabled:false'),
