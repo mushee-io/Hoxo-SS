@@ -6,7 +6,7 @@
  * A wallet must sign the exact UTF-8 payload returned by canonicalPayload().
  */
 import { createPublicKey, verify as verifyEd25519 } from "node:crypto";
-import { isStellarGAddress } from "../../app/wallet-core.mjs";
+import { isStellarGAddress } from "../app/wallet-core.mjs";
 
 export const TESTNET_PASSPHRASE = "Test SDF Network ; September 2015";
 const PREFIX = "HOXO-SS-M8-OFFCHAIN-INTENT-V1\n";
