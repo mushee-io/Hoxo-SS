@@ -477,3 +477,63 @@ fn m11_controller_single_binding_and_policy_validation_are_strict(){
     m.set_borrow_policy(&(10*UNIT),&8000,&1000,&true);
     assert!(m.borrowing_enabled());
 }
+
+
+#[test]
+fn m11_interest_repayment_preserves_supplier_income_and_unclaimable_protocol_reserves(){
+    let (e,id,_,alice,bob,asset)=setup();
+    open(&e,&id);
+    let m=MoneyMarketClient::new(&e,&id);
+    m.supply(&alice,&(300*UNIT));
+    enable_mock_risk(&e,&id,100*UNIT,8000);
+    m.borrow(&bob,&(30*UNIT));
+    e.ledger().with_mut(|l|l.timestamp+=10*86_400);
+    let loan=m.debt_of(&bob);
+    assert!(loan>30*UNIT);
+    assert_eq!(m.repay(&bob,&bob,&(100*UNIT)),loan);
+    let reserves=m.pool().protocol_reserves_e7;
+    assert!(reserves>0);
+    assert_eq!(m.pool().total_borrowed_e7,0);
+    let supplier_receipt=m.redeem(&alice,&(300*UNIT));
+    assert!(supplier_receipt>300*UNIT);
+    assert_eq!(m.pool().total_shares_e7,0);
+    assert_eq!(m.pool().cash_e7,reserves);
+    assert!(m.solvent());
+    assert_eq!(token::TokenClient::new(&e,&asset).balance(&id),reserves);
+    // A new depositor gets ONLY shares for their own fresh supplied amount,
+    // not a claim on the previous loan's retained protocol reserves.
+    assert_eq!(m.supply(&alice,&UNIT),UNIT);
+    assert_eq!(m.pool().total_shares_e7,UNIT);
+    assert_eq!(m.pool().cash_e7,reserves+UNIT);
+}
+#[test]
+fn m11_no_debt_fast_forwards_idle_time_without_creating_yield(){
+    let (e,id,_,alice,_,_)=setup();
+    open(&e,&id);
+    let m=MoneyMarketClient::new(&e,&id);
+    e.ledger().with_mut(|l|l.timestamp+=120*86_400);
+    assert_eq!(m.supply(&alice,&(5*UNIT)),5*UNIT);
+    assert_eq!(m.pool().total_borrowed_e7,0);
+    assert_eq!(m.pool().supply_index_e7,UNIT);
+    assert_eq!(m.debt_status().last_accrual_sec,e.ledger().timestamp());
+}
+#[test]
+fn m11_multiple_borrowers_repay_separately_and_global_shares_reconcile(){
+    let (e,id,_,alice,bob,_)=setup();
+    open(&e,&id);
+    let m=MoneyMarketClient::new(&e,&id);
+    m.supply(&alice,&(300*UNIT));
+    enable_mock_risk(&e,&id,100*UNIT,8000);
+    m.borrow(&bob,&(20*UNIT));
+    m.borrow(&alice,&(10*UNIT));
+    assert_eq!(m.debt_of(&bob),20*UNIT);
+    assert_eq!(m.debt_of(&alice),10*UNIT);
+    assert_eq!(m.pool().total_borrowed_e7,30*UNIT);
+    assert_eq!(m.repay(&bob,&bob,&(20*UNIT)),20*UNIT);
+    assert_eq!(m.debt_of(&bob),0);
+    assert_eq!(m.debt_of(&alice),10*UNIT);
+    assert_eq!(m.pool().total_borrowed_e7,10*UNIT);
+    assert_eq!(m.repay(&alice,&alice,&(10*UNIT)),10*UNIT);
+    assert_eq!(m.pool().total_borrowed_e7,0);
+    assert_eq!(m.debt_status().debt_shares_e7,0);
+}

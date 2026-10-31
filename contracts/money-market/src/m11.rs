@@ -92,6 +92,15 @@ pub fn compute(e:&Env,allow_partial:bool)->Result<(PoolState,DebtState),PoolErro
     let now=e.ledger().timestamp();
     if now<d.last_accrual_sec{return Err(PoolError::ClockRollback);}
     let gap=now-d.last_accrual_sec;
+    // No outstanding principal: skip keeper catch-up without inventing interest.
+    // Previous indexed debt may be closed, so do not charge new borrowers for
+    // the elapsed idle period or strand suppliers behind stale timestamps.
+    if d.total_debt_shares_e7==0 {
+        if p.borrowed_e7!=0{return Err(PoolError::AccountingMismatch);}
+        d.last_accrual_sec=now;
+        d.index_remainder=0;
+        return Ok((p,d));
+    }
     if !allow_partial&&gap>MAX_STEP{return Err(PoolError::StaleAccrual);}
     let seconds=if allow_partial{gap.min(MAX_STEP)}else{gap};
     if seconds==0{return Ok((p,d));}
