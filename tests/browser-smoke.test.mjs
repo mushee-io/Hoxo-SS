@@ -200,7 +200,7 @@ test("M4 Testnet network panel verifies Horizon/RPC and never claims deployed ex
         history_latest_ledger_closed_at:new Date(at*1000).toISOString()
       })});
     }
-    if(url==="https://soroban-testnet.stellar.org"){
+    if(url==="https://soroban-testnet.stellar.org"||url==="https://soroban-testnet.stellar.org/"){
       const input=route.request().postDataJSON();
       calls.push(input.method);
       const result={
@@ -216,7 +216,7 @@ test("M4 Testnet network panel verifies Horizon/RPC and never claims deployed ex
   page.on("pageerror",e=>errors.push(e.message));
   try{
     await page.goto(BASE+"/app/?market=xlm-usdc-spot#network",{waitUntil:"domcontentloaded"});
-    await page.waitForFunction(()=>document.getElementById("infraOverall").textContent.includes("TESTNET CONNECTED"),{timeout:15000});
+    await page.waitForFunction(()=>document.getElementById("infraOverall").textContent.includes("TESTNET CONNECTED"),null,{timeout:8000});
     assert.equal(await page.locator("#infraHorizonStatus").innerText(),"VERIFIED");
     assert.equal(await page.locator("#infraRpcStatus").innerText(),"VERIFIED");
     assert.equal(await page.locator("#infraRegistryStatus").innerText(),"REGISTRY VALID");
