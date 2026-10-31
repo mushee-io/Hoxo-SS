@@ -54,7 +54,7 @@ pub struct SettlementReceipt {
     pub maker_side:u32,
     pub settled_ledger:u32,
 }
-#[contractevent(topics = ["hoxo_spot", "settled"], data_format = "single-value")]
+#[contractevent(topics = ["hoxo_spot", "settled"], data_format = "vec")]
 #[derive(Clone, Debug)]
 pub struct SpotSettled {
     #[topic]
