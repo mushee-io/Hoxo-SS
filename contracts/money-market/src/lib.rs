@@ -1,16 +1,18 @@
 #![no_std]
-//! Hoxo SS M10: SINGLE-ASSET, SUPPLY-ONLY Stellar Testnet money market.
+//! Hoxo SS M10-M11: SINGLE-ASSET, risk-gated Stellar Testnet lending foundation.
 //! - Owner-authorised deposits/withdrawals, shares, exact token transfers.
 //! - Conservative reserve accounting, no fictional interest or yield.
-//! - A pure kinked utilization-rate quote for future M11 borrowing.
-//! - NO borrowing, NO cross-product collateral reuse, NO admin fund sweep.
-//!
-//! Read-only interest indices remain 1.0 until audited M11 debt exists.
+//! - M11 indexed debt shares, bounded accrual and on-chain risk-authority call.
+//! - Borrow starts PAUSED with a ZERO cap and NO risk authority configured.
+//! - No approved M5/M7 canonical risk authority has been deployed.
+//! - No cross-product collateral reuse or admin fund sweep.
 //! Archived Soroban storage requires a keeper/restore runbook before public use.
 use soroban_sdk::{
     contract, contracterror, contractevent, contractimpl, contracttype,
     token, Address, BytesN, Env,
 };
+mod m11;
+use m11::*;
 
 const SCALE:i128=10_000_000;
 const BPS:i128=10_000;
@@ -26,7 +28,7 @@ const TESTNET_ID:[u8;32]=[
 
 #[contracttype]
 #[derive(Clone)]
-pub enum Key { Admin, Asset, Pause, SupplyCap, Pool, Shares(Address) }
+pub enum Key { Admin, Asset, Pause, SupplyCap, Pool, Shares(Address), Debt, DebtShares(Address) }
 
 #[contracttype]
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -100,6 +102,15 @@ pub enum PoolError {
     InvalidUtilization=11,
     BorrowingDisabled=12,
     LastShareCash=13,
+    AccountingMismatch=14,
+    ClockRollback=15,
+    StaleAccrual=16,
+    InvalidPolicy=17,
+    DebtCap=18,
+    UtilizationCap=19,
+    RiskNotConfigured=20,
+    RiskDenied=21,
+    DebtDust=22,
 }
 
 fn admin(e:&Env)->Address{
@@ -165,9 +176,16 @@ fn exchange_rate(state:&PoolState)->Result<i128,PoolError>{
 }
 fn ensure_cash(e:&Env,state:&PoolState)->Result<(),PoolError>{
     if state.cash_e7<0||state.total_shares_e7<0||
-       state.borrowed_e7!=0||state.protocol_reserves_e7!=0||
-       state.borrow_index_e7!=SCALE||state.supply_index_e7!=SCALE {
-        return Err(PoolError::BorrowingDisabled);
+       state.borrowed_e7<0||state.protocol_reserves_e7<0||
+       state.borrow_index_e7<SCALE||state.supply_index_e7<SCALE {
+        return Err(PoolError::Insolvent);
+    }
+    let debt=config(e);
+    if owed(debt.total_debt_shares_e7,state.borrow_index_e7)?!=state.borrowed_e7{
+        return Err(PoolError::AccountingMismatch);
+    }
+    if state.total_shares_e7==0&&total_assets(state)?>0{
+        return Err(PoolError::Insolvent);
     }
     let actual=token::TokenClient::new(e,&asset(e))
         .balance(&e.current_contract_address());
@@ -206,6 +224,7 @@ impl MoneyMarket {
             protocol_reserves_e7:0,
             borrow_index_e7:SCALE,supply_index_e7:SCALE
         });
+        init_debt(&e);
         keep_instance(&e);
     }
     pub fn asset(e:Env)->Address{asset(&e)}
@@ -213,7 +232,10 @@ impl MoneyMarket {
     pub fn deposits_paused(e:Env)->bool{
         e.storage().instance().get(&Key::Pause).unwrap_or(true)
     }
-    pub fn borrowing_enabled()->bool{false}
+    pub fn borrowing_enabled(e:Env)->bool{
+        let d=config(&e);
+        !d.paused&&d.risk_authority.is_some()&&d.debt_cap_e7>0
+    }
     pub fn pause(e:Env,paused:bool){
         admin(&e).require_auth();
         e.storage().instance().set(&Key::Pause,&paused);
@@ -222,7 +244,7 @@ impl MoneyMarket {
     pub fn set_supply_cap(e:Env,cap_e7:i128)->Result<(),PoolError>{
         admin(&e).require_auth();
         if cap_e7<=0||cap_e7>MAX_SUPPLY{return Err(PoolError::SupplyCap);}
-        if cap_e7<pool(&e).cash_e7{return Err(PoolError::SupplyCap);}
+        if cap_e7<total_assets(&pool(&e))?{return Err(PoolError::SupplyCap);}
         e.storage().instance().set(&Key::SupplyCap,&cap_e7);
         keep_instance(&e);
         Ok(())
@@ -246,8 +268,8 @@ impl MoneyMarket {
             supply_index_e7:p.supply_index_e7,
             supply_cap_e7:e.storage().instance().get(&Key::SupplyCap).unwrap_or(0),
             deposits_paused:Self::deposits_paused(e.clone()),
-            borrowing_enabled:false,
-            rates:rate_quote(total_assets(&p).expect("invalid state"),p.borrowed_e7,1000)
+            borrowing_enabled:Self::borrowing_enabled(e.clone()),
+            rates:rate_quote(total_assets(&p).expect("invalid state"),p.borrowed_e7,config(&e).reserve_factor_bps)
                 .expect("invalid utilization"),
         }
     }
@@ -258,13 +280,14 @@ impl MoneyMarket {
         rate_quote(total_assets_e7,borrowed_e7,reserve_factor_bps)
     }
     pub fn preview_supply(e:Env,amount_e7:i128)->Result<i128,PoolError>{
-        deposit_share_quote(&pool(&e),amount_e7)
+        let (p,_)=compute(&e,false)?;
+        deposit_share_quote(&p,amount_e7)
     }
     pub fn supply(e:Env,owner:Address,amount_e7:i128)->Result<i128,PoolError>{
         require_testnet(&e)?;
         owner.require_auth();
         if Self::deposits_paused(e.clone()){return Err(PoolError::Paused);}
-        let mut p=pool(&e);
+        let (mut p,_)=accrue(&e,false)?;
         ensure_cash(&e,&p)?;
         let minted=deposit_share_quote(&p,amount_e7)?;
         let new_cash=p.cash_e7.checked_add(amount_e7).ok_or(PoolError::Overflow)?;
@@ -294,7 +317,7 @@ impl MoneyMarket {
         require_testnet(&e)?;
         owner.require_auth();
         if shares_e7<=0{return Err(PoolError::InvalidAmount);}
-        let mut p=pool(&e);
+        let (mut p,_)=accrue(&e,false)?;
         ensure_cash(&e,&p)?;
         let held=share(&e,&owner);
         if held<shares_e7{return Err(PoolError::InsufficientShares);}
@@ -324,7 +347,7 @@ impl MoneyMarket {
         require_testnet(&e)?;
         owner.require_auth();
         if amount_e7<=0{return Err(PoolError::InvalidAmount);}
-        let mut p=pool(&e);
+        let (mut p,_)=accrue(&e,false)?;
         ensure_cash(&e,&p)?;
         if amount_e7>p.cash_e7{return Err(PoolError::InsufficientLiquidity);}
         if p.total_shares_e7<=0{return Err(PoolError::Insolvent);}
@@ -332,7 +355,7 @@ impl MoneyMarket {
         if burned<=0{return Err(PoolError::ZeroShares);}
         let held=share(&e,&owner);
         if held<burned{return Err(PoolError::InsufficientShares);}
-        if burned==p.total_shares_e7&&amount_e7!=p.cash_e7{
+        if burned==p.total_shares_e7&&amount_e7!=total_assets(&p)?{
             return Err(PoolError::LastShareCash);
         }
         let tok=token::TokenClient::new(&e,&asset(&e));
@@ -351,15 +374,178 @@ impl MoneyMarket {
         SupplyWithdrawn{owner,token_amount_e7:amount_e7,burned_shares_e7:burned}.publish(&e);
         Ok(burned)
     }
+
+    /// Public snapshot is AS OF the last accrual ledger timestamp. A stale
+    /// snapshot is not a current lending approval.
+    pub fn debt_status(e:Env)->BorrowState{
+        let d=config(&e);
+        BorrowState{
+            borrowing_enabled:Self::borrowing_enabled(e.clone()),
+            paused:d.paused,risk_authority_configured:d.risk_authority.is_some(),
+            outstanding_debt_e7:pool(&e).borrowed_e7,
+            debt_shares_e7:d.total_debt_shares_e7,debt_cap_e7:d.debt_cap_e7,
+            max_utilization_bps:d.max_utilization_bps,
+            reserve_factor_bps:d.reserve_factor_bps,
+            last_accrual_sec:d.last_accrual_sec,
+        }
+    }
+    pub fn debt_of(e:Env,borrower:Address)->Result<i128,PoolError>{
+        let (p,_)=compute(&e,false)?;
+        owed(owner_shares(&e,&borrower),p.borrow_index_e7)
+    }
+    /// Admin may bind only ONE future independently reviewed risk authority.
+    /// A malicious controller remains a serious security risk. No M7
+    /// canonical controller is currently deployed or registered.
+    pub fn set_risk_authority(e:Env,authority:Address)->Result<(),PoolError>{
+        require_testnet(&e)?;
+        admin(&e).require_auth();
+        let mut d=config(&e);
+        if d.risk_authority.is_some()||!d.paused||d.total_debt_shares_e7>0 {
+            return Err(PoolError::InvalidPolicy);
+        }
+        d.risk_authority=Some(authority);
+        store_config(&e,&d);
+        Ok(())
+    }
+    /// Borrow starts paused with a cap of 0. Repay is ALWAYS allowed even
+    /// when borrowing is paused or the risk authority becomes unavailable.
+    pub fn set_borrow_policy(
+        e:Env,cap_e7:i128,max_utilization_bps:u32,
+        reserve_factor_bps:u32,enable:bool
+    )->Result<(),PoolError>{
+        require_testnet(&e)?;
+        admin(&e).require_auth();
+        let (p,mut d)=accrue(&e,false)?;
+        policy(cap_e7,max_utilization_bps,reserve_factor_bps,p.borrowed_e7)?;
+        if enable&&(cap_e7==0||d.risk_authority.is_none()){
+            return Err(PoolError::RiskNotConfigured);
+        }
+        d.debt_cap_e7=cap_e7;
+        d.max_utilization_bps=max_utilization_bps;
+        d.reserve_factor_bps=reserve_factor_bps;
+        d.paused=!enable;
+        store_config(&e,&d);
+        Ok(())
+    }
+    /// Permissionless bounded <=30 day accrual. Multiple calls can catch up
+    /// longer dormancy; money mutations fail stale until fully caught up.
+    pub fn accrue_interest(e:Env)->Result<i128,PoolError>{
+        require_testnet(&e)?;
+        let (p,_)=accrue(&e,true)?;
+        ensure_cash(&e,&p)?;
+        Ok(p.borrowed_e7)
+    }
+    pub fn borrow(e:Env,borrower:Address,amount_e7:i128)->Result<i128,PoolError>{
+        require_testnet(&e)?;
+        borrower.require_auth();
+        if amount_e7<=0{return Err(PoolError::InvalidAmount);}
+        let (mut p,mut d)=accrue(&e,false)?;
+        ensure_cash(&e,&p)?;
+        let risk=d.risk_authority.clone().ok_or(PoolError::RiskNotConfigured)?;
+        if d.paused||d.debt_cap_e7<=0{return Err(PoolError::BorrowingDisabled);}
+        if amount_e7>p.cash_e7{return Err(PoolError::InsufficientLiquidity);}
+        if p.total_shares_e7<=0{return Err(PoolError::InsufficientLiquidity);}
+        let new_debt_shares=ceil_div_pos(
+            checked_mul(amount_e7,SCALE)?,p.borrow_index_e7
+        )?;
+        let old_shares=owner_shares(&e,&borrower);
+        let new_owner_shares=old_shares.checked_add(new_debt_shares).ok_or(PoolError::Overflow)?;
+        let new_total_shares=d.total_debt_shares_e7.checked_add(new_debt_shares)
+            .ok_or(PoolError::Overflow)?;
+        let new_global_debt=owed(new_total_shares,p.borrow_index_e7)?;
+        if new_global_debt>d.debt_cap_e7{return Err(PoolError::DebtCap);}
+        // A tiny amount can round up debt. Do not give out free dust.
+        if new_global_debt-p.borrowed_e7<amount_e7 {
+            return Err(PoolError::DebtDust);
+        }
+        let new_owner_debt=owed(new_owner_shares,p.borrow_index_e7)?;
+        let new_cash=p.cash_e7-amount_e7;
+        let prospective=PoolState{cash_e7:new_cash,borrowed_e7:new_global_debt,..p.clone()};
+        check_utilization(&prospective,new_global_debt,d.max_utilization_bps)?;
+        // The authority MUST use canonical on-chain oracle/collateral/position
+        // data itself, not trust caller-provided prices or portfolio snapshots.
+        // Its code/address has NOT been verified in any public deployment.
+        let approved=BorrowRiskClient::new(&e,&risk).approve_borrow(
+            &borrower,&e.current_contract_address(),&asset(&e),
+            &amount_e7,&new_owner_debt
+        );
+        if !approved{return Err(PoolError::RiskDenied);}
+        let token=token::TokenClient::new(&e,&asset(&e));
+        let vault=e.current_contract_address();
+        let before=token.balance(&vault);
+        if before<amount_e7{return Err(PoolError::Insolvent);}
+        token.transfer(&vault,&borrower,&amount_e7);
+        let after=token.balance(&vault);
+        if after.checked_add(amount_e7)!=Some(before)||after<new_cash{
+            return Err(PoolError::Insolvent);
+        }
+        p.cash_e7=new_cash;p.borrowed_e7=new_global_debt;
+        d.total_debt_shares_e7=new_total_shares;
+        update_supply_index(&mut p)?;
+        store_owner_shares(&e,&borrower,new_owner_shares);
+        e.storage().instance().set(&Key::Pool,&p);
+        store_config(&e,&d);
+        BorrowEvent{borrower,amount_e7,debt_shares_e7:new_debt_shares}.publish(&e);
+        Ok(new_owner_debt)
+    }
+    /// Payer may repay anyone's loan but MUST authorise their own token spend.
+    /// This remains available while borrowing is paused or risk is offline.
+    pub fn repay(e:Env,payer:Address,borrower:Address,max_amount_e7:i128)
+        ->Result<i128,PoolError>{
+        require_testnet(&e)?;
+        payer.require_auth();
+        if max_amount_e7<=0{return Err(PoolError::InvalidAmount);}
+        let (mut p,mut d)=accrue(&e,false)?;
+        ensure_cash(&e,&p)?;
+        let user_shares=owner_shares(&e,&borrower);
+        if user_shares<=0{return Err(PoolError::InsufficientShares);}
+        let due=owed(user_shares,p.borrow_index_e7)?;
+        let burn=if max_amount_e7>=due {
+            user_shares
+        }else{
+            let b=checked_mul(max_amount_e7,SCALE)?/p.borrow_index_e7;
+            if b<=0{return Err(PoolError::DebtDust);}
+            b.min(user_shares)
+        };
+        let new_total=d.total_debt_shares_e7.checked_sub(burn)
+            .ok_or(PoolError::AccountingMismatch)?;
+        let new_borrowed=owed(new_total,p.borrow_index_e7)?;
+        let paid=p.borrowed_e7.checked_sub(new_borrowed)
+            .ok_or(PoolError::AccountingMismatch)?;
+        if paid<=0||paid>max_amount_e7{return Err(PoolError::DebtDust);}
+        let next_cash=p.cash_e7.checked_add(paid).ok_or(PoolError::Overflow)?;
+        let token=token::TokenClient::new(&e,&asset(&e));
+        let vault=e.current_contract_address();
+        let before=token.balance(&vault);
+        token.transfer(&payer,&vault,&paid);
+        let after=token.balance(&vault);
+        if after.checked_sub(before)!=Some(paid)||after<next_cash{
+            return Err(PoolError::Insolvent);
+        }
+        p.cash_e7=next_cash;p.borrowed_e7=new_borrowed;
+        d.total_debt_shares_e7=new_total;
+        update_supply_index(&mut p)?;
+        store_owner_shares(&e,&borrower,user_shares-burn);
+        e.storage().instance().set(&Key::Pool,&p);
+        store_config(&e,&d);
+        RepayEvent{borrower,payer,amount_e7:paid,burned_shares_e7:burn}.publish(&e);
+        Ok(paid)
+    }
+
     /// M11 placeholder that MUST NOT grant a loan, write principal or increase
     /// utilization until canonical oracle/risk checks are enforced atomically.
     pub fn borrow_disabled()->Result<(),PoolError>{
         Err(PoolError::BorrowingDisabled)
     }
+
+    /// The zero-cap, unconfigured state never permits borrowing even if
+    /// a frontend mistakenly attempts to activate its UI.
+    pub fn borrow_guarded(e:Env)->bool{
+        let d=config(&e);
+        !d.paused && d.debt_cap_e7>0 && d.risk_authority.is_some()
+    }
     pub fn solvent(e:Env)->bool{
-        let p=pool(&e);
-        p.borrowed_e7==0&&p.protocol_reserves_e7==0&&
-        token::TokenClient::new(&e,&asset(&e)).balance(&e.current_contract_address())>=p.cash_e7
+        ensure_cash(&e,&pool(&e)).is_ok()
     }
     /// Permissionless keeper call; persistent share entry may have been
     /// archived before this is called and then needs explicit restoration.
@@ -367,6 +553,10 @@ impl MoneyMarket {
         let k=Key::Shares(owner);
         if e.storage().persistent().has(&k){
             e.storage().persistent().extend_ttl(&k,TTL_THRESHOLD,TTL_TARGET);
+        }
+        let debt_key=Key::DebtShares(owner);
+        if e.storage().persistent().has(&debt_key){
+            e.storage().persistent().extend_ttl(&debt_key,TTL_THRESHOLD,TTL_TARGET);
         }
         keep_instance(&e);
     }

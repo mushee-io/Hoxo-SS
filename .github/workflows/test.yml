@@ -105,7 +105,7 @@ jobs:
         run: npm run test:m9-wallet
 
   rust-contracts:
-    name: M6–M10 Soroban contracts and WASM smoke
+    name: M6–M11 Soroban contracts and WASM smoke
     runs-on: ubuntu-latest
     timeout-minutes: 22
     permissions:
@@ -130,7 +130,7 @@ jobs:
         run: cargo test -p hoxo-risk-gate --lib
       - name: Run M9 atomic spot settlement contract tests
         run: cargo test -p hoxo-spot-settlement --lib
-      - name: Run M10 Soroban supply pool tests
+      - name: Run M10–M11 supply, interest, guarded borrow and repayment contract tests
         run: cargo test -p hoxo-money-market --lib
       - uses: stellar/stellar-cli@v28.1.0
       - name: Install official Stellar Soroban WASM target
@@ -141,14 +141,14 @@ jobs:
           stellar contract build --package hoxo-spot-settlement
           test -s target/wasm32v1-none/release/hoxo_spot_settlement.wasm
           sha256sum target/wasm32v1-none/release/hoxo_spot_settlement.wasm
-      - name: Build M10 WASM using official Stellar CLI
+      - name: Build M10–M11 WASM using official Stellar CLI
         run: |
           stellar contract build --package hoxo-money-market
           test -s target/wasm32v1-none/release/hoxo_money_market.wasm
           sha256sum target/wasm32v1-none/release/hoxo_money_market.wasm
       - uses: actions/upload-artifact@v4
         with:
-          name: hoxo-m10-wasm-review-only
+          name: hoxo-m10-m11-wasm-review-only
           path: target/wasm32v1-none/release/hoxo_money_market.wasm
           if-no-files-found: error
           retention-days: 7

@@ -249,3 +249,231 @@ fn preview_shares_are_read_only_and_keeper_does_not_mint_or_move_assets(){
     assert_eq!(m.pool().borrow_index_e7,UNIT);
     assert_eq!(m.pool().supply_index_e7,UNIT);
 }
+
+
+#[contract]
+struct MockCanonicalRisk;
+#[contractimpl]
+impl MockCanonicalRisk {
+    pub fn approve_borrow(
+        _env:Env,_borrower:Address,_market:Address,_asset:Address,
+        amount:i128,projected_debt:i128
+    )->bool {amount>0&&amount<=60*UNIT&&projected_debt<=100*UNIT}
+}
+#[contract]
+struct MockDeniedRisk;
+#[contractimpl]
+impl MockDeniedRisk {
+    pub fn approve_borrow(
+        _env:Env,_borrower:Address,_market:Address,_asset:Address,
+        _amount:i128,_projected_debt:i128
+    )->bool {false}
+}
+fn enable_mock_risk(e:&Env,id:&Address,cap:i128,max_util:u32) {
+    let guard=e.register(MockCanonicalRisk,());
+    let m=MoneyMarketClient::new(e,id);
+    m.set_risk_authority(&guard);
+    m.set_borrow_policy(&cap,&max_util,&1000,&true);
+}
+#[test]
+fn m11_borrow_starts_disabled_without_cap_or_configured_risk_authority(){
+    let (e,id,_,alice,bob,_)=setup();
+    open(&e,&id);
+    let m=MoneyMarketClient::new(&e,&id);
+    m.supply(&alice,&(100*UNIT));
+    assert!(!m.borrowing_enabled());
+    assert!(!m.borrow_guarded());
+    assert!(m.try_borrow(&bob,&UNIT).is_err());
+    assert!(m.try_set_borrow_policy(&(50*UNIT),&8000,&1000,&true).is_err());
+    assert_eq!(m.debt_status().outstanding_debt_e7,0);
+    assert_eq!(m.debt_status().debt_cap_e7,0);
+    assert!(m.try_borrow_disabled().is_err());
+}
+#[test]
+fn m11_verified_mock_risk_and_borrower_signature_required_before_token_send(){
+    let (e,id,_,alice,bob,asset)=setup();
+    open(&e,&id);
+    let m=MoneyMarketClient::new(&e,&id);
+    let t=token::TokenClient::new(&e,&asset);
+    m.supply(&alice,&(100*UNIT));
+    enable_mock_risk(&e,&id,50*UNIT,8000);
+    let old_cash=t.balance(&id);
+    let owed=m.borrow(&bob,&(20*UNIT));
+    assert_eq!(owed,20*UNIT);
+    assert_eq!(t.balance(&id),old_cash-20*UNIT);
+    assert_eq!(m.pool().total_borrowed_e7,20*UNIT);
+    assert_eq!(m.pool().cash_e7,80*UNIT);
+    assert_eq!(m.debt_of(&bob),20*UNIT);
+    assert_eq!(m.debt_of(&alice),0);
+    assert_eq!(m.pool().total_shares_e7,100*UNIT);
+    assert!(m.solvent());
+}
+#[test]
+fn m11_partial_repay_and_full_repay_restore_liquidity_without_forgiving_debt(){
+    let (e,id,_,alice,bob,asset)=setup();
+    open(&e,&id);
+    let m=MoneyMarketClient::new(&e,&id);
+    m.supply(&alice,&(100*UNIT));
+    enable_mock_risk(&e,&id,60*UNIT,8000);
+    m.borrow(&bob,&(30*UNIT));
+    assert_eq!(m.repay(&bob,&bob,&(10*UNIT)),10*UNIT);
+    assert_eq!(m.debt_of(&bob),20*UNIT);
+    assert_eq!(m.repay(&bob,&bob,&(100*UNIT)),20*UNIT);
+    assert_eq!(m.debt_of(&bob),0);
+    assert_eq!(m.pool().total_borrowed_e7,0);
+    assert_eq!(m.pool().cash_e7,100*UNIT);
+    assert_eq!(m.pool().total_shares_e7,100*UNIT);
+    assert_eq!(token::TokenClient::new(&e,&asset).balance(&id),100*UNIT);
+}
+#[test]
+fn m11_repayment_remains_available_when_new_borrowing_is_paused(){
+    let (e,id,_,alice,bob,_)=setup();
+    open(&e,&id);
+    let m=MoneyMarketClient::new(&e,&id);
+    m.supply(&alice,&(100*UNIT));
+    enable_mock_risk(&e,&id,80*UNIT,8000);
+    m.borrow(&bob,&(20*UNIT));
+    m.set_borrow_policy(&(80*UNIT),&8000,&1000,&false);
+    assert!(!m.borrowing_enabled());
+    assert!(m.try_borrow(&bob,&UNIT).is_err());
+    assert_eq!(m.repay(&bob,&bob,&(20*UNIT)),20*UNIT);
+    assert_eq!(m.debt_of(&bob),0);
+    assert_eq!(m.redeem(&alice,&(100*UNIT)),100*UNIT);
+}
+#[test]
+fn m11_debt_cap_liquidity_cap_and_controller_denial_fail_closed(){
+    let (e,id,_,alice,bob,asset)=setup();
+    open(&e,&id);
+    let m=MoneyMarketClient::new(&e,&id);
+    m.supply(&alice,&(100*UNIT));
+    enable_mock_risk(&e,&id,30*UNIT,5000);
+    assert!(m.try_borrow(&bob,&(40*UNIT)).is_err());
+    assert!(m.try_borrow(&bob,&(80*UNIT)).is_err());
+    assert_eq!(m.pool().cash_e7,100*UNIT);
+    assert_eq!(m.debt_status().outstanding_debt_e7,0);
+    assert_eq!(token::TokenClient::new(&e,&asset).balance(&id),100*UNIT);
+}
+#[test]
+fn m11_mock_guard_can_deny_borrow_and_prevent_cash_movement(){
+    let (e,id,_,alice,bob,asset)=setup();
+    open(&e,&id);
+    let m=MoneyMarketClient::new(&e,&id);
+    m.supply(&alice,&(100*UNIT));
+    let denied=e.register(MockDeniedRisk,());
+    m.set_risk_authority(&denied);
+    m.set_borrow_policy(&(50*UNIT),&8000,&1000,&true);
+    let before=token::TokenClient::new(&e,&asset).balance(&id);
+    assert!(m.try_borrow(&bob,&UNIT).is_err());
+    assert_eq!(m.pool().total_borrowed_e7,0);
+    assert_eq!(token::TokenClient::new(&e,&asset).balance(&id),before);
+}
+#[test]
+fn m11_real_ledger_time_accrues_interest_to_debt_index_and_supplier_share_rate(){
+    let (e,id,_,alice,bob,_)=setup();
+    open(&e,&id);
+    let m=MoneyMarketClient::new(&e,&id);
+    m.supply(&alice,&(300*UNIT));
+    enable_mock_risk(&e,&id,100*UNIT,8000);
+    m.borrow(&bob,&(30*UNIT));
+    let before=m.pool();
+    e.ledger().with_mut(|l|l.timestamp+=10*86_400);
+    let total=m.accrue_interest();
+    let after=m.pool();
+    assert!(total>before.total_borrowed_e7);
+    assert!(after.borrow_index_e7>UNIT);
+    assert!(after.supply_index_e7>UNIT);
+    assert!(after.protocol_reserves_e7>0);
+    assert!(m.debt_of(&bob)>30*UNIT);
+    assert!(after.total_borrowed_e7<m.debt_status().debt_cap_e7);
+    assert_eq!(m.debt_of(&alice),0);
+}
+#[test]
+fn m11_late_accrual_must_catch_up_with_permissionless_bounded_steps(){
+    let (e,id,_,alice,bob,_)=setup();
+    open(&e,&id);
+    let m=MoneyMarketClient::new(&e,&id);
+    m.supply(&alice,&(300*UNIT));
+    enable_mock_risk(&e,&id,100*UNIT,8000);
+    m.borrow(&bob,&(20*UNIT));
+    e.ledger().with_mut(|l|l.timestamp+=70*86_400);
+    assert!(m.try_repay(&bob,&bob,&UNIT).is_err());
+    assert!(m.try_borrow(&bob,&UNIT).is_err());
+    let a=m.accrue_interest();
+    let b=m.accrue_interest();
+    let c=m.accrue_interest();
+    assert!(a>20*UNIT);
+    assert!(b>a);
+    assert!(c>b);
+    assert_eq!(m.debt_status().last_accrual_sec,e.ledger().timestamp());
+    assert!(m.repay(&bob,&bob,&(100*UNIT))>20*UNIT);
+    assert_eq!(m.debt_of(&bob),0);
+}
+#[test]
+fn m11_lenders_cannot_redeem_borrowed_tokens_as_if_cash_were_available(){
+    let (e,id,_,alice,bob,_)=setup();
+    open(&e,&id);
+    let m=MoneyMarketClient::new(&e,&id);
+    m.supply(&alice,&(100*UNIT));
+    enable_mock_risk(&e,&id,80*UNIT,8000);
+    m.borrow(&bob,&(50*UNIT));
+    assert!(m.try_redeem(&alice,&(100*UNIT)).is_err());
+    assert!(m.try_withdraw(&alice,&(100*UNIT)).is_err());
+    assert_eq!(m.pool().cash_e7,50*UNIT);
+    assert_eq!(m.pool().total_shares_e7,100*UNIT);
+    m.repay(&bob,&bob,&(50*UNIT));
+    assert_eq!(m.redeem(&alice,&(100*UNIT)),100*UNIT);
+}
+#[test]
+fn m11_third_party_repayment_requires_payer_authorization_but_not_oracle(){
+    let (e,id,_,alice,bob,_)=setup();
+    open(&e,&id);
+    let m=MoneyMarketClient::new(&e,&id);
+    m.supply(&alice,&(100*UNIT));
+    enable_mock_risk(&e,&id,80*UNIT,8000);
+    m.borrow(&bob,&(20*UNIT));
+    m.set_borrow_policy(&(80*UNIT),&8000,&1000,&false);
+    assert_eq!(m.repay(&alice,&bob,&(20*UNIT)),20*UNIT);
+    assert_eq!(m.debt_of(&bob),0);
+}
+#[test]
+fn m11_unauthorised_borrow_or_repay_cannot_move_tokens(){
+    let (e,id,_,alice,bob,asset)=setup();
+    open(&e,&id);
+    let m=MoneyMarketClient::new(&e,&id);
+    m.supply(&alice,&(100*UNIT));
+    enable_mock_risk(&e,&id,80*UNIT,8000);
+    m.borrow(&bob,&(20*UNIT));
+    let before=token::TokenClient::new(&e,&asset).balance(&id);
+    e.set_auths(&[]);
+    assert!(m.try_borrow(&bob,&UNIT).is_err());
+    assert!(m.try_repay(&alice,&bob,&UNIT).is_err());
+    assert_eq!(token::TokenClient::new(&e,&asset).balance(&id),before);
+    assert_eq!(m.debt_of(&bob),20*UNIT);
+}
+#[test]
+fn m11_unauthorised_admin_cannot_enable_credit_or_install_controller(){
+    let (e,id,_,alice,_,_)=setup();
+    let m=MoneyMarketClient::new(&e,&id);
+    let guard=e.register(MockCanonicalRisk,());
+    e.set_auths(&[]);
+    assert!(m.try_set_risk_authority(&guard).is_err());
+    assert!(m.try_set_borrow_policy(&(100*UNIT),&8000,&1000,&true).is_err());
+    assert!(!m.borrowing_enabled());
+    assert_eq!(m.debt_status().debt_cap_e7,0);
+}
+#[test]
+fn m11_controller_single_binding_and_policy_validation_are_strict(){
+    let (e,id,_,alice,_,_)=setup();
+    let m=MoneyMarketClient::new(&e,&id);
+    let guard=e.register(MockCanonicalRisk,());
+    m.set_risk_authority(&guard);
+    assert!(m.try_set_risk_authority(&guard).is_err());
+    for (cap,util,reserve) in [
+        (-1,8000,1000),(MAX_SUPPLY+1,8000,1000),
+        (UNIT,0,1000),(UNIT,9001,1000),(UNIT,8000,5001)
+    ] {
+        assert!(m.try_set_borrow_policy(&cap,&util,&reserve,&true).is_err());
+    }
+    m.set_borrow_policy(&(10*UNIT),&8000,&1000,&true);
+    assert!(m.borrowing_enabled());
+}

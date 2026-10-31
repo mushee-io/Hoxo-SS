@@ -29,7 +29,7 @@ This plan deliberately distinguishes a rendered interface, a read-only wallet in
 | ID | Milestone | Acceptance gate | Status |
 | --- | --- | --- | --- |
 | M10 | Money market supply | Single Testnet-only Soroban pool with audited-intent shares, owner-auth deposits/withdrawals, reserve and solvency tracking, supply cap, pause, TTL, rate curve preview, borrowing forbidden | Native Soroban tests 16/16 and official Stellar CLI optimized WASM build pass; supply-only contract, no real Testnet deployment, asset approval, deposit, borrowing or yield |
-| M11 | Borrowing | Originate, accrue, repay, debt caps, shared cross-product risk checks | Not started |
+| M11 | Borrowing and repayment | Account-scoped indexed debt shares, per-second interest index accrual, protocol reserves, debt caps, utilisation cap, mandatory canonical on-chain risk-authority check, borrower-signed origination, payer-signed repayments and expiry-safe keeper | Contract and test suite implemented; borrowing paused at zero cap by default; no audited/deployed canonical M5/M7 risk oracle, no signed Testnet loan or cross-product risk acceptance |
 | M12 | Perpetual clearinghouse | Sign and settle actual testnet long/short positions with margin reservation | Not started |
 | M13 | Funding and settlement | Mark/index price separation, funding updates, realised PnL, fees, reconciliation | Not started |
 | M14 | Liquidations and insurance | Maint margin checks, partial/full liquidation, keeper incentives, insurance and bad debt | Not started |

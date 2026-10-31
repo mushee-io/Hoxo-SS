@@ -3,7 +3,7 @@ name = "hoxo-money-market"
 version = "0.1.0"
 edition = "2021"
 publish = false
-description = "Soroban M10 single-asset supply pool, share accounting and disabled borrowing"
+description = "Soroban M10-M11 single-asset supplier shares, indexed debt and guarded borrowing"
 
 [lib]
 crate-type = ["cdylib", "rlib"]

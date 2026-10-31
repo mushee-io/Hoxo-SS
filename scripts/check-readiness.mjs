@@ -14,6 +14,7 @@ const vault=await read("contracts/collateral-vault/src/lib.rs");
 const spot=await read("contracts/spot-settlement/src/lib.rs");
 const m9Flow=await read("matching/m9-wallet-settlement.mjs");
 const moneyMarket=await read("contracts/money-market/src/lib.rs");
+const debtModule=await read("contracts/money-market/src/m11.rs");
 const sandbox=snapshot(emptyBook(),"xlm-usdc-spot");
 const invariants={
   noVerifiedExchangeContracts:registry.deployedVerified===0 && registry.candidateContracts===0,
@@ -33,8 +34,14 @@ const invariants={
     m9Flow.includes('needsNonInvokerSigningBy'),
   m10SupplyPoolUndeployed:registry.statuses.some(x=>
     x.role==="money-market"&&x.status==="planned"&&x.contractId===null),
-  m10BorrowingHardDisabled:moneyMarket.includes('pub fn borrowing_enabled()->bool{false}')&&
-    moneyMarket.includes('Err(PoolError::BorrowingDisabled)'),
+  m11BorrowingPausedAndZeroCapByDefault:
+    debtModule.includes('debt_cap_e7:0') &&
+    debtModule.includes('paused:true,risk_authority:None') &&
+    moneyMarket.includes('d.risk_authority.clone().ok_or(PoolError::RiskNotConfigured)') &&
+    moneyMarket.includes('BorrowRiskClient::new(&e,&risk).approve_borrow'),
+  m11BorrowerMustSign:moneyMarket.includes('borrower.require_auth()'),
+  m11RepaymentPayerMustSign:moneyMarket.includes('payer.require_auth()'),
+  m11NoCrossProductClaims:moneyMarket.includes('pub fn borrow_disabled()->Result<(),PoolError>'),
   m10WalletAuthRequired:moneyMarket.includes('owner.require_auth()')&&
     moneyMarket.includes('require_testnet(&e)?'),
   m10NoUnverifiedInterest:moneyMarket.includes('borrowed_e7:0')&&
@@ -53,7 +60,8 @@ console.log(JSON.stringify({
   M7:"mathematical Soroban preview; atomic enforcement missing",
   M8:"signed matching sandbox; not real fills",
   M9:"compiled contract and signed bilateral SDK operator path; no verified Testnet deployment or real signed settlement",
-  M10:"isolated Soroban money-market supply code with preview-only rate model; no active borrow or genuine Testnet deposit",
+  M10:"isolated Soroban money-market supply code; no genuine Testnet deposit",
+  M11:"indexed debt and repayment added behind unconfigured canonical risk authority and zero cap; no real Testnet borrow",
  },
  invariants
 },null,2));
