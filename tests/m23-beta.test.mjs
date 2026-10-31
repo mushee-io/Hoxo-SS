@@ -66,7 +66,7 @@ test("M23 plan requires real fixed-name valid WASM bytes and preserves SHA256 wi
   for(const item of M23_PACKAGES)await writeFile(join(dir,item.wasm),WASM);
   const plan=await m23DeploymentPlan({
     wasmDirectory:dir,registry:r,sourceRevision:"a".repeat(64)});
-  assert.equal(plan.artifacts.length,6);
+  assert.equal(plan.artifacts.length,7);
   assert.equal(plan.state,"COMPLETE_ARTIFACT_HASH_INVENTORY_ONLY");
   assert.ok(plan.artifacts.every(x=>x.sha256===createHash("sha256").update(WASM).digest("hex")));
   assert.ok(plan.artifacts.every(x=>x.sizeBytes===8));

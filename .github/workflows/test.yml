@@ -172,6 +172,8 @@ jobs:
         run: cargo test -p hoxo-collateral-vault --lib
       - name: Run M7 and M16 read-only Soroban risk preview contract tests
         run: cargo test -p hoxo-risk-gate --lib
+      - name: Verify two-publisher oracle contract with fail-closed approval and stale-source tests
+        run: cargo test -p hoxo-oracle-adapter --lib
       - name: Run M9 atomic spot settlement contract tests
         run: cargo test -p hoxo-spot-settlement --lib
       - name: Run M10–M11 supply, interest, guarded borrow and repayment contract tests
@@ -188,6 +190,11 @@ jobs:
           stellar contract build --package hoxo-risk-gate
           test -s target/wasm32v1-none/release/hoxo_risk_gate.wasm
           sha256sum target/wasm32v1-none/release/hoxo_risk_gate.wasm
+      - name: Build signed-source candidate oracle WASM (not audited or live)
+        run: |
+          stellar contract build --package hoxo-oracle-adapter
+          test -s target/wasm32v1-none/release/hoxo_oracle_adapter.wasm
+          sha256sum target/wasm32v1-none/release/hoxo_oracle_adapter.wasm
       - name: Build M9 WASM with official stellar contract build
         run: |
           stellar --version
@@ -209,6 +216,12 @@ jobs:
           stellar contract build --package hoxo-unified-margin
           test -s target/wasm32v1-none/release/hoxo_unified_margin.wasm
           sha256sum target/wasm32v1-none/release/hoxo_unified_margin.wasm
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hoxo-m5-oracle-adapter-wasm-review-only
+          path: target/wasm32v1-none/release/hoxo_oracle_adapter.wasm
+          if-no-files-found: error
+          retention-days: 7
       - uses: actions/upload-artifact@v4
         with:
           name: hoxo-m16-risk-analytics-wasm-review-only
