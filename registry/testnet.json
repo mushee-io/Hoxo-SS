@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "network": "testnet",
   "passphrase": "Test SDF Network ; September 2015",
-  "note": "M11 indexed debt + borrowing/repayment source is added to the M10 money-market contract, but the pool starts PAUSED, debt cap zero, risk authority absent. No verified oracle/risk deployment, loans, live Testnet funds or earned yield exist.",
+  "note": "M12 isolated Soroban bilateral perp clearinghouse source added; trading begins paused with oracle and risk authority unconfigured. All Hoxo contract IDs remain null; no real Testnet positions, deposits, liquidity, funding or unified margin exist.",
   "assets": [
     {
       "key": "XLM",

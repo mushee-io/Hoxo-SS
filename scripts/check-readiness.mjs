@@ -15,6 +15,7 @@ const spot=await read("contracts/spot-settlement/src/lib.rs");
 const m9Flow=await read("matching/m9-wallet-settlement.mjs");
 const moneyMarket=await read("contracts/money-market/src/lib.rs");
 const debtModule=await read("contracts/money-market/src/m11.rs");
+const perp=await read("contracts/perp-clearinghouse/src/lib.rs");
 const sandbox=snapshot(emptyBook(),"xlm-usdc-spot");
 const invariants={
   noVerifiedExchangeContracts:registry.deployedVerified===0 && registry.candidateContracts===0,
@@ -46,6 +47,17 @@ const invariants={
     moneyMarket.includes('require_testnet(&e)?'),
   m10NoUnverifiedInterest:moneyMarket.includes('borrowed_e7:0')&&
     moneyMarket.includes('supply_index_e7:SCALE'),
+  m12ContractUnverified:registry.statuses.some(x=>
+    x.role==="perp-clearinghouse"&&x.status==="planned"&&x.contractId===null),
+  m12StartsPaused:perp.includes('e.storage().instance().set(&Key::Paused,&true)'),
+  m12ControllerRequired:perp.includes('has(&Key::Oracle)')&&
+    perp.includes('has(&Key::Risk)')&&
+    perp.includes('MarginRiskClient::new(&e,&risk).approve_open'),
+  m12WalletsMustSign:perp.includes('long.require_auth()')&&
+    perp.includes('short.require_auth()')&&
+    perp.includes('pos.long.require_auth();pos.short.require_auth()'),
+  m12NoUnifiedMarginClaims:perp.includes('ISOLATED bilateral perpetual')&&
+    perp.includes('M5 oracle/M7 canonical risk are NOT deployed'),
 
 };
 console.log(JSON.stringify({
@@ -62,6 +74,7 @@ console.log(JSON.stringify({
   M9:"compiled contract and signed bilateral SDK operator path; no verified Testnet deployment or real signed settlement",
   M10:"isolated Soroban money-market supply code; no genuine Testnet deposit",
   M11:"indexed debt and repayment added behind unconfigured canonical risk authority and zero cap; no real Testnet borrow",
+  M12:"isolated two-wallet perp escrow and PnL contract source; no verified oracle, risk controller, deployment, funding or liquidation",
  },
  invariants
 },null,2));
