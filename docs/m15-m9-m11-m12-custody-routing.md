@@ -86,3 +86,8 @@ npm run m24:readiness
 5. Commission independent smart-contract/economic audits and separate legal/risk/governance release approvals; M23 public financial beta and M24 mainnet stay **CLOSED/NO-GO**.
 
 **In short:** the router connects the custody and settlement paths **with real token-backed atomic operations in the native Soroban test environment**. It deliberately does **not** pretend that leveraged borrowing and perpetuals already share executable M15 collateral.
+
+
+### Subsequent M11 liability projection and cross-product snapshot
+
+The custody router now verifies `M11.current_outstanding_debt_e7()`, which **projects interest to the current ledger** before deciding whether isolated transfers are allowed. If the lending contract requires a >30-day interest catch-up, the read fails closed and routes cannot mistake a historical stored principal for a current zero debt. The additional read-only `hoxo-portfolio-accounting` contract reconciles M15, projected M11 and M12 global and owner book claims without recognising nominal loan receivables as physical token cash. It refuses to authorise any leveraged credit, unsettled perpetuals, or public financial beta. See [cross-product liability documentation](cross-product-liability-accounting.md).
