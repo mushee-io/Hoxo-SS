@@ -78,7 +78,7 @@ pub struct CapsInput {
     pub max_debt_e7:i128,
     pub max_order_initial_e7:i128,
     pub max_leverage_bps:u32,
-    pub max_collateral_concentration_bps:u32,
+    pub max_concentration_bps:u32,
 }
 impl CapsInput {
     fn math(self)->ExposureCaps{ExposureCaps{
@@ -87,7 +87,7 @@ impl CapsInput {
         max_debt_e7:self.max_debt_e7,
         max_order_initial_e7:self.max_order_initial_e7,
         max_leverage_bps:self.max_leverage_bps,
-        max_collateral_concentration_bps:self.max_collateral_concentration_bps,
+        max_collateral_concentration_bps:self.max_concentration_bps,
     }}
 }
 #[contracttype]
@@ -379,7 +379,7 @@ mod tests {
             max_debt_e7:500*10_000_000,
             max_order_initial_e7:100*10_000_000,
             max_leverage_bps:50_000,
-            max_collateral_concentration_bps:10_000,
+            max_concentration_bps:10_000,
         };
         let shock=StressInput{
             collateral_price_drop_bps:2000,debt_price_rise_bps:1000,
