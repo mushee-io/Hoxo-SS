@@ -143,13 +143,13 @@
         let c=SpotSettlementClient::new(&e,&id);
         let fill=terms(&e,&maker,&taker,&base,&quote,18,0);
         assert!(c.try_settle(&MatchTerms{expires_at_ledger:e.ledger().sequence()+101,..fill.clone()}).is_err());
-        e.ledger().with_mut(|li|li.sequence += 21);
+        e.ledger().with_mut(|li|li.sequence_number += 21);
         assert!(c.try_settle(&fill).is_err());
         assert!(!c.is_settled(&fill.match_id));
     }
     #[test]
     fn insufficient_quote_balance_aborts_both_token_transfers(){
-        let (e,id,admin,maker,taker,base,quote)=setup();
+        let (e,id,_admin,maker,taker,base,quote)=setup();
         open(&e,&id);
         let c=SpotSettlementClient::new(&e,&id);
         let b=token::TokenClient::new(&e,&base);
