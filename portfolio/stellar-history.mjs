@@ -12,7 +12,11 @@ const ERROR=message=>{throw Error(message);};
 const HASH=/^[a-fA-F0-9]{64}$/;
 const CURSOR=/^[0-9]{1,40}$/;
 const AMOUNT=/^(?:0|[1-9][0-9]*)(?:\.[0-9]{1,7})?$/;
-const TYPES=new Set(["payment","path_payment_strict_receive","path_payment_strict_send"]);
+const TYPES=new Set(["payment","create_account"]);
+const FILTERED_TYPES=new Set([
+  "path_payment_strict_receive","path_payment_strict_send",
+  "account_merge","claim_claimable_balance","clawback"
+]);
 function limitNumber(value) {
   if(!Number.isSafeInteger(value)||value<1||value>maxItems)ERROR("Invalid history limit");
   return value;
@@ -43,34 +47,38 @@ function assetOf(record){
   }
   ERROR("Unverified Horizon operation asset");
 }
-export function normalizePayment(record,owner,latestLedger,nowMs){
-  if(!record||typeof record!=="object"||!TYPES.has(record.type))ERROR("Invalid Horizon payment operation type");
-  if(typeof record.id!=="string"||!CURSOR.test(record.id)||
-     typeof record.paging_token!=="string"||!CURSOR.test(record.paging_token)){
-    ERROR("Missing valid operation identity/paging token");
-  }
+function identity(record,latestLedger,nowMs){
+  if(!record||typeof record!=="object"||typeof record.id!=="string"||
+     !CURSOR.test(record.id)||typeof record.paging_token!=="string"||
+     !CURSOR.test(record.paging_token))ERROR("Missing valid operation identity/paging token");
   if(!HASH.test(record.transaction_hash||"")||record.transaction_successful!==true)
     ERROR("Unverified successful operation reference");
-  if(!Number.isSafeInteger(record.ledger)||record.ledger<=0||record.ledger>latestLedger)
+  // Horizon's PAYMENT OPERATION object commonly DOES NOT expose the ledger.
+  // Do not invent one from the latest network ledger or a paging token.
+  if(record.ledger!==undefined&&(!Number.isSafeInteger(record.ledger)||
+     record.ledger<1||record.ledger>latestLedger))
     ERROR("Horizon operation ledger out of verified range");
   const ts=Date.parse(record.created_at);
   if(!Number.isFinite(ts)||ts>nowMs+15_000)ERROR("Invalid operation timestamp");
-  // This endpoint promises a simple, ledger-attributed transfer history,
-  // not path-payment route execution or DEX price information.
-  if(record.type!=="payment")ERROR("Unsupported transfer type without full route metadata");
-  if(!isStellarGAddress(record.from)||!isStellarGAddress(record.to)||
-     (record.from!==owner&&record.to!==owner)){
-    ERROR("Horizon payment not attributable to requested account");
-  }
-  const asset=assetOf(record);
-  const direction=record.from===owner&&record.to===owner?"SELF":
-    record.from===owner?"OUT":"IN";
+  return {createdAt:new Date(ts).toISOString(),ledger:record.ledger??null};
+}
+export function normalizePayment(record,owner,latestLedger,nowMs){
+  if(!record||typeof record!=="object"||!TYPES.has(record.type))
+    ERROR("Unsupported payment-like operation type");
+  const meta=identity(record,latestLedger,nowMs);
+  const creation=record.type==="create_account";
+  const from=creation?record.funder:record.from;
+  const to=creation?record.account:record.to;
+  if(!isStellarGAddress(from)||!isStellarGAddress(to)||
+     (from!==owner&&to!==owner))ERROR("Horizon payment not attributable to requested account");
+  const asset=creation?{assetId:"XLM",code:"XLM",issuer:null}:assetOf(record);
+  const direction=from===owner&&to===owner?"SELF":from===owner?"OUT":"IN";
   return Object.freeze({
     operationId:record.id,pagingToken:record.paging_token,
-    txHash:record.transaction_hash.toLowerCase(),ledger:record.ledger,
-    createdAt:new Date(ts).toISOString(),type:"PAYMENT",
-    direction,from:record.from,to:record.to,
-    amount:positiveAmount(record.amount),...asset,
+    txHash:record.transaction_hash.toLowerCase(),...meta,
+    type:creation?"ACCOUNT_CREATION":"PAYMENT",
+    direction,from,to,
+    amount:positiveAmount(creation?record.starting_balance:record.amount),...asset,
     provenance:HORIZON_ACTIVITY_SOURCE,
     status:"HORIZON_REPORTED_SUCCESS",
     hoxoTrade:false,hoxoDeposit:false,
@@ -94,6 +102,7 @@ export async function loadStellarWalletActivity(owner,{
     return {
       owner,network:"STELLAR_TESTNET",funded:false,
       observedLedger:proof.ledger,balances:[],payments:[],nextCursor:null,
+      excludedOperationTypes:[],
       provenance:HORIZON_ACTIVITY_SOURCE,
       completeness:"ACCOUNT_UNFUNDED",executionPermitted:false,
     };
@@ -107,23 +116,28 @@ export async function loadStellarWalletActivity(owner,{
     ERROR("Malformed Horizon payment page");
   const items=records.data._embedded.records;
   if(items.length>limit)ERROR("Horizon payment page exceeds requested bound");
-  const ids=new Set(),cursors=new Set(),payments=[];
+  const ids=new Set(),cursors=new Set(),payments=[],excludedOperationTypes=[];
   for(const record of items){
-    // Mixed operation types are not silently treated as transfers or trades.
-    // A page containing a complex route fails closed rather than presenting
-    // misleading payment amounts as an executed trade.
-    const item=normalizePayment(record,owner,proof.ledger,nowMs);
-    if(ids.has(item.operationId)||cursors.has(item.pagingToken))
+    const meta=identity(record,proof.ledger,nowMs);
+    void meta;
+    if(ids.has(record.id)||cursors.has(record.paging_token))
       ERROR("Duplicate Horizon payment operation");
-    ids.add(item.operationId);cursors.add(item.pagingToken);
-    payments.push(item);
+    ids.add(record.id);cursors.add(record.paging_token);
+    if(FILTERED_TYPES.has(record.type)){
+      // Path payment outputs are *not* a simple deposit/transfer amount.
+      // Exclude but disclose, and preserve original paging tokens.
+      excludedOperationTypes.push(record.type);
+      continue;
+    }
+    payments.push(normalizePayment(record,owner,proof.ledger,nowMs));
   }
-  const nextCursor=items.length===limit ? payments.at(-1)?.pagingToken??null:null;
+  const nextCursor=items.length===limit ? items.at(-1)?.paging_token??null:null;
   if(nextCursor!==null&&cursor!==null&&nextCursor===cursor)
     ERROR("Horizon page cursor did not advance");
   return {
     owner,network:"STELLAR_TESTNET",funded:true,observedLedger:proof.ledger,
-    balances,payments,nextCursor,provenance:HORIZON_ACTIVITY_SOURCE,
+    balances,payments,nextCursor,excludedOperationTypes,
+    provenance:HORIZON_ACTIVITY_SOURCE,
     completeness:nextCursor?"PAGE_LIMIT_MORE_POSSIBLE":"CURRENT_PAGE_ONLY",
     executionPermitted:false,
   };
