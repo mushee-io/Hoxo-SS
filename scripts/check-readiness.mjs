@@ -16,6 +16,7 @@ const m9Flow=await read("matching/m9-wallet-settlement.mjs");
 const moneyMarket=await read("contracts/money-market/src/lib.rs");
 const debtModule=await read("contracts/money-market/src/m11.rs");
 const perp=await read("contracts/perp-clearinghouse/src/lib.rs");
+const funding=await read("contracts/perp-clearinghouse/src/m13.rs");
 const sandbox=snapshot(emptyBook(),"xlm-usdc-spot");
 const invariants={
   noVerifiedExchangeContracts:registry.deployedVerified===0 && registry.candidateContracts===0,
@@ -58,6 +59,16 @@ const invariants={
     perp.includes('pos.long.require_auth();pos.short.require_auth()'),
   m12NoUnifiedMarginClaims:perp.includes('ISOLATED bilateral perpetual')&&
     perp.includes('M5 oracle/M7 canonical risk are NOT deployed'),
+  m13FeesOffByDefault:funding.includes('fee_bps:0')&&
+    perp.includes('totals(&e).open_positions>0'),
+  m13FundingNotHistorical:funding.includes('FundingOverdue')&&
+    funding.includes('FUNDING_INTERVAL_SEC'),
+  m13OnchainPriceRequired:perp.includes('let price=require_price(&e)?')&&
+    perp.includes('m13::funding_step(&e,&pos,&q)?'),
+  m13FeesSegregated:perp.includes('t.total_user_claims_e7.checked_sub(assessed)')&&
+    funding.includes('accrued_fees_e7'),
+  m13NoAdminSweep:!perp.includes('pub fn sweep(')&&
+    !perp.includes('pub fn collect_fees('),
 
 };
 console.log(JSON.stringify({
@@ -74,7 +85,8 @@ console.log(JSON.stringify({
   M9:"compiled contract and signed bilateral SDK operator path; no verified Testnet deployment or real signed settlement",
   M10:"isolated Soroban money-market supply code; no genuine Testnet deposit",
   M11:"indexed debt and repayment added behind unconfigured canonical risk authority and zero cap; no real Testnet borrow",
-  M12:"isolated two-wallet perp escrow and PnL contract source; no verified oracle, risk controller, deployment, funding or liquidation",
+  M12:"isolated two-wallet perp escrow and PnL contract source; no verified oracle, risk controller or deployment",
+  M13:"bounded Soroban mark-index funding, closed-loop fee reserves and reconciliation; no approved oracle, Testnet funding receipts or liquidation",
  },
  invariants
 },null,2));

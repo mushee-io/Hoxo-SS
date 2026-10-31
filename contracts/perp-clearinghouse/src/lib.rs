@@ -1,6 +1,6 @@
 #![no_std]
 //! Hoxo SS M12 - ISOLATED bilateral perpetual contract foundation.
-//! Testnet ONLY. No synthetic USDC, external payout, funding or liquidation.
+//! Testnet ONLY. No synthetic USDC, external payout or liquidation.
 //! The "perp" is a matched long/short pair with isolated, on-chain
 //! token escrow. Mark comes ONLY from an external Soroban oracle contract;
 //! risk comes ONLY from a separate Soroban risk authority contract.
@@ -10,6 +10,8 @@ use soroban_sdk::{
     contract,contractclient,contracterror,contractevent,contractimpl,
     contracttype,token,Address,BytesN,Env,
 };
+mod m13;
+use m13::*;
 const SCALE:i128=10_000_000;
 const BPS:i128=10_000;
 const MAX_DEVIATION_BPS:i128=200;
@@ -52,7 +54,7 @@ pub trait CanonicalRisk {
 #[contracttype]
 #[derive(Clone)]
 pub enum Key {
-    Admin, Token, Market, Paused, Oracle, Risk, Totals,
+    Admin, Token, Market, Paused, Oracle, Risk, Totals, Fees,
     Wallet(Address), Position(BytesN<32>),
 }
 #[contracttype]
@@ -76,6 +78,11 @@ pub struct Position {
     pub base_quantity_e7:i128,
     pub entry_price_e7:i128,
     pub initial_margin_each_e7:i128,
+    pub long_margin_e7:i128,
+    pub short_margin_e7:i128,
+    pub last_funding_sec:u64,
+    pub cumulative_funding_to_short_e7:i128,
+    pub total_fees_paid_e7:i128,
     pub opened_at_sec:u64,
     pub closed_at_sec:u64,
     pub close_price_e7:i128,
@@ -95,6 +102,8 @@ pub struct MarketView {
     pub maintenance_margin_bps:u32,
     pub total_user_claims_e7:i128,
     pub open_positions:u32,
+    pub fee_bps:u32,
+    pub accrued_fees_e7:i128,
 }
 #[contractevent(topics=["hoxo_perp","opened"],data_format="vec")]
 #[derive(Clone,Debug)]
@@ -116,6 +125,14 @@ pub struct Closed {
     pub long_realised_pnl_e7:i128,
     pub closed_at_sec:u64,
 }
+#[contractevent(topics=["hoxo_perp","funding"],data_format="vec")]
+#[derive(Clone,Debug)]
+pub struct FundingSettled {
+    #[topic]
+    pub id:BytesN<32>,
+    pub long_pays_short_e7:i128,
+    pub timestamp_sec:u64,
+}
 #[contracterror]
 #[derive(Copy,Clone,Debug,Eq,PartialEq)]
 #[repr(u32)]
@@ -125,6 +142,7 @@ pub enum PerpError {
     InsufficientMargin=9,UnapprovedRisk=10,DuplicatePosition=11,
     PositionNotFound=12,PositionClosed=13,Insolvent=14,
     LossExceedsMargin=15,Expired=16,Capacity=17,UnauthorizedChange=18,
+    InvalidFee=19,FundingOverdue=20,MaintenanceBreach=21,
 }
 fn admin(e:&Env)->Address {
     e.storage().instance().get(&Key::Admin).expect("constructor required")
@@ -192,10 +210,7 @@ fn require_price(e:&Env)->Result<Price,PerpError>{
     Ok(p)
 }
 fn require_solvency(e:&Env)->Result<(),PerpError>{
-    let amount=totals(e).total_user_claims_e7;
-    if amount<0{return Err(PerpError::Insolvent);}
-    let observed=token::TokenClient::new(e,&collateral(e)).balance(&e.current_contract_address());
-    if observed<amount{return Err(PerpError::Insolvent);}
+    if !m13::reconcile(e)?.solvent{return Err(PerpError::Insolvent);}
     Ok(())
 }
 #[contract]
@@ -215,10 +230,12 @@ impl PerpClearinghouse {
         e.storage().instance().set(&Key::Totals,&Totals{
             total_user_claims_e7:0,open_positions:0
         });
+        m13::init(&e);
         keep_instance(&e);
     }
     pub fn market(e:Env)->MarketView{
         let t=totals(&e);
+        let fee=m13::ledger(&e);
         let paused:bool=e.storage().instance().get(&Key::Paused).unwrap_or(true);
         let oracle=e.storage().instance().has(&Key::Oracle);
         let risk=e.storage().instance().has(&Key::Risk);
@@ -230,9 +247,28 @@ impl PerpClearinghouse {
             initial_margin_bps:INITIAL_MARGIN_BPS as u32,
             maintenance_margin_bps:MAINT_MARGIN_BPS as u32,
             total_user_claims_e7:t.total_user_claims_e7,open_positions:t.open_positions,
+            fee_bps:fee.fee_bps,accrued_fees_e7:fee.fees_accrued_e7,
         }
     }
     pub fn wallet(e:Env,owner:Address)->Wallet {wallet(&e,&owner)}
+    pub fn reconciliation(e:Env)->Result<Reconciliation,PerpError>{
+        require_testnet(&e)?;
+        m13::reconcile(&e)
+    }
+    /// Fee governance is immutable while any positions are open. Starts at
+    /// ZERO fees. No admin sweep of accumulated fee reserves in M13.
+    pub fn set_fee_bps(e:Env,bps:u32)->Result<(),PerpError>{
+        require_testnet(&e)?;
+        admin(&e).require_auth();
+        if bps>MAX_FEE_BPS||totals(&e).open_positions>0||
+           !e.storage().instance().get::<_,bool>(&Key::Paused).unwrap_or(true){
+            return Err(PerpError::InvalidFee);
+        }
+        let mut l=m13::ledger(&e);
+        l.fee_bps=bps;
+        m13::save(&e,&l);
+        Ok(())
+    }
     pub fn position(e:Env,id:BytesN<32>)->Option<Position> {
         e.storage().persistent().get(&Key::Position(id))
     }
@@ -352,9 +388,12 @@ impl PerpClearinghouse {
             return Err(PerpError::LimitPrice);
         }
         let m=margin(quantity_e7,q.mark_e7)?;
+        let mut f=m13::ledger(&e);
+        let open_fee=m13::opening_or_closing_fee(quantity_e7,q.mark_e7,f.fee_bps)?;
+        let required=m.checked_add(open_fee).ok_or(PerpError::Overflow)?;
         let mut wl=wallet(&e,&long);
         let mut ws=wallet(&e,&short);
-        if wl.available_e7<m||ws.available_e7<m{
+        if wl.available_e7<required||ws.available_e7<required{
             return Err(PerpError::InsufficientMargin);
         }
         long.require_auth();
@@ -372,17 +411,26 @@ impl PerpClearinghouse {
             return Err(PerpError::UnapprovedRisk);
         }
         require_solvency(&e)?;
-        wl.available_e7-=m;
-        ws.available_e7-=m;
+        wl.available_e7-=required;
+        ws.available_e7-=required;
+        let assessed=open_fee.checked_mul(2).ok_or(PerpError::Overflow)?;
+        t.total_user_claims_e7=t.total_user_claims_e7.checked_sub(assessed)
+            .ok_or(PerpError::Insolvent)?;
+        f.fees_accrued_e7=f.fees_accrued_e7.checked_add(assessed)
+            .ok_or(PerpError::Overflow)?;
         wl.locked_e7=wl.locked_e7.checked_add(m).ok_or(PerpError::Overflow)?;
         ws.locked_e7=ws.locked_e7.checked_add(m).ok_or(PerpError::Overflow)?;
         save_wallet(&e,&long,&wl);save_wallet(&e,&short,&ws);
         t.open_positions+=1;
         e.storage().instance().set(&Key::Totals,&t);
+        m13::save(&e,&f);
         let pos=Position {
             id:id.clone(),long:long.clone(),short:short.clone(),
             base_quantity_e7:quantity_e7,entry_price_e7:q.mark_e7,
-            initial_margin_each_e7:m,opened_at_sec:e.ledger().timestamp(),
+            initial_margin_each_e7:m,long_margin_e7:m,short_margin_e7:m,
+            last_funding_sec:e.ledger().timestamp(),
+            cumulative_funding_to_short_e7:0,total_fees_paid_e7:assessed,
+            opened_at_sec:e.ledger().timestamp(),
             closed_at_sec:0,close_price_e7:0,long_realised_pnl_e7:0,
             active:true,
         };
@@ -391,6 +439,27 @@ impl PerpClearinghouse {
         Opened{id,long,short,base_quantity_e7:quantity_e7,
             entry_price_e7:q.mark_e7,margin_each_e7:m}.publish(&e);
         Ok(pos)
+    }
+    /// Permissionless mark/index funding for at most one fresh 8h window.
+    /// There are NO fabricated historical prices: stale funding fails shut.
+    pub fn settle_funding(e:Env,id:BytesN<32>)->Result<i128,PerpError>{
+        require_testnet(&e)?;
+        let p:Position=e.storage().persistent().get(&Key::Position(id.clone()))
+            .ok_or(PerpError::PositionNotFound)?;
+        if !p.active{return Err(PerpError::PositionClosed);}
+        let price=require_price(&e)?;
+        require_solvency(&e)?;
+        let (pos,wl,ws,paid)=m13::funding_step(&e,&p,&price)?;
+        let mut f=m13::ledger(&e);
+        f.cumulative_funding_to_short_e7=f.cumulative_funding_to_short_e7
+            .checked_add(paid).ok_or(PerpError::Overflow)?;
+        save_wallet(&e,&pos.long,&wl);
+        save_wallet(&e,&pos.short,&ws);
+        save_position(&e,&pos);
+        m13::save(&e,&f);
+        FundingSettled{id,long_pays_short_e7:paid,
+            timestamp_sec:e.ledger().timestamp()}.publish(&e);
+        Ok(paid)
     }
     /// Bilateral close at canonical oracle mark. Profits transfer between
     /// held margins; no new tokens created. Margin loss above escrow causes
@@ -404,27 +473,44 @@ impl PerpClearinghouse {
         if !pos.active{return Err(PerpError::PositionClosed);}
         pos.long.require_auth();pos.short.require_auth();
         let q=require_price(&e)?;
+        require_solvency(&e)?;
+        let (updated,mut wl,mut ws,paid)=m13::funding_step(&e,&pos,&q)?;
+        pos=updated;
         let delta=q.mark_e7.checked_sub(pos.entry_price_e7)
             .ok_or(PerpError::Overflow)?;
         let pnl=mul(pos.base_quantity_e7,delta)?/SCALE;
-        let m=pos.initial_margin_each_e7;
-        if pnl.checked_abs().ok_or(PerpError::Overflow)?>m{
-            return Err(PerpError::LossExceedsMargin);
-        }
-        require_solvency(&e)?;
-        let mut wl=wallet(&e,&pos.long);
-        let mut ws=wallet(&e,&pos.short);
-        if wl.locked_e7<m||ws.locked_e7<m{return Err(PerpError::Insolvent);}
-        let lc=m.checked_add(pnl).ok_or(PerpError::Overflow)?;
-        let sc=m.checked_sub(pnl).ok_or(PerpError::Overflow)?;
-        if lc<0||sc<0{return Err(PerpError::LossExceedsMargin);}
-        wl.locked_e7-=m;ws.locked_e7-=m;
-        wl.available_e7=wl.available_e7.checked_add(lc).ok_or(PerpError::Overflow)?;
-        ws.available_e7=ws.available_e7.checked_add(sc).ok_or(PerpError::Overflow)?;
+        let lm=pos.long_margin_e7;
+        let sm=pos.short_margin_e7;
+        if wl.locked_e7<lm||ws.locked_e7<sm{return Err(PerpError::Insolvent);}
+        let gross_long=lm.checked_add(pnl).ok_or(PerpError::Overflow)?;
+        let gross_short=sm.checked_sub(pnl).ok_or(PerpError::Overflow)?;
+        if gross_long<0||gross_short<0{return Err(PerpError::LossExceedsMargin);}
+        let mut fee=m13::ledger(&e);
+        let base_fee=m13::opening_or_closing_fee(
+            pos.base_quantity_e7,q.mark_e7,fee.fee_bps
+        )?;
+        // If a losing side has no payout left, never create fee debt.
+        let long_fee=base_fee.min(gross_long);
+        let short_fee=base_fee.min(gross_short);
+        let assessed=long_fee.checked_add(short_fee).ok_or(PerpError::Overflow)?;
+        wl.locked_e7-=lm;ws.locked_e7-=sm;
+        wl.available_e7=wl.available_e7.checked_add(gross_long-long_fee)
+            .ok_or(PerpError::Overflow)?;
+        ws.available_e7=ws.available_e7.checked_add(gross_short-short_fee)
+            .ok_or(PerpError::Overflow)?;
         save_wallet(&e,&pos.long,&wl);save_wallet(&e,&pos.short,&ws);
         let mut t=totals(&e);
         t.open_positions=t.open_positions.checked_sub(1).ok_or(PerpError::Insolvent)?;
+        t.total_user_claims_e7=t.total_user_claims_e7.checked_sub(assessed)
+            .ok_or(PerpError::Insolvent)?;
         e.storage().instance().set(&Key::Totals,&t);
+        fee.fees_accrued_e7=fee.fees_accrued_e7.checked_add(assessed)
+            .ok_or(PerpError::Overflow)?;
+        fee.cumulative_funding_to_short_e7=fee.cumulative_funding_to_short_e7
+            .checked_add(paid).ok_or(PerpError::Overflow)?;
+        m13::save(&e,&fee);
+        pos.total_fees_paid_e7=pos.total_fees_paid_e7
+            .checked_add(assessed).ok_or(PerpError::Overflow)?;
         pos.active=false;pos.close_price_e7=q.mark_e7;
         pos.closed_at_sec=e.ledger().timestamp();pos.long_realised_pnl_e7=pnl;
         save_position(&e,&pos);
