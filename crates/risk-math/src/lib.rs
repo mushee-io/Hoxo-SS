@@ -1,9 +1,9 @@
 #![no_std]
-pub mod m16;
-//! Hoxo SS M7 fixed-point portfolio risk arithmetic.
+//! Hoxo SS M7 + M16 fixed-point portfolio risk arithmetic.
 //! All numeric values are integer 10^7 units. No floating point, wrapping
 //! arithmetic, heap allocation, unchecked oracle freshness or implicit rounding.
 //! This library is PURE MATH; input authenticity is the caller's obligation.
+pub mod m16;
 pub const SCALE: i128 = 10_000_000;
 pub const BPS: i128 = 10_000;
 pub const MAX_ITEMS: usize = 16;
