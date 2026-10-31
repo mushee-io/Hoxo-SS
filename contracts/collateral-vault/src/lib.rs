@@ -183,6 +183,28 @@ mod tests{
         assert_eq!(vault.withdraw(&alice,&asset,&80),0);
     }
     #[test]
+    fn unapproved_signer_cannot_withdraw_when_auth_mocks_are_disabled(){
+        let (e,id,asset,alice,_)=setup();
+        let vault=CollateralVaultClient::new(&e,&id);
+        vault.set_asset(&asset,&true);
+        vault.deposit(&alice,&asset,&30);
+        e.set_auths(&[]);
+        // set_auths disables all-auth mocks; no signer provided for this call.
+        assert!(vault.try_withdraw(&alice,&asset,&1).is_err());
+        assert_eq!(vault.balance(&alice,&asset),30);
+        assert_eq!(vault.total(&asset),30);
+    }
+    #[test]
+    fn unauthorized_admin_cannot_pause_deposits(){
+        let (e,id,asset,alice,_)=setup();
+        let vault=CollateralVaultClient::new(&e,&id);
+        vault.set_asset(&asset,&true);
+        e.set_auths(&[]);
+        assert!(vault.try_pause(&true).is_err());
+        assert_eq!(vault.deposits_paused(),false);
+        assert_eq!(vault.balance(&alice,&asset),0);
+    }
+    #[test]
     fn unapproved_token_and_overwithdraw_rejected(){
         let (e,id,asset,alice,bob)=setup();
         let vault=CollateralVaultClient::new(&e,&id);
