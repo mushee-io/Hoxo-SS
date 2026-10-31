@@ -1,0 +1,19 @@
+[package]
+name = "hoxo-custody-router"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Testnet-only atomic M15-M9/M11/M12 custody handoffs; no shared lending/perp risk or live financial authorization"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+soroban-sdk = "=29.0.1"
+
+[dev-dependencies]
+soroban-sdk = { version = "=29.0.1", features = ["testutils"] }
+hoxo-unified-margin = { path = "../unified-margin" }
+hoxo-money-market = { path = "../money-market" }
+hoxo-perp-clearinghouse = { path = "../perp-clearinghouse" }
+hoxo-spot-settlement = { path = "../spot-settlement" }
