@@ -120,7 +120,7 @@ export function inspectM21Envelope(sdk,{envelopeXdr,transactionHash,expectedSign
   try{tx=sdk.TransactionBuilder.fromXDR(envelopeXdr,TESTNET_PASSPHRASE);}
   catch{fail("Unable to decode transaction envelope as Stellar Testnet");}
   const hash=tx.hash?.();
-  if(!Buffer.isBuffer(hash)||hash.toString("hex")!==transactionHash)
+  if(!(hash instanceof Uint8Array)||Buffer.from(hash).toString("hex")!==transactionHash)
     fail("Transaction envelope hash does not match RPC receipt");
   if(tx.source!==expectedSigner||!Array.isArray(tx.signatures)||tx.signatures.length<1)
     fail("Expected exact independent wallet as transaction source");
