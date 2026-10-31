@@ -36,7 +36,7 @@ pub trait MarginRisk {
     fn authorization_enabled(env:Env)->bool;
     fn approve_reservation(
         env:Env,owner:Address,vault:Address,asset:Address,
-        product:u32,amount_e7:i128
+        product:u32,id:BytesN<32>,amount_e7:i128
     )->bool;
 }
 #[contracttype]
@@ -360,7 +360,7 @@ impl UnifiedMargin {
         if w.available_e7<amount{return Err(MarginError::InsufficientFree);}
         require_solvent(&e)?;
         if !MarginRiskClient::new(&e,&risk).approve_reservation(
-            &owner,&e.current_contract_address(),&asset(&e),&product.code(),&amount
+            &owner,&e.current_contract_address(),&asset(&e),&product.code(),&id,&amount
         ){
             return Err(MarginError::RiskDenied);
         }

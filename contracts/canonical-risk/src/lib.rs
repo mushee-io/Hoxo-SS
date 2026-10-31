@@ -54,7 +54,15 @@ pub trait PriceOracle{
 }
 #[contracttype]
 #[derive(Clone)]
-enum Key{Admin,Vault,Asset,Oracle,Market,Paused,MaxReservation}
+enum Key{Admin,Vault,Asset,Oracle,Market,Paused,MaxReservation,Pending(Address)}
+#[contracttype]
+#[derive(Clone,Debug,PartialEq,Eq)]
+pub struct ReservationPermit{
+    pub id:BytesN<32>,
+    pub amount_e7:i128,
+    pub product:u32,
+    pub expires_at_ledger:u32,
+}
 #[contracttype]
 #[derive(Clone,Debug)]
 pub struct Status{
@@ -82,6 +90,24 @@ fn keep_instance(e:&Env){
 }
 fn approved(e:&Env)->bool{
     testnet(e)&&!e.storage().instance().get::<_,bool>(&Key::Paused).unwrap_or(true)
+}
+/// Oracle may be read from a nested call because it does not call M15.
+/// The margin vault itself must ONLY be read at the separate preflight step.
+fn live_price(e:&Env)->bool{
+    let oracle:Address=e.storage().instance().get(&Key::Oracle).unwrap();
+    let market:u32=e.storage().instance().get(&Key::Market).unwrap_or(0);
+    let p=PriceOracleClient::new(e,&oracle).current(&market);
+    if p.mark_e7<=0||p.index_e7<=0{return false;}
+    let now=e.ledger().timestamp();
+    if now<p.updated_at_sec||now-p.updated_at_sec>MAX_AGE_SEC{return false;}
+    let diff=match p.mark_e7.checked_sub(p.index_e7).and_then(|x|x.checked_abs()){
+        Some(v)=>v,None=>return false,
+    };
+    let lhs=match diff.checked_mul(BPS){Some(v)=>v,None=>return false};
+    let rhs=match p.index_e7.checked_mul(MAX_MARK_INDEX_DEVIATION_BPS){
+        Some(v)=>v,None=>return false,
+    };
+    lhs<=rhs
 }
 #[contract]
 pub struct CanonicalRisk;
@@ -134,20 +160,22 @@ impl CanonicalRisk{
         keep_instance(&e);
         Ok(())
     }
-    /// Called by M15 when owner and bound spot-adapter have BOTH authorised
-    /// the exact requested reservation. Only this exact vault/asset is allowed.
-    /// For independent manual calls, true means a preview, not a token action.
-    pub fn approve_reservation(
-        e:Env,owner:Address,vault:Address,asset:Address,
-        product:u32,amount_e7:i128
+    /// Step 1: owner signs an exact once-only spot reservation permit.
+    /// This is the ONLY path to read M15's actual account/solvency. The
+    /// main M15.reserve invocation is not active, so no Soroban re-entry.
+    pub fn prepare_spot_reservation(
+        e:Env,owner:Address,id:BytesN<32>,amount_e7:i128
     )->bool{
-        if !approved(&e)||product!=1||amount_e7<=0||
-           e.storage().instance().get::<_,Address>(&Key::Vault)!=Some(vault.clone())||
-           e.storage().instance().get::<_,Address>(&Key::Asset)!=Some(asset.clone()){
-            return false;
-        }
+        if !approved(&e)||amount_e7<=0{return false;}
+        owner.require_auth();
         let max:i128=e.storage().instance().get(&Key::MaxReservation).unwrap_or(0);
         if amount_e7>max{return false;}
+        let key=Key::Pending(owner.clone());
+        if let Some(old)=e.storage().persistent().get::<_,ReservationPermit>(&key){
+            if old.expires_at_ledger>=e.ledger().sequence(){return false;}
+        }
+        let vault:Address=e.storage().instance().get(&Key::Vault).unwrap();
+        let asset:Address=e.storage().instance().get(&Key::Asset).unwrap();
         let ledger=MarginLedgerClient::new(&e,&vault);
         if ledger.collateral_asset()!=asset||!ledger.solvent(){return false;}
         let account=ledger.account(&owner);
@@ -159,25 +187,52 @@ impl CanonicalRisk{
         }
         let totals=ledger.totals();
         let held=token::TokenClient::new(&e,&asset).balance(&vault);
-        if held<totals.user_claims_e7||totals.user_claims_e7<=0{
+        if held<totals.user_claims_e7||totals.user_claims_e7<=0{return false;}
+        if !live_price(&e){return false;}
+        let expiry=match e.ledger().sequence().checked_add(20){
+            Some(v)=>v,None=>return false,
+        };
+        e.storage().persistent().set(&key,&ReservationPermit{
+            id,amount_e7,product:1,expires_at_ledger:expiry
+        });
+        e.storage().persistent().extend_ttl(&key,100,1000);
+        keep_instance(&e);
+        true
+    }
+    pub fn pending(e:Env,owner:Address)->Option<ReservationPermit>{
+        e.storage().persistent().get(&Key::Pending(owner))
+    }
+    pub fn cancel_spot_reservation(e:Env,owner:Address)->bool{
+        if !testnet(&e){return false;}
+        owner.require_auth();
+        e.storage().persistent().remove(&Key::Pending(owner));
+        true
+    }
+    /// Step 2: M15 has already checked actual free balance, vault solvency,
+    /// exact owner+adapter auth and replay ID. Consume the exact permit
+    /// without calling BACK into executing M15 (forbidden Soroban re-entry).
+    pub fn approve_reservation(
+        e:Env,owner:Address,vault:Address,asset:Address,
+        product:u32,id:BytesN<32>,amount_e7:i128
+    )->bool{
+        if !approved(&e)||product!=1||amount_e7<=0||
+           e.storage().instance().get::<_,Address>(&Key::Vault)!=Some(vault)||
+           e.storage().instance().get::<_,Address>(&Key::Asset)!=Some(asset){
             return false;
         }
-        // The price is always sourced from the exact immutable on-chain
-        // oracle configured at constructor; no caller-supplied price.
-        let oracle:Address=e.storage().instance().get(&Key::Oracle).unwrap();
-        let market:u32=e.storage().instance().get(&Key::Market).unwrap_or(0);
-        let p=PriceOracleClient::new(&e,&oracle).current(&market);
-        if p.mark_e7<=0||p.index_e7<=0{return false;}
-        let now=e.ledger().timestamp();
-        if now<p.updated_at_sec||now-p.updated_at_sec>MAX_AGE_SEC{return false;}
-        let diff=match p.mark_e7.checked_sub(p.index_e7).and_then(|x|x.checked_abs()){
-            Some(v)=>v,None=>return false,
+        owner.require_auth();
+        let key=Key::Pending(owner);
+        let permit=match e.storage().persistent().get::<_,ReservationPermit>(&key){
+            Some(x)=>x,None=>return false,
         };
-        let lhs=match diff.checked_mul(BPS){Some(v)=>v,None=>return false};
-        let rhs=match p.index_e7.checked_mul(MAX_MARK_INDEX_DEVIATION_BPS){
-            Some(v)=>v,None=>return false,
-        };
-        lhs<=rhs
+        if permit.id!=id||permit.product!=1||permit.amount_e7!=amount_e7||
+           e.ledger().sequence()>permit.expires_at_ledger||!live_price(&e){
+            return false;
+        }
+        // If the parent M15 reserve fails, Soroban atomically rolls back this
+        // permit removal; it cannot mint collateral or bypass M15 controls.
+        e.storage().persistent().remove(&key);
+        true
     }
     /// ABI matches M11. Until unified credit and debt accounting is audited,
     /// a collateral spot reservation MUST NEVER underwrite a separate loan.
