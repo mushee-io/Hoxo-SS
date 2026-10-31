@@ -105,7 +105,7 @@ jobs:
         run: npm run test:m9-wallet
 
   rust-contracts:
-    name: M6–M14 Soroban contract tests and WASM
+    name: M6–M15 Soroban contract tests and WASM
     runs-on: ubuntu-latest
     timeout-minutes: 22
     permissions:
@@ -134,6 +134,8 @@ jobs:
         run: cargo test -p hoxo-money-market --lib
       - name: Run M12–M14 margin, funding, insurance and liquidation tests
         run: cargo test -p hoxo-perp-clearinghouse --lib
+      - name: Run M15 single-asset canonical margin and cross-product reservation tests
+        run: cargo test -p hoxo-unified-margin --lib
       - uses: stellar/stellar-cli@v28.1.0
       - name: Install official Stellar Soroban WASM target
         run: rustup target add wasm32v1-none
@@ -153,6 +155,17 @@ jobs:
           stellar contract build --package hoxo-perp-clearinghouse
           test -s target/wasm32v1-none/release/hoxo_perp_clearinghouse.wasm
           sha256sum target/wasm32v1-none/release/hoxo_perp_clearinghouse.wasm
+      - name: Build M15 canonical margin WASM with official Stellar CLI
+        run: |
+          stellar contract build --package hoxo-unified-margin
+          test -s target/wasm32v1-none/release/hoxo_unified_margin.wasm
+          sha256sum target/wasm32v1-none/release/hoxo_unified_margin.wasm
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hoxo-m15-unified-margin-wasm-review-only
+          path: target/wasm32v1-none/release/hoxo_unified_margin.wasm
+          if-no-files-found: error
+          retention-days: 7
       - uses: actions/upload-artifact@v4
         with:
           name: hoxo-m12-m14-perp-wasm-review-only

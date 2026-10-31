@@ -106,7 +106,7 @@ test("M4 registry starts with only native XLM and NO deployed contracts",async()
   assert.equal(summary.assetCount,1);
   assert.equal(summary.candidateContracts,0);
   assert.equal(summary.deployedVerified,0);
-  assert.equal(summary.contractCount,6);
+  assert.equal(summary.contractCount,7);
   assert.ok(data.contracts.every(x=>x.status==="planned"&&x.contractId===null));
 });
 test("M4 registry refuses public network, fabricated deployment flags and invalid asset issuers",async()=>{

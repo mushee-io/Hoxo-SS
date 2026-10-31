@@ -38,7 +38,7 @@ This plan deliberately distinguishes a rendered interface, a read-only wallet in
 
 | ID | Milestone | Acceptance gate | Status |
 | --- | --- | --- | --- |
-| M15 | Cross-product collateral | Eligible collateral reused within one canonical account safely; open orders reserve collateral | Not started |
+| M15 | Cross-product collateral | Canonical single-asset Testnet ledger, per-owner free/locked balances, unique spot/perp/lending reservations, external on-chain risk authority and adapter authorization, zero-mint internal settlement | **Canonical source and 17 native test cases** added. CI pending. Existing M9/M11/M12–M14 contracts remain isolated and do not invoke the M15 vault; no deployed on-chain oracle/risk, approved adapters, verified Testnet transactions, multi-asset valuation or full unified-margin execution. |
 | M16 | Portfolio-wide risk analytics | Health factor, stress tests, liquidation estimates, exposure caps and isolated fail-closed rules | Not started |
 | M17 | Advanced order controls | Market/limit, reduce-only, TP/SL, conditional orders and auditable order transitions | Not started |
 | M18 | Portfolio and history | Authenticated positions, PnL, funding, interest, transfers, order and trade history | Not started |

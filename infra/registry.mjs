@@ -2,10 +2,10 @@
 import {TESTNET_PASSPHRASE} from "../config/testnet.mjs";
 import {isStellarGAddress} from "../app/wallet-core.mjs";
 
-const KNOWN_ROLES=Object.freeze(["collateral-vault","oracle-adapter","risk-engine","spot-settlement","money-market","perp-clearinghouse"]);
+const KNOWN_ROLES=Object.freeze(["collateral-vault","oracle-adapter","risk-engine","spot-settlement","money-market","perp-clearinghouse","unified-margin"]);
 const EXPECTED_MILESTONES=Object.freeze({
   "collateral-vault":"M6","oracle-adapter":"M5","risk-engine":"M7",
-  "spot-settlement":"M9","money-market":"M10","perp-clearinghouse":"M12"
+  "spot-settlement":"M9","money-market":"M10","perp-clearinghouse":"M12","unified-margin":"M15"
 });
 const ALPHABET="ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 function decode32(s){

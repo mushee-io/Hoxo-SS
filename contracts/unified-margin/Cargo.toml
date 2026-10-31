@@ -1,0 +1,15 @@
+[package]
+name = "hoxo-unified-margin"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "M15 canonical Testnet single-asset margin ledger and fail-closed cross-product reservations"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+soroban-sdk = "=29.0.1"
+
+[dev-dependencies]
+soroban-sdk = { version = "=29.0.1", features = ["testutils"] }

@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "network": "testnet",
   "passphrase": "Test SDF Network ; September 2015",
-  "note": "M14 Soroban keeper liquidation and prefunded insurance source added. All Hoxo contract IDs remain null, the clearinghouse remains paused, oracle/risk controllers are unset, and no real Testnet margin, insurance, liquidation, or unified-margin transactions exist.",
+  "note": "M15 single-asset canonical reserve ledger code added (spot/perp/lending roles). All Hoxo contract IDs are null; M7 risk authority remains preview-only, so activating the M15 vault is blocked. Existing M9/M11/M12 isolated products are not connected. No live Testnet unified-margin activity.",
   "assets": [
     {
       "key": "XLM",
@@ -56,6 +56,14 @@
     {
       "role": "perp-clearinghouse",
       "milestone": "M12",
+      "contractId": null,
+      "deploymentTxHash": null,
+      "verifiedAtLedger": null,
+      "status": "planned"
+    },
+    {
+      "role": "unified-margin",
+      "milestone": "M15",
       "contractId": null,
       "deploymentTxHash": null,
       "verifiedAtLedger": null,

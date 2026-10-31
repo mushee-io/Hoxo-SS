@@ -18,6 +18,7 @@ const debtModule=await read("contracts/money-market/src/m11.rs");
 const perp=await read("contracts/perp-clearinghouse/src/lib.rs");
 const funding=await read("contracts/perp-clearinghouse/src/m13.rs");
 const liquidation=await read("contracts/perp-clearinghouse/src/m14.rs");
+const unified=await read("contracts/unified-margin/src/lib.rs");
 const sandbox=snapshot(emptyBook(),"xlm-usdc-spot");
 const invariants={
   noVerifiedExchangeContracts:registry.deployedVerified===0 && registry.candidateContracts===0,
@@ -81,6 +82,19 @@ const invariants={
     funding.includes('insurance_reserve_e7'),
   m14UnverifiedDeployment:registry.statuses.some(x=>
     x.role==="perp-clearinghouse"&&x.status==="planned"&&x.contractId===null),
+  m15Undeployed:registry.statuses.some(x=>
+    x.role==="unified-margin"&&x.status==="planned"&&x.contractId===null),
+  m15StartsPaused:unified.includes('e.storage().instance().set(&Key::Paused,&true)'),
+  m15RiskRequired:unified.includes('MarginRiskClient::new(e,&risk).authorization_enabled()')&&
+    unified.includes('approve_reservation('),
+  m15OwnerAndAdapterAuthorize:unified.includes('owner.require_auth();')&&
+    unified.includes('adapter.require_auth();'),
+  m15DoesNotDoubleCount:unified.includes('w.available_e7-=amount;')&&
+    unified.includes('w.reserved_e7=w.reserved_e7.checked_add(amount)')&&
+    unified.includes('t.user_claims_e7'),
+  m15NoFakeYieldOrCrossProductExecution:
+    !unified.includes('pub fn borrow(')&&!unified.includes('pub fn open_perp(')&&
+    !unified.includes('pub fn atomic_swap('),
 
 };
 console.log(JSON.stringify({
@@ -100,6 +114,7 @@ console.log(JSON.stringify({
   M12:"isolated two-wallet perp escrow and PnL contract source; no verified oracle, risk controller or deployment",
   M13:"bounded Soroban mark-index funding, closed-loop fee reserves and reconciliation; no approved oracle or Testnet funding receipts",
   M14:"isolated keeper liquidation, prefunded insurance and potential bad-debt preview; no verified deployment, historical funding recovery or public trading",
+  M15:"canonical single-asset shared reservation ledger for spot, perp and lending; not deployed or linked to M9/M11/M12 and blocked by M7 risk gate",
  },
  invariants
 },null,2));
