@@ -88,7 +88,7 @@ test("M1: landing links and terminal are strictly no-deposit/no-trade demos", as
   const html = await readFile(resolve(root, "index.html"), "utf8");
   const terminal = await readFile(resolve(root, "app/index.html"), "utf8");
   assert.match(html, /TRADING, BORROWING, MARGIN TRANSFERS AND CONTRACT DEPOSITS REMAIN DISABLED/);
-  assert.match(terminal, /disabled>TRADING NOT DEPLOYED/);
+  assert.match(terminal, /disabled>EXECUTION UNAVAILABLE ON TESTNET/);
   assert.match(terminal, /<button disabled>DEPOSIT<\/button>/);
   assert.match(terminal, /<button disabled>WITHDRAW<\/button>/);
 });

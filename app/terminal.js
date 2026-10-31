@@ -16,59 +16,6 @@
   };
   const walletLabel = () => publicAddress
     ? publicAddress.slice(0, 5) + "…" + publicAddress.slice(-5) : "CONNECT WALLET";
-  function setView(view) {
-    document.querySelectorAll("[data-view]").forEach((button) =>
-      button.classList.toggle("selected", button.dataset.view === view));
-    const trading = view === "trade";
-    $("tradeView").classList.toggle("hidden", !trading);
-    $("alternateView").classList.toggle("hidden", trading);
-    if (!trading) {
-      $("altTitle").textContent = view === "earn" ? "MONEY MARKETS" : "PORTFOLIO";
-      $("altDescription").textContent = view === "earn"
-        ? "Lending and borrowing will become available after the Soroban money-market pools and unified risk engine pass testnet verification."
-        : "Real Stellar account balances can be viewed in the Balances tab of the trading terminal. Unified-margin positions are not yet deployed.";
-    }
-  }
-
-  document.querySelectorAll("[data-view]").forEach((button) =>
-    button.addEventListener("click", () => setView(button.dataset.view)));
-  $("backToTrade").addEventListener("click", () => setView("trade"));
-  if (window.location.hash === "#portfolio") setView("portfolio");
-
-  document.querySelectorAll("[data-chart-view]").forEach((button) =>
-    button.addEventListener("click", () => {
-      document.querySelectorAll("[data-chart-view]").forEach((b) => b.classList.toggle("active", b === button));
-      const selected = button.dataset.chartView;
-      $("chartEmptyTitle").textContent = selected === "price" ? "NO VERIFIED MARKET DATA" : selected === "depth" ? "DEPTH NOT DEPLOYED" : "FUNDING NOT DEPLOYED";
-      $("chartEmptyDescription").textContent = selected === "price"
-        ? "Live testnet candles require a verified market-data source."
-        : selected === "depth"
-        ? "Order-book depth requires an operational matching and indexing service."
-        : "Funding data requires a deployed perpetual clearinghouse.";
-    }));
-  document.querySelectorAll("[data-book-view]").forEach((button) =>
-    button.addEventListener("click", () => {
-      document.querySelectorAll("[data-book-view]").forEach((b) => b.classList.toggle("active", b === button));
-      const isBook = button.dataset.bookView === "book";
-      $("bookEmptyTitle").textContent = isBook ? "ORDER BOOK OFFLINE" : "TRADES NOT DEPLOYED";
-      $("bookEmptyDescription").textContent = isBook
-        ? "Real order-book updates will appear after the matching and indexing engines are deployed."
-        : "Verified testnet executions will appear here after settlement integration.";
-    }));
-  document.querySelectorAll("[data-order-type]").forEach((button) =>
-    button.addEventListener("click", () => {
-      document.querySelectorAll("[data-order-type]").forEach((b) => b.classList.toggle("active", b === button));
-      notice(button.dataset.orderType + " order placement is not available until testnet settlement is deployed.");
-    }));
-  document.querySelectorAll(".timeframes button").forEach((button) =>
-    button.addEventListener("click", () => {
-      document.querySelectorAll(".timeframes button").forEach((b) => b.classList.toggle("active", b === button));
-      notice("Verified testnet candlestick feed is not yet configured.");
-    }));
-  ["buySide", "sellSide"].forEach((id) => $(id).addEventListener("click", () => {
-    $("buySide").classList.toggle("selected", id === "buySide");
-    $("sellSide").classList.toggle("selected", id === "sellSide");
-  }));
   document.querySelectorAll("[data-portfolio-tab]").forEach((button) =>
     button.addEventListener("click", () => {
       activePortfolioTab = button.dataset.portfolioTab;
@@ -197,16 +144,19 @@
 
   async function updateLedger() {
     try {
-      const response = await fetch(HORIZON + "/ledgers?order=desc&limit=1", {cache:"no-store"});
-      if (!response.ok) throw new Error("Horizon error");
+      const response = await fetch(HORIZON + "/", { cache: "no-store" });
+      if (!response.ok) throw new Error("Horizon HTTP error");
       const data = await response.json();
-      const latest = data._embedded?.records?.[0];
-      if (latest?.sequence === undefined) throw new Error("No ledger found");
-      $("ledgerValue").textContent = "#" + Number(latest.sequence).toLocaleString("en-US");
-      $("networkStatus").textContent = "STELLAR TESTNET REACHABLE";
+      if (data.network_passphrase !== NETWORK_PASSPHRASE) throw new Error("Wrong Stellar network");
+      const ledger = Number(data.history_latest_ledger);
+      const closeMs = Date.parse(data.history_latest_ledger_closed_at);
+      if (!Number.isSafeInteger(ledger) || ledger < 1 || !Number.isFinite(closeMs) ||
+          Date.now()-closeMs > 120000 || closeMs-Date.now() > 15000) throw new Error("Stale or missing ledger");
+      $("ledgerValue").textContent = "#" + ledger.toLocaleString("en-GB");
+      $("networkStatus").textContent = "STELLAR TESTNET VERIFIED (READ ONLY)";
     } catch {
       $("ledgerValue").textContent = "UNAVAILABLE";
-      $("networkStatus").textContent = "NETWORK READ FAILED";
+      $("networkStatus").textContent = "STELLAR TESTNET UNVERIFIED";
     }
   }
   function updateClock() { $("clock").textContent = new Date().toISOString().slice(11, 19); }
