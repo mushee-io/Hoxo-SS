@@ -15,7 +15,7 @@ function address(seed){
   for(const x of b){
     crc^=x<<8;
     for(let i=0;i<8;i++)
-      crc=crc&0x8000?((crc<<1)^0x1021)&65535:(crc<<1)&65535);
+      crc=(crc&0x8000)?(((crc<<1)^0x1021)&65535):((crc<<1)&65535);
   }
   b.push(crc&255,crc>>8);
   let value=0,bits=0,out="";
