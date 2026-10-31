@@ -766,3 +766,37 @@ fn m14_insurance_and_trading_fees_are_distinct_claims(){
     assert!(c.solvent());
     assert_eq!(token::TokenClient::new(&e,&asset).balance(&id),206*UNIT);
 }
+
+
+/// Real Hoxo candidate-oracle contract ↔ M12 ABI integration, but a DENYING
+/// risk adapter still blocks new positions. This is not a live deployment.
+#[test]
+fn testnet_candidate_oracle_abi_interoperates_without_granting_risk_authority(){
+    use hoxo_oracle_adapter::{OracleAdapter,OracleAdapterClient};
+    let (e,market,admin,long,short,asset)=setup();
+    let publisher1=Address::generate(&e);
+    let publisher2=Address::generate(&e);
+    let oracle=e.register(OracleAdapter,(&admin,&1u32,&publisher1,&publisher2));
+    let o=OracleAdapterClient::new(&e,&oracle);
+    assert!(o.try_current(&1).is_err());
+    o.pause(&false);
+    o.submit(&publisher1,&1,&(10*UNIT),&(10*UNIT));
+    assert!(o.try_current(&1).is_err());
+    o.submit(&publisher2,&1,&(10*UNIT),&(10*UNIT));
+    assert_eq!(o.current(&1).mark_e7,10*UNIT);
+
+    let deny=e.register(MockDenyRisk,());
+    let c=PerpClearinghouseClient::new(&e,&market);
+    c.set_controllers(&oracle,&deny);
+    c.set_pause(&false);
+    fund(&e,&market,&long,&short);
+    assert!(c.try_open(&id(&e,198),&long,&short,&(4*UNIT),
+        &(12*UNIT),&(8*UNIT),&(e.ledger().sequence()+20)).is_err());
+    assert_eq!(c.market().open_positions,0);
+    assert_eq!(c.wallet(&long).locked_e7,0);
+    assert_eq!(c.wallet(&short).locked_e7,0);
+    assert!(c.reconciliation().solvent);
+    assert_eq!(token::TokenClient::new(&e,&asset).balance(&market),200*UNIT);
+    // A healthy candidate price does not imply authorised financial execution.
+    assert!(!o.execution_approved());
+}
