@@ -17,7 +17,8 @@ Stellar smart contracts (Rust `soroban-sdk`) for vaults, settlement and enforcem
 ## Product experience
 
 - [Landing page](index.html): Nado-inspired original visual identity for HOXO SS.
-- [Stellar Testnet trading terminal](app/index.html): market workspace with wallet connection, read-only Horizon balance and ledger data, explicit not-deployed states for trading and lending.
+- [Stellar Testnet trading terminal](app/index.html): responsive market workspace, Freighter-approved wallet identity, Testnet-only Horizon account balances and explicit not-deployed states for trading and lending.
+- [M3 wallet verification and manual acceptance plan](docs/m3-wallet.md): strict Testnet validation, wallet-session lifecycle, guarded Friendbot and real-extension test criteria.
 - [Full development roadmap — M0–M24](docs/milestones.md): 25 stages from product design to audited mainnet readiness, with verifiable acceptance gates.
 - [Architecture](docs/architecture.md), [risk model](docs/risk-model.md), [delivery gates](docs/delivery.md).
 
