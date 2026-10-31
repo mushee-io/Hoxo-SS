@@ -22,7 +22,8 @@ function key(version,byte){
 const owner=key(48,1),a=key(48,2),b=key(48,3),token=key(16,4);
 const config={network:"testnet",networkPassphrase:TESTNET_PASSPHRASE,
   sourceAlias:"hoxo_testnet_operator",adminPublicKey:owner,
-  publisherA:a,publisherB:b,marketId:1,valuelessTokenContract:token};
+  publisherA:a,publisherB:b,marketId:1,valuelessTokenContract:token,
+  riskVaultContract:key(16,5),riskOracleContract:key(16,6),maxOwnerReservedE7:500000000};
 test("testnet-only deployment manifest covers exact canonical 7 roles with safe constructor args",()=>{
   assert.equal(isStellarCAddress(token),true);
   assert.equal(isStellarCAddress(owner),false);
@@ -38,7 +39,11 @@ test("testnet-only deployment manifest covers exact canonical 7 roles with safe 
     assert.equal(p.sourceAlias,"hoxo_testnet_operator");
     assert.ok(p.args.some(arg=>arg.endsWith("/"+p.wasm)));
   }
-  assert.deepEqual(prepareTestnetDeployment(config,"risk-engine").args.slice(-2),["--network","testnet"]);
+  const risk=prepareTestnetDeployment(config,"risk-engine");
+  assert.ok(risk.args.includes("--max-owner-reserved-e7"));
+  assert.ok(risk.args.includes(config.riskVaultContract));
+  assert.ok(risk.args.includes(config.riskOracleContract));
+  assert.equal(risk.args[risk.args.length-1],"500000000");
   const oracle=prepareTestnetDeployment(config,"oracle-adapter");
   assert.deepEqual(oracle.args.slice(-8),
     ["--admin",owner,"--market-id","1","--publisher-a",a,"--publisher-b",b]);
@@ -54,6 +59,9 @@ test("strict Testnet and independent publisher validation rejects insecure confi
   ])assert.throws(()=>prepareTestnetDeployment(bad,"oracle-adapter"));
   assert.throws(()=>prepareTestnetDeployment(config,"mainnet-bypass"));
   assert.throws(()=>prepareTestnetDeployment({...config,valuelessTokenContract:owner},"unified-margin"));
+  assert.throws(()=>prepareTestnetDeployment({...config,riskVaultContract:owner},"risk-engine"));
+  assert.throws(()=>prepareTestnetDeployment({...config,riskVaultContract:config.riskOracleContract},"risk-engine"));
+  assert.throws(()=>prepareTestnetDeployment({...config,maxOwnerReservedE7:0},"risk-engine"));
 });
 test("actual Testnet deployment refuses no acknowledgement, CI and missing network verification",async()=>{
   let executed=0,probed=0;

@@ -205,6 +205,9 @@ impl UnifiedMargin {
         keep_instance(&e);
     }
     pub fn account(e:Env,owner:Address)->Account{account(&e,&owner)}
+    /// M15's actual immutable collateral asset; used by risk contracts
+    /// instead of trusting caller-supplied asset addresses.
+    pub fn collateral_asset(e:Env)->Address{asset(&e)}
     pub fn reservation(e:Env,id:BytesN<32>)->Option<Reservation>{record(&e,&id)}
     pub fn totals(e:Env)->Totals{totals(&e)}
     pub fn margin(e:Env)->MarginView {

@@ -19,7 +19,6 @@ fn setup()->(Env,Address,Address,Address,Address,Address,Address,Address,Address
     mint.mint(&bob,&(1000*UNIT));
     let vault=e.register(UnifiedMargin,(&admin,&asset));
     let oracle=e.register(OracleAdapter,(&admin,&1u32,&a,&b));
-    let risk=e.register(CanonicalRisk,(&admin,&vault,&asset,&oracle,&1u32,&(50*UNIT)));
     (e,admin,alice,bob,a,b,spot,asset,vault,oracle)
 }
 fn ready(e:&Env,admin:&Address,alice:&Address,a:&Address,b:&Address,spot:&Address,
