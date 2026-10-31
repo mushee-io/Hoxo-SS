@@ -1,4 +1,4 @@
-name: Risk engine tests
+name: Hoxo SS Testnet verification
 on:
   push:
     branches: [main, feat/unified-margin-foundation]
@@ -30,7 +30,7 @@ jobs:
         run: npm run check:testnet
 
   browser-smoke:
-    name: M2 Chromium trading terminal smoke
+    name: Chromium trading terminal and infrastructure smoke
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -49,3 +49,19 @@ jobs:
           python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/hoxo-server.log 2>&1 &
           sleep 2
           node --test tests/browser-smoke.test.mjs
+
+  testnet-infrastructure:
+    name: Live Stellar Testnet RPC + Horizon + registry
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate Testnet contract and asset registry
+        run: npm run check:registry
+      - name: Verify RPC getNetwork/getHealth/getLatestLedger and Horizon consensus
+        run: npm run check:infra

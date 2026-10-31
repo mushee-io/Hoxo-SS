@@ -9,12 +9,13 @@
 <script src="./terminal.js" type="module"></script>
 <script src="./wallet-ui.mjs" type="module"></script>
 <script src="./terminal-ui.mjs" type="module"></script>
+<script src="./infra-ui.mjs" type="module"></script>
 </head>
 <body>
 <a class="skip-terminal" href="#tradeView">Skip to trading workspace</a>
 <header class="global-header">
   <a class="logo" href="../" aria-label="Hoxo SS home"><span class="logo-icon">✳</span>HOXO<span class="slash">/</span>SS</a>
-  <nav class="topnav" aria-label="Terminal navigation"><button class="toplink selected" data-view="trade">Trade</button><button class="toplink" data-view="portfolio">Portfolio</button><button class="toplink" data-view="earn">Earn</button><a href="../docs/milestones.md" class="toplink external">Roadmap ↗</a></nav>
+  <nav class="topnav" aria-label="Terminal navigation"><button class="toplink selected" data-view="trade">Trade</button><button class="toplink" data-view="portfolio">Portfolio</button><button class="toplink" data-view="earn">Earn</button><button class="toplink" data-view="network">Network</button><a href="../docs/milestones.md" class="toplink external">Roadmap ↗</a></nav>
   <div class="header-right"><span class="network-badge"><i></i> STELLAR TESTNET</span><button type="button" id="walletButton" class="wallet-button" aria-describedby="walletStatus">CONNECT FREIGHTER</button></div>
 </header>
 <div class="announcement"><span>✳ TESTNET DEVELOPMENT PREVIEW</span><span>WALLET BALANCES ARE LIVE WHEN CONNECTED. SPOT/PERP EXECUTION, LENDING AND UNIFIED-MARGIN CONTRACTS ARE NOT YET DEPLOYED.</span><a target="_blank" rel="noopener noreferrer" href="https://github.com/mushee-io/Hoxo-SS">SOURCE ↗</a></div>
@@ -58,7 +59,20 @@
 </div>
 <div class="wallet-help"><a href="https://freighter.app/" target="_blank" rel="noopener noreferrer">GET FREIGHTER ↗</a><span>DESKTOP EXTENSION · TESTNET</span></div><p class="account-note">Stellar wallet balances are read from verified Testnet Horizon. They are NOT exchange vault deposits, available margin or borrowing collateral. No wallet seed or private key is requested.</p></section>
 </main>
-<section class="alternate hidden" id="alternateView"><div class="alternate-heading" id="altTitle">PORTFOLIO</div><p id="altDescription">This area is being developed.</p><div class="alternate-cards"><article><span>01 / ACCOUNT</span><h2>TESTNET BALANCES</h2><p>Real wallet balances are distinct from exchange collateral.</p></article><article><span>02 / UNIFIED MARGIN</span><h2>NOT DEPLOYED</h2><p>Account positions and margin health require Soroban clearing and risk contracts.</p></article><article><span>03 / MONEY MARKETS</span><h2>NOT DEPLOYED</h2><p>Supply and borrowing are unavailable until Soroban lending pools are verified.</p></article></div><button type="button" id="backToTrade">← BACK TO TERMINAL</button></section>
+<section class="alternate hidden" id="alternateView"><div class="alternate-heading" id="altTitle">PORTFOLIO</div><p id="altDescription">This area is being developed.</p><div class="alternate-cards" id="alternateCards"><article><span>01 / ACCOUNT</span><h2>TESTNET BALANCES</h2><p>Real wallet balances are distinct from exchange collateral.</p></article><article><span>02 / UNIFIED MARGIN</span><h2>NOT DEPLOYED</h2><p>Account positions and margin health require Soroban clearing and risk contracts.</p></article><article><span>03 / MONEY MARKETS</span><h2>NOT DEPLOYED</h2><p>Supply and borrowing are unavailable until Soroban lending pools are verified.</p></article></div>
+<section id="networkPanel" class="network-panel hidden" aria-label="Stellar Testnet infrastructure diagnostics">
+  <p class="infra-caution">READ-ONLY NETWORK DIAGNOSTICS. THIS IS NOT EXCHANGE CONTRACT READINESS. NO SPOT, PERPETUAL OR LENDING CONTRACTS ARE LIVE.</p>
+  <div class="infra-grid">
+    <article><span>01 / HORIZON</span><h2 id="infraHorizonStatus">NOT CHECKED</h2><p class="infra-url" id="infraHorizonUrl">https://horizon-testnet.stellar.org</p><div class="infra-property"><span>Latest verified ledger</span><b id="infraHorizonLedger">—</b></div><p id="infraHorizonDetail">Read-only network proof pending.</p></article>
+    <article><span>02 / STELLAR RPC</span><h2 id="infraRpcStatus">NOT CHECKED</h2><p class="infra-url" id="infraRpcUrl">https://soroban-testnet.stellar.org</p><div class="infra-property"><span>Latest verified ledger</span><b id="infraRpcLedger">—</b></div><p id="infraRpcDetail">RPC network, health and latest ledger checks pending.</p></article>
+    <article><span>03 / CONTRACT REGISTRY</span><h2 id="infraRegistryStatus">NOT CHECKED</h2><p class="infra-url">registry/testnet.json</p><div class="infra-property"><span>Verified Hoxo contracts</span><b id="infraVerifiedContracts">0</b></div><p id="infraRegistryDetail">No deployed contracts are registered.</p></article>
+  </div>
+  <div class="infra-verdict" role="status" aria-live="polite"><span>NETWORK READINESS</span><strong id="infraOverall">NOT CHECKED</strong><p id="infraOverallDetail">Horizon, Stellar RPC and contract registry must be checked independently.</p></div>
+  <button type="button" class="infra-refresh" id="infraRefresh">REFRESH STELLAR TESTNET DIAGNOSTICS ↻</button>
+  <div class="infra-contracts"><h3>PLANNED SMART CONTRACT MODULES</h3><div id="infraContractList">Loading registry…</div></div>
+  <p class="infra-foot">The network can be healthy while all Hoxo smart contracts remain undeployed. Contract IDs, issuers, oracle feeds and settlement permissions will be added only after independent on-chain verification.</p>
+</section>
+<button type="button" id="backToTrade">← BACK TO TERMINAL</button></section>
 <footer class="terminal-footer"><div class="footer-left"><span class="status-dot"></span><span id="networkStatus">CONNECTING TO STELLAR TESTNET</span></div><a href="https://stellar.expert/explorer/testnet" target="_blank" rel="noopener noreferrer">STELLAR EXPLORER ↗</a><a href="https://github.com/mushee-io/Hoxo-SS" target="_blank" rel="noopener noreferrer">GITHUB ↗</a><span>DEVELOPMENT BUILD 0.1</span></footer>
 <div class="toast hidden" role="status" id="toast"></div>
 </body></html>

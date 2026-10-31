@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "network": "testnet",
+  "passphrase": "Test SDF Network ; September 2015",
+  "note": "NO smart contracts or issued assets have been deployed/verified by Hoxo SS at M4. Entries below are plans only. Never interpret them as active trading markets.",
+  "assets": [
+    {
+      "key": "XLM",
+      "kind": "native",
+      "issuer": null,
+      "contractId": null,
+      "status": "native-asset"
+    }
+  ],
+  "contracts": [
+    {
+      "role": "collateral-vault",
+      "milestone": "M6",
+      "contractId": null,
+      "deploymentTxHash": null,
+      "verifiedAtLedger": null,
+      "status": "planned"
+    },
+    {
+      "role": "oracle-adapter",
+      "milestone": "M5",
+      "contractId": null,
+      "deploymentTxHash": null,
+      "verifiedAtLedger": null,
+      "status": "planned"
+    },
+    {
+      "role": "risk-engine",
+      "milestone": "M7",
+      "contractId": null,
+      "deploymentTxHash": null,
+      "verifiedAtLedger": null,
+      "status": "planned"
+    },
+    {
+      "role": "spot-settlement",
+      "milestone": "M9",
+      "contractId": null,
+      "deploymentTxHash": null,
+      "verifiedAtLedger": null,
+      "status": "planned"
+    },
+    {
+      "role": "money-market",
+      "milestone": "M10",
+      "contractId": null,
+      "deploymentTxHash": null,
+      "verifiedAtLedger": null,
+      "status": "planned"
+    },
+    {
+      "role": "perp-clearinghouse",
+      "milestone": "M12",
+      "contractId": null,
+      "deploymentTxHash": null,
+      "verifiedAtLedger": null,
+      "status": "planned"
+    }
+  ],
+  "networkReset": {
+    "lastVerifiedAt": null,
+    "lastVerifiedLedger": null
+  }
+}

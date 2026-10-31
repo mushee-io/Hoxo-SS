@@ -13,7 +13,7 @@ function selectGroup(selector,value,key){
   });
 }
 function setView(next){
-  view=["trade","portfolio","earn"].includes(next)?next:"trade";
+  view=["trade","portfolio","earn","network"].includes(next)?next:"trade";
   all("[data-view]").forEach(b=>b.classList.toggle("selected",b.dataset.view===view));
   $("tradeView").classList.toggle("hidden",view!=="trade");
   $("alternateView").classList.toggle("hidden",view==="trade");
@@ -24,6 +24,13 @@ function setView(next){
     $("altTitle").textContent="MONEY MARKETS";
     $("altDescription").textContent="Supply and borrowing require independently verified Soroban lending contracts and on-chain risk enforcement.";
   }
+  if(view==="network"){
+    $("altTitle").textContent="STELLAR TESTNET INFRASTRUCTURE";
+    $("altDescription").textContent="Live read-only Horizon and Stellar RPC health, exact network passphrase, ledger reconciliation, and undeployed contract registry.";
+  }
+  $("alternateCards").classList.toggle("hidden",view==="network");
+  $("networkPanel").classList.toggle("hidden",view!=="network");
+  window.dispatchEvent(new CustomEvent("hoxo:view",{detail:{view}}));
   const location=window.location.pathname+"?market="+encodeURIComponent(market.id)+(view==="trade"?"":"#"+view);
   window.history.replaceState(null,"",location);
 }
@@ -143,4 +150,4 @@ $("orderSize").addEventListener("input",updateDraft);
 $("limitPrice").addEventListener("input",updateDraft);
 const initialView=window.location.hash.slice(1);
 chooseSide("buy");chooseOrderType("Market");chooseMarket(market.id);
-if(initialView==="portfolio"||initialView==="earn")setView(initialView);
+if(initialView==="portfolio"||initialView==="earn"||initialView==="network")setView(initialView);

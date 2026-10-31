@@ -184,3 +184,48 @@ test("M3 Freighter mock: Friendbot never called before explicit confirmation",as
     assert.deepEqual(errors,[]);
   }finally{await context.close();}
 });
+
+
+test("M4 Testnet network panel verifies Horizon/RPC and never claims deployed exchange",async()=>{
+  const context=await browser.newContext({viewport:{width:1440,height:900}});
+  const calls=[];
+  const at=Math.floor(Date.now()/1000)-5;
+  await context.route("**/*",async route=>{
+    const url=route.request().url();
+    if(url.startsWith(BASE+"/"))return route.continue();
+    if(url==="https://horizon-testnet.stellar.org/"){
+      return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({
+        network_passphrase:"Test SDF Network ; September 2015",
+        history_latest_ledger:1000000,
+        history_latest_ledger_closed_at:new Date(at*1000).toISOString()
+      })});
+    }
+    if(url==="https://soroban-testnet.stellar.org"){
+      const input=route.request().postDataJSON();
+      calls.push(input.method);
+      const result={
+        getNetwork:{passphrase:"Test SDF Network ; September 2015",protocolVersion:23},
+        getHealth:{status:"healthy",latestLedger:1000000,oldestLedger:999000,latestLedgerCloseTime:String(at),ledgerRetentionWindow:120960},
+        getLatestLedger:{sequence:1000000,closeTime:String(at),protocolVersion:23}
+      }[input.method];
+      return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({jsonrpc:"2.0",id:input.id,result})});
+    }
+    return route.abort();
+  });
+  const page=await context.newPage(),errors=[];
+  page.on("pageerror",e=>errors.push(e.message));
+  try{
+    await page.goto(BASE+"/app/?market=xlm-usdc-spot#network",{waitUntil:"domcontentloaded"});
+    await page.waitForFunction(()=>document.getElementById("infraOverall").textContent.includes("TESTNET CONNECTED"),{timeout:15000});
+    assert.equal(await page.locator("#infraHorizonStatus").innerText(),"VERIFIED");
+    assert.equal(await page.locator("#infraRpcStatus").innerText(),"VERIFIED");
+    assert.equal(await page.locator("#infraRegistryStatus").innerText(),"REGISTRY VALID");
+    assert.equal(await page.locator("#infraVerifiedContracts").innerText(),"0");
+    assert.equal(await page.locator(".infra-contract-row").count(),6);
+    assert.ok(calls.includes("getNetwork")&&calls.includes("getHealth")&&calls.includes("getLatestLedger"));
+    assert.match(await page.locator("#infraOverall").innerText(),/CONTRACTS NOT DEPLOYED/);
+    await page.locator("#backToTrade").click();
+    assert.equal(await page.locator("#tradeButton").isDisabled(),true);
+    assert.deepEqual(errors,[]);
+  }finally{await context.close();}
+});

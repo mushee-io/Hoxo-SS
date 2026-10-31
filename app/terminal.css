@@ -46,3 +46,24 @@
 .faucet-confirm #cancelFaucet{background:transparent;border-color:#63665c}
 .wallet-help{display:flex;flex-direction:column;gap:7px;margin-top:14px;font:10px var(--mono);color:#788b88}.wallet-help a{color:#c1ff62;text-decoration:underline;text-underline-offset:3px}
 .balance-grid>div{overflow-wrap:anywhere}.balance-grid{max-width:900px}.portfolio-body .balance-head{color:#aab4ba}.wallet-balance-meta{font:10px var(--mono);color:#9ba4ac;margin-top:10px!important}.wallet-account-link{color:var(--lime);text-decoration:underline}
+
+/* M4: browser Testnet diagnostics view */
+.topnav [data-view="network"]{color:#bedca7}
+.network-panel{width:min(1100px,100%);margin:24px auto 0;text-align:left;padding:0 12px}
+.infra-caution{font:11px/1.6 var(--mono)!important;color:#e8b77a!important;border:1px solid #625039;background:#27231f;padding:15px;margin:0 0 17px!important}
+.infra-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.infra-grid article{border:1px solid #39453e;background:#141a1b;padding:20px;min-width:0}
+.infra-grid article>span{font:10px var(--mono);color:var(--lime)}
+.infra-grid h2{font-size:22px;line-height:1.2;margin:16px 0;letter-spacing:-.04em}
+.infra-grid p,.infra-foot{font:10px/1.7 var(--mono);color:#a4b0ad;margin:13px 0}
+.infra-grid .infra-url{overflow-wrap:anywhere;color:#93b593}
+.infra-property{display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid #39453e;padding:12px 0;font:10px var(--mono)}
+.infra-property span{color:#829395}.infra-verdict{background:#1c291f;border:1px solid #49633c;padding:16px;margin:14px 0;font:11px var(--mono)}
+.infra-verdict span{color:var(--lime);display:block;margin-bottom:9px}
+.infra-verdict strong{font-size:15px;display:block}.infra-verdict p{color:#b0beae;font:10px/1.7 var(--mono)}
+.infra-refresh{background:var(--lime);color:#111;font:11px var(--mono);border:0;padding:13px 17px}.infra-refresh:disabled{opacity:.5;cursor:wait}
+.infra-contracts{margin:32px 0 24px}.infra-contracts h3{font-size:15px;letter-spacing:.03em}
+.infra-contract-row{display:flex;justify-content:space-between;gap:10px;padding:13px 0;border-bottom:1px solid #2a3431;font:11px var(--mono)}
+.infra-contract-row b{color:#d0b784;font-weight:400;text-align:right}
+@media(max-width:900px){.infra-grid{grid-template-columns:1fr}.infra-grid article{padding:15px}.network-panel{padding:0}}
+@media(max-width:650px){.topnav{gap:6px!important}.topnav .toplink{font-size:10px}.infra-contract-row{font-size:10px}}
