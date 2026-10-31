@@ -10,6 +10,7 @@
 <script src="./wallet-ui.mjs" type="module"></script>
 <script src="./terminal-ui.mjs" type="module"></script>
 <script src="./infra-ui.mjs" type="module"></script>
+<script src="./network-market-ui.mjs" type="module"></script>
 </head>
 <body>
 <a class="skip-terminal" href="#tradeView">Skip to trading workspace</a>
@@ -34,6 +35,13 @@
 <div class="tabbar"><button class="tab active" data-book-view="book">Order Book</button><button class="tab" data-book-view="trades">Trades</button></div>
 <div class="book-meta"><span id="bookPriceHeading">PRICE (USDC)</span><span id="bookSizeHeading">SIZE (XLM)</span><span>TOTAL</span></div>
 <div class="order-empty"><span>↕</span><strong id="bookEmptyTitle">ORDER BOOK OFFLINE</strong><p id="bookEmptyDescription">Real order-book updates will appear after the matching and indexing engines are deployed.</p></div>
+<section class="testnet-trade-activity" aria-label="Independent Stellar Testnet activity">
+ <div class="observed-activity-top"><strong>STELLAR TESTNET NETWORK TRADES</strong><span>NOT HOXO FILLS</span></div>
+ <p id="observedActivityState" role="status" aria-live="polite">Checking network source...</p>
+ <div id="observedActivityRows" class="observed-activity-rows"></div>
+ <button type="button" id="observedActivityRefresh">REFRESH NETWORK ACTIVITY ↻</button>
+ <p class="observed-activity-warning">Public Stellar network trade observations are unrelated to HOXO orders. No verified HOXO markets, quotes, candles or oracle prices exist yet.</p>
+</section>
 <div class="book-bottom"><span>SPREAD</span><b>—</b></div>
 </section>
 <section class="order-panel panel">

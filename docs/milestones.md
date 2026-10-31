@@ -18,7 +18,7 @@ This plan deliberately distinguishes a rendered interface, a read-only wallet in
 
 | ID | Milestone | Acceptance gate | Status |
 | --- | --- | --- | --- |
-| M5 | Oracle and market-data layer | Source selection, heartbeat, deviation bounds, signed/canonical index and mark prices, kill switches | Not started |
+| M5 | Oracle and market-data layer | Testnet-only Horizon SDEX trade/aggregation adapters, issuer validation, fixed-point candles/book parsing; oracle freshness/deviation review and kill switch | Partial: code and tests; no approved on-chain oracle, canonical mark/index, verified issuer pair, or actual HOXO fills |
 | M6 | Soroban collateral vault | Non-custodial deposits/withdrawals, signed authentication, canonical per-account token accounting | Not started |
 | M7 | On-chain portfolio risk | Initial/maintenance margin enforced atomically, collateral haircuts, margin reservation, no double-counting | Not started |
 | M8 | Price-time order-book engine | Signed Testnet-domain order intents, deterministic price/time matching, cancel/replace, self-trade prevention, append-only hashed replay journal, loopback API | Implementation committed for CI; no settlement or on-chain reservation; M5–M7 dependencies outstanding |

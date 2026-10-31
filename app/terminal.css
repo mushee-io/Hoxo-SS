@@ -67,3 +67,15 @@
 .infra-contract-row b{color:#d0b784;font-weight:400;text-align:right}
 @media(max-width:900px){.infra-grid{grid-template-columns:1fr}.infra-grid article{padding:15px}.network-panel{padding:0}}
 @media(max-width:650px){.topnav{gap:6px!important}.topnav .toplink{font-size:10px}.infra-contract-row{font-size:10px}}
+
+/* M5 - observed external Testnet activity, explicitly not HOXO market data */
+.testnet-trade-activity{padding:12px;border-top:1px solid #34423d;margin-top:14px;max-height:240px;overflow-y:auto}
+.observed-activity-top{display:flex;gap:7px;justify-content:space-between;align-items:center}
+.observed-activity-top strong{font:10px var(--mono);color:#c1f5c0;font-weight:500}
+.observed-activity-top span{font:9px var(--mono);color:#edbf8e}
+#observedActivityState,.observed-activity-warning{font:9px/1.6 var(--mono);color:#91a79f}
+.observed-activity-warning{color:#d4ac89;border-top:1px solid #3b3532;padding-top:8px}
+.observed-activity-row{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid #293934;font:10px var(--mono)}
+.observed-activity-row strong{font-weight:400;color:#e0eae3}.observed-activity-row small{color:#86a9a2;font-size:9px}
+#observedActivityRefresh{background:#26372d;border:1px solid #415e48;padding:7px 10px;color:#b9e4bb;font:9px var(--mono)}
+#observedActivityRefresh:disabled{opacity:.5;cursor:wait}
