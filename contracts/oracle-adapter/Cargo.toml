@@ -1,0 +1,15 @@
+[package]
+name = "hoxo-oracle-adapter"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Two-independent-publisher, Testnet-only candidate spot/perp oracle; not an audited financial authority"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+soroban-sdk = "=29.0.1"
+
+[dev-dependencies]
+soroban-sdk = { version = "=29.0.1", features = ["testutils"] }
