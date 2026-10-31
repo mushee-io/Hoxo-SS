@@ -31,3 +31,8 @@ M9 source code is a bilateral *wallet-to-wallet* atomic swap, deliberately indep
 ## M9 compiled artifact evidence
 
 [CI 41193442596](https://github.com/mushee-io/Hoxo-SS/actions/runs/41193442596) created a 9,574-byte M9 WASM using official `stellar contract build` (CLI 28.1.0), with SHA-256 `916917c61fc36a55929201027a98625097f6e8ee74f26de255728f451de4fcc3`. Its review-only artifact is available from the CI run. Building WASM does not deploy or prove bilateral account authorisations. Use a fresh CLI/SDK compatibility review after the Testnet upgrade vote, then establish actual transaction receipts before updating the registry.
+
+
+### Operator deployment execution track
+
+`npm run testnet:deploy` now builds explicit seven-role Stellar Testnet commands. Real on-chain deployments require an interactive operator with an externally managed signer, an explicit acknowledgement and independent Testnet network verification. No private keys or registry modifications occur automatically. See [Testnet execution handoff](testnet-execution-handoff.md).
