@@ -8,7 +8,7 @@ Hoxo-SS is a proposed non-custodial exchange for Stellar. The intended product c
 - **Money markets:** supply, redeem, borrow and repay with risk-controlled collateral usage.
 - **Unified margin:** a single collateral ledger and conservative account-wide risk calculation.
 
-**Status: early development.** M4 read-only Stellar Testnet RPC + Horizon infrastructure is verified in CI; M5 provides read-only market-data adapters; M6/M7 Rust code compiles and passes Soroban test-environment checks, but neither is a deployed contract. **No HOXO contracts are deployed, no wallet-controlled deposits have been executed, and there is no audited unified-margin risk engine.** Testnet-first. No synthetic volumes or fake live market data.
+**Status: early development.** M4 read-only Stellar Testnet RPC + Horizon infrastructure is verified in CI; M5 provides read-only market-data adapters; M6–M9 Soroban source is undergoing native contract and Wasm tests, but no HOXO contract is deployed. **No HOXO contracts are deployed, no wallet-controlled spot swaps or deposits have been executed, and there is no audited unified-margin risk engine.** Testnet-first. No synthetic volumes or fake live market data.
 
 [M1–M8 audited implementation and blockers](docs/m1-m8-audit.md) · `npm run check:readiness` verifies no premature real-trading claims.
 
@@ -26,6 +26,7 @@ Stellar smart contracts (Rust `soroban-sdk`) for vaults, settlement and enforcem
 - [M6 Soroban collateral vault](docs/m6-vault.md): token allowlist, owner-signed deposits/withdrawals and isolated wallet balances. Requires Rust compilation, contract deployment and real Testnet tests.
 - [M7 Risk-preview contract](docs/m7-risk.md): deterministic Rust portfolio risk and read-only Soroban previews; execution authorization remains hard-disabled pending authenticated state.
 - [M8 Sandbox Matching Engine](docs/m8-matching.md): signed off-chain testnet-domain order intents, price/time matching, self-trade prevention, cancellation and deterministic restart replay. **No orders are settled or risk-authorised.**
+- [M9 Soroban bilateral spot settlement](docs/m9-spot-settlement.md): two-wallet atomic token DvP, Testnet-only network ID, maker/taker limit checks, ledger expiry, receipt/replay protection and M8 non-executable proposal handoff. **No live deployment or signed on-chain settlement yet.**
 - [Full development roadmap — M0–M24](docs/milestones.md): 25 stages from product design to audited mainnet readiness, with verifiable acceptance gates.
 - [Architecture](docs/architecture.md), [risk model](docs/risk-model.md), [delivery gates](docs/delivery.md).
 
@@ -48,6 +49,7 @@ npm run check:registry     # Validates canonical Testnet asset/contract registry
 npm run check:testnet      # Live read-only Stellar Testnet Horizon check
 npm run check:infra        # Live read-only Stellar RPC + Horizon + registry gate
 npm run test:matching      # Signed matching journal and HTTP sandbox tests
+npm run test:spot-preview  # Non-executable M8→M9 settlement proposal tests
 npm run dev:matching      # Local sandbox API on 127.0.0.1:8788 (NO exchange execution)
 ```
 

@@ -86,7 +86,7 @@ jobs:
           node --input-type=module -e 'import {emptyBook,snapshot} from "./matching/core.mjs"; const book=snapshot(emptyBook(),"xlm-usdc-spot"); if(book.tradingEnabled||book.settleable||book.onchain) process.exit(1);'
 
   rust-contracts:
-    name: M6 vault and M7 Soroban risk Rust tests
+    name: M6–M9 Soroban contracts and WASM smoke
     runs-on: ubuntu-latest
     timeout-minutes: 22
     permissions:
@@ -111,3 +111,9 @@ jobs:
         run: cargo test -p hoxo-risk-gate --lib
       - name: Run M9 atomic spot settlement contract tests
         run: cargo test -p hoxo-spot-settlement --lib
+      - name: Install Stellar Soroban wasm32v1-none target
+        run: rustup target add wasm32v1-none
+      - name: Compile M9 Wasm smoke artifact (not a deployable release claim)
+        run: |
+          cargo build --release --target wasm32v1-none -p hoxo-spot-settlement
+          test -s target/wasm32v1-none/release/hoxo_spot_settlement.wasm

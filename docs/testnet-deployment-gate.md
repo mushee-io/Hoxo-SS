@@ -23,3 +23,7 @@
 10. Keep app-side deposit and trading buttons disabled until independent Testnet verification and the separate M9 settlement gate pass.
 
 **Network change warning:** The planned Bell/Protocol 30 Testnet upgrade vote is 3 November 2026, 17:00 UTC. Repeat deployment assumptions after that vote, particularly SDK/CLI and address-format compatibility.
+
+## M9 spot settlement deployment acceptance (not yet performed)
+
+M9 source code is a bilateral *wallet-to-wallet* atomic swap, deliberately independent of M6 custody and M7 margin. It is Testnet-locked using `SHA256("Test SDF Network ; September 2015")`. To accept a real Testnet settlement, additionally verify both authorised Stellar accounts, both approved 7-decimal token contract IDs and the exact `MatchTerms` signed by both wallets. Record the successful Soroban transaction hash, ledger, contract event, token deltas and persistent receipt; attempt replay and expired-settlement transactions and confirm failure. M8's matching signatures must **not** be interpreted as Soroban spending authorisations. Release M9 only with an audited M8 matching-to-settlement bridge and independently tested on-chain permissioning.

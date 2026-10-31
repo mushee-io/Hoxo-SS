@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "network": "testnet",
   "passphrase": "Test SDF Network ; September 2015",
-  "note": "NO smart contracts or issued assets have been deployed/verified by Hoxo SS at M4. Entries below are plans only. Never interpret them as active trading markets.",
+  "note": "M9: Soroban spot settlement source and tests exist, but every HOXO contract is UNDEPLOYED on Stellar Testnet. Do not treat native/Rust tests, M8 sandbox fills or healthy RPC as on-chain trading proof.",
   "assets": [
     {
       "key": "XLM",
