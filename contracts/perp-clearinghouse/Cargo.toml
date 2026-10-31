@@ -3,7 +3,7 @@ name = "hoxo-perp-clearinghouse"
 version = "0.1.0"
 edition = "2021"
 publish = false
-description = "Isolated bilateral Soroban Testnet perp clearinghouse with margin escrow; not unified margin"
+description = "Isolated Soroban Testnet perp clearinghouse with prefunded insurance and liquidation; not unified margin"
 [lib]
 crate-type = ["cdylib", "rlib"]
 [dependencies]

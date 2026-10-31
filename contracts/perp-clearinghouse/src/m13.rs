@@ -19,6 +19,7 @@ pub struct Reconciliation {
     pub actual_cash_e7:i128,
     pub user_claims_e7:i128,
     pub accrued_fees_e7:i128,
+    pub insurance_reserve_e7:i128,
     pub surplus_e7:i128,
     pub open_positions:u32,
     pub solvent:bool,
@@ -91,8 +92,12 @@ pub fn funding_step(
 pub fn reconcile(e:&Env)->Result<Reconciliation,PerpError>{
     let t=totals(e);
     let fees=ledger(e);
-    if t.total_user_claims_e7<0||fees.fees_accrued_e7<0{return Err(PerpError::Insolvent);}
+    let insurance=m14::insurance(e);
+    if t.total_user_claims_e7<0||fees.fees_accrued_e7<0||insurance.reserves_e7<0{
+        return Err(PerpError::Insolvent);
+    }
     let total=t.total_user_claims_e7.checked_add(fees.fees_accrued_e7)
+        .and_then(|v|v.checked_add(insurance.reserves_e7))
         .ok_or(PerpError::Overflow)?;
     let actual=token::TokenClient::new(e,&collateral(e))
         .balance(&e.current_contract_address());
@@ -100,6 +105,7 @@ pub fn reconcile(e:&Env)->Result<Reconciliation,PerpError>{
     Ok(Reconciliation{
         actual_cash_e7:actual,user_claims_e7:t.total_user_claims_e7,
         accrued_fees_e7:fees.fees_accrued_e7,
+        insurance_reserve_e7:insurance.reserves_e7,
         surplus_e7:if solvent{actual-total}else{0},
         open_positions:t.open_positions,solvent
     })

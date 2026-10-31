@@ -17,6 +17,7 @@ const moneyMarket=await read("contracts/money-market/src/lib.rs");
 const debtModule=await read("contracts/money-market/src/m11.rs");
 const perp=await read("contracts/perp-clearinghouse/src/lib.rs");
 const funding=await read("contracts/perp-clearinghouse/src/m13.rs");
+const liquidation=await read("contracts/perp-clearinghouse/src/m14.rs");
 const sandbox=snapshot(emptyBook(),"xlm-usdc-spot");
 const invariants={
   noVerifiedExchangeContracts:registry.deployedVerified===0 && registry.candidateContracts===0,
@@ -69,6 +70,17 @@ const invariants={
     funding.includes('accrued_fees_e7'),
   m13NoAdminSweep:!perp.includes('pub fn sweep(')&&
     !perp.includes('pub fn collect_fees('),
+  m14InsuranceIsPrefunded:liquidation.includes('reserves_e7:0')&&
+    perp.includes('funder.require_auth()')&&
+    perp.includes('token.transfer(&funder,&vault,&amount_e7)'),
+  m14FullLiquidationsFailClosed:liquidation.includes('InsuranceShortfall')&&
+    perp.includes('if !snapshot.can_full_liquidate'),
+  m14KeeperAuthAndConflictGuard:perp.includes('keeper.require_auth()')&&
+    perp.includes('keeper==p.long||keeper==p.short'),
+  m14SeparateLiabilities:liquidation.includes('uncovered_bad_debt_e7')&&
+    funding.includes('insurance_reserve_e7'),
+  m14UnverifiedDeployment:registry.statuses.some(x=>
+    x.role==="perp-clearinghouse"&&x.status==="planned"&&x.contractId===null),
 
 };
 console.log(JSON.stringify({
@@ -86,7 +98,8 @@ console.log(JSON.stringify({
   M10:"isolated Soroban money-market supply code; no genuine Testnet deposit",
   M11:"indexed debt and repayment added behind unconfigured canonical risk authority and zero cap; no real Testnet borrow",
   M12:"isolated two-wallet perp escrow and PnL contract source; no verified oracle, risk controller or deployment",
-  M13:"bounded Soroban mark-index funding, closed-loop fee reserves and reconciliation; no approved oracle, Testnet funding receipts or liquidation",
+  M13:"bounded Soroban mark-index funding, closed-loop fee reserves and reconciliation; no approved oracle or Testnet funding receipts",
+  M14:"isolated keeper liquidation, prefunded insurance and potential bad-debt preview; no verified deployment, historical funding recovery or public trading",
  },
  invariants
 },null,2));

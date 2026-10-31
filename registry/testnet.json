@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "network": "testnet",
   "passphrase": "Test SDF Network ; September 2015",
-  "note": "M13 Soroban fee/position reconciliation and bounded mark-index-based funding source added. All Hoxo contract IDs remain null; the M12/M13 clearinghouse starts paused, with no oracle/risk and zero fee rate. No Testnet positions, real fees, funding, liquidation, or unified margin exist.",
+  "note": "M14 Soroban keeper liquidation and prefunded insurance source added. All Hoxo contract IDs remain null, the clearinghouse remains paused, oracle/risk controllers are unset, and no real Testnet margin, insurance, liquidation, or unified-margin transactions exist.",
   "assets": [
     {
       "key": "XLM",

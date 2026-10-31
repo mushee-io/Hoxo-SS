@@ -1,6 +1,6 @@
 #![no_std]
-//! Hoxo SS M12 - ISOLATED bilateral perpetual contract foundation.
-//! Testnet ONLY. No synthetic USDC, external payout or liquidation.
+//! Hoxo SS M12–M14 - ISOLATED bilateral perpetual contract foundation.
+//! Testnet ONLY. No synthetic USDC or external payout.
 //! The "perp" is a matched long/short pair with isolated, on-chain
 //! token escrow. Mark comes ONLY from an external Soroban oracle contract;
 //! risk comes ONLY from a separate Soroban risk authority contract.
@@ -11,7 +11,9 @@ use soroban_sdk::{
     contracttype,token,Address,BytesN,Env,
 };
 mod m13;
+mod m14;
 use m13::*;
+use m14::*;
 const SCALE:i128=10_000_000;
 const BPS:i128=10_000;
 const MAX_DEVIATION_BPS:i128=200;
@@ -54,7 +56,7 @@ pub trait CanonicalRisk {
 #[contracttype]
 #[derive(Clone)]
 pub enum Key {
-    Admin, Token, Market, Paused, Oracle, Risk, Totals, Fees,
+    Admin, Token, Market, Paused, Oracle, Risk, Totals, Fees, Insurance,
     Wallet(Address), Position(BytesN<32>),
 }
 #[contracttype]
@@ -83,6 +85,9 @@ pub struct Position {
     pub last_funding_sec:u64,
     pub cumulative_funding_to_short_e7:i128,
     pub total_fees_paid_e7:i128,
+    pub liquidated_quantity_e7:i128,
+    pub cumulative_realised_pnl_e7:i128,
+    pub liquidation_count:u32,
     pub opened_at_sec:u64,
     pub closed_at_sec:u64,
     pub close_price_e7:i128,
@@ -104,6 +109,8 @@ pub struct MarketView {
     pub open_positions:u32,
     pub fee_bps:u32,
     pub accrued_fees_e7:i128,
+    pub insurance_reserves_e7:i128,
+    pub keeper_reward_bps:u32,
 }
 #[contractevent(topics=["hoxo_perp","opened"],data_format="vec")]
 #[derive(Clone,Debug)]
@@ -133,6 +140,17 @@ pub struct FundingSettled {
     pub long_pays_short_e7:i128,
     pub timestamp_sec:u64,
 }
+#[contractevent(topics=["hoxo_perp","liquidation"],data_format="vec")]
+#[derive(Clone,Debug)]
+pub struct Liquidated {
+    #[topic]
+    pub id:BytesN<32>,
+    pub keeper:Address,
+    pub quantity_closed_e7:i128,
+    pub fully_closed:bool,
+    pub insurance_used_e7:i128,
+    pub keeper_reward_e7:i128,
+}
 #[contracterror]
 #[derive(Copy,Clone,Debug,Eq,PartialEq)]
 #[repr(u32)]
@@ -143,6 +161,8 @@ pub enum PerpError {
     PositionNotFound=12,PositionClosed=13,Insolvent=14,
     LossExceedsMargin=15,Expired=16,Capacity=17,UnauthorizedChange=18,
     InvalidFee=19,FundingOverdue=20,MaintenanceBreach=21,
+    LiquidationNotRequired=22,InsuranceShortfall=23,PartialNotSafe=24,
+    InvalidReduction=25,InvalidReward=26,InvalidKeeper=27,
 }
 fn admin(e:&Env)->Address {
     e.storage().instance().get(&Key::Admin).expect("constructor required")
@@ -231,11 +251,13 @@ impl PerpClearinghouse {
             total_user_claims_e7:0,open_positions:0
         });
         m13::init(&e);
+        m14::init(&e);
         keep_instance(&e);
     }
     pub fn market(e:Env)->MarketView{
         let t=totals(&e);
         let fee=m13::ledger(&e);
+        let insurance=m14::insurance(&e);
         let paused:bool=e.storage().instance().get(&Key::Paused).unwrap_or(true);
         let oracle=e.storage().instance().has(&Key::Oracle);
         let risk=e.storage().instance().has(&Key::Risk);
@@ -248,6 +270,8 @@ impl PerpClearinghouse {
             maintenance_margin_bps:MAINT_MARGIN_BPS as u32,
             total_user_claims_e7:t.total_user_claims_e7,open_positions:t.open_positions,
             fee_bps:fee.fee_bps,accrued_fees_e7:fee.fees_accrued_e7,
+            insurance_reserves_e7:insurance.reserves_e7,
+            keeper_reward_bps:insurance.keeper_reward_bps,
         }
     }
     pub fn wallet(e:Env,owner:Address)->Wallet {wallet(&e,&owner)}
@@ -268,6 +292,54 @@ impl PerpClearinghouse {
         l.fee_bps=bps;
         m13::save(&e,&l);
         Ok(())
+    }
+    pub fn insurance_state(e:Env)->InsuranceState {m14::insurance(&e)}
+    /// Funding is a direct, exact 7-decimal transfer into a separate
+    /// insurance reserve: not user equity, not accrued trading fees.
+    /// No withdrawal/sweep privilege exists in M14.
+    pub fn fund_insurance(e:Env,funder:Address,amount_e7:i128)->Result<i128,PerpError>{
+        require_testnet(&e)?;
+        funder.require_auth();
+        if amount_e7<=0||amount_e7>MAX_NOTIONAL_E7{return Err(PerpError::InvalidInput);}
+        require_solvency(&e)?;
+        let mut insurance=m14::insurance(&e);
+        let next=insurance.reserves_e7.checked_add(amount_e7).ok_or(PerpError::Overflow)?;
+        if next>MAX_NOTIONAL_E7{return Err(PerpError::InvalidInput);}
+        let token=token::TokenClient::new(&e,&collateral(&e));
+        let vault=e.current_contract_address();
+        let before=token.balance(&vault);
+        token.transfer(&funder,&vault,&amount_e7);
+        let after=token.balance(&vault);
+        if after.checked_sub(before)!=Some(amount_e7){return Err(PerpError::Insolvent);}
+        insurance.reserves_e7=next;
+        insurance.contributed_e7=insurance.contributed_e7.checked_add(amount_e7)
+            .ok_or(PerpError::Overflow)?;
+        m14::save(&e,&insurance);
+        require_solvency(&e)?;
+        Ok(next)
+    }
+    /// Bounded keeper reward (0–50bps) can only be configured while paused
+    /// and with zero open positions. Defaults to zero.
+    pub fn set_keeper_reward_bps(e:Env,bps:u32)->Result<(),PerpError>{
+        require_testnet(&e)?;
+        admin(&e).require_auth();
+        if bps>MAX_REWARD_BPS||totals(&e).open_positions>0||
+           !e.storage().instance().get::<_,bool>(&Key::Paused).unwrap_or(true){
+            return Err(PerpError::InvalidReward);
+        }
+        let mut i=m14::insurance(&e);
+        i.keeper_reward_bps=bps;
+        m14::save(&e,&i);
+        Ok(())
+    }
+    /// Read-only shortfall/maintenance quote, not a guaranteed liquidation.
+    pub fn liquidation_preview(e:Env,id:BytesN<32>)->Result<LiquidationPreview,PerpError>{
+        require_testnet(&e)?;
+        let p:Position=e.storage().persistent().get(&Key::Position(id))
+            .ok_or(PerpError::PositionNotFound)?;
+        let oracle=require_price(&e)?;
+        require_solvency(&e)?;
+        m14::quote(&p,&oracle,e.ledger().timestamp(),&m14::insurance(&e))
     }
     pub fn position(e:Env,id:BytesN<32>)->Option<Position> {
         e.storage().persistent().get(&Key::Position(id))
@@ -430,6 +502,7 @@ impl PerpClearinghouse {
             initial_margin_each_e7:m,long_margin_e7:m,short_margin_e7:m,
             last_funding_sec:e.ledger().timestamp(),
             cumulative_funding_to_short_e7:0,total_fees_paid_e7:assessed,
+            liquidated_quantity_e7:0,cumulative_realised_pnl_e7:0,liquidation_count:0,
             opened_at_sec:e.ledger().timestamp(),
             closed_at_sec:0,close_price_e7:0,long_realised_pnl_e7:0,
             active:true,
@@ -513,12 +586,106 @@ impl PerpClearinghouse {
             .checked_add(assessed).ok_or(PerpError::Overflow)?;
         pos.active=false;pos.close_price_e7=q.mark_e7;
         pos.closed_at_sec=e.ledger().timestamp();pos.long_realised_pnl_e7=pnl;
+        pos.cumulative_realised_pnl_e7=pos.cumulative_realised_pnl_e7
+            .checked_add(pnl).ok_or(PerpError::Overflow)?;
         save_position(&e,&pos);
         keep_instance(&e);
         Closed{id,close_price_e7:q.mark_e7,long_realised_pnl_e7:pnl,
             closed_at_sec:e.ledger().timestamp()}.publish(&e);
         Ok(pos)
     }
+
+    /// Keeper-authorised full/partial liquidation of a MAINTENANCE-BREACHED
+    /// matched position. No bilateral close signatures needed, but both
+    /// counterparties have already agreed to the contract's liquidation rule
+    /// at opening. Insolvent full close needs genuine PREFUNDED insurance.
+    /// A gap >8h fails: M14 cannot invent historical oracle funding.
+    pub fn liquidate(
+        e:Env,id:BytesN<32>,keeper:Address,quantity_to_close_e7:i128
+    )->Result<LiquidationResult,PerpError>{
+        require_testnet(&e)?;
+        keeper.require_auth();
+        let p:Position=e.storage().persistent().get(&Key::Position(id.clone()))
+            .ok_or(PerpError::PositionNotFound)?;
+        if !p.active{return Err(PerpError::PositionClosed);}
+        if keeper==p.long||keeper==p.short{return Err(PerpError::InvalidKeeper);}
+        if quantity_to_close_e7<=0||quantity_to_close_e7>p.base_quantity_e7{
+            return Err(PerpError::InvalidReduction);
+        }
+        let q=require_price(&e)?;
+        require_solvency(&e)?;
+        let mut insurance=m14::insurance(&e);
+        let snapshot=m14::quote(&p,&q,e.ledger().timestamp(),&insurance)?;
+        if !snapshot.required{return Err(PerpError::LiquidationNotRequired);}
+        let mut wl=wallet(&e,&p.long);
+        let mut ws=wallet(&e,&p.short);
+        let mut wk=wallet(&e,&keeper);
+        if wl.locked_e7<p.long_margin_e7||ws.locked_e7<p.short_margin_e7{
+            return Err(PerpError::Insolvent);
+        }
+        let mut totals=totals(&e);
+        let mut f=m13::ledger(&e);
+        let result=if quantity_to_close_e7==p.base_quantity_e7 {
+            if !snapshot.can_full_liquidate{return Err(PerpError::InsuranceShortfall);}
+            let (next,lp,sp,draw,reward,pnl,funding)=m14::full(
+                &p,&q,e.ledger().timestamp(),&insurance
+            )?;
+            wl.locked_e7-=p.long_margin_e7;
+            ws.locked_e7-=p.short_margin_e7;
+            wl.available_e7=wl.available_e7.checked_add(lp).ok_or(PerpError::Overflow)?;
+            ws.available_e7=ws.available_e7.checked_add(sp).ok_or(PerpError::Overflow)?;
+            wk.available_e7=wk.available_e7.checked_add(reward).ok_or(PerpError::Overflow)?;
+            insurance.reserves_e7-=draw;
+            insurance.used_e7=insurance.used_e7.checked_add(draw).ok_or(PerpError::Overflow)?;
+            totals.total_user_claims_e7=totals.total_user_claims_e7
+                .checked_add(draw).ok_or(PerpError::Overflow)?;
+            totals.open_positions=totals.open_positions.checked_sub(1).ok_or(PerpError::Insolvent)?;
+            f.cumulative_funding_to_short_e7=f.cumulative_funding_to_short_e7
+                .checked_add(funding).ok_or(PerpError::Overflow)?;
+            save_position(&e,&next);
+            LiquidationResult {
+                position_id:id.clone(),fully_closed:true,
+                quantity_closed_e7:quantity_to_close_e7,remaining_base_e7:0,
+                keeper_reward_e7:reward,insurance_used_e7:draw,
+                uncovered_bad_debt_e7:0,realised_long_pnl_e7:pnl,
+            }
+        }else{
+            let (next,reward,pnl,funding)=m14::partial(
+                &p,&q,e.ledger().timestamp(),quantity_to_close_e7,
+                insurance.keeper_reward_bps
+            )?;
+            wl.locked_e7=wl.locked_e7.checked_sub(p.long_margin_e7)
+                .and_then(|v|v.checked_add(next.long_margin_e7)).ok_or(PerpError::Overflow)?;
+            ws.locked_e7=ws.locked_e7.checked_sub(p.short_margin_e7)
+                .and_then(|v|v.checked_add(next.short_margin_e7)).ok_or(PerpError::Overflow)?;
+            wk.available_e7=wk.available_e7.checked_add(reward).ok_or(PerpError::Overflow)?;
+            f.cumulative_funding_to_short_e7=f.cumulative_funding_to_short_e7
+                .checked_add(funding).ok_or(PerpError::Overflow)?;
+            save_position(&e,&next);
+            LiquidationResult {
+                position_id:id.clone(),fully_closed:false,
+                quantity_closed_e7:quantity_to_close_e7,
+                remaining_base_e7:next.base_quantity_e7,
+                keeper_reward_e7:reward,insurance_used_e7:0,
+                uncovered_bad_debt_e7:0,realised_long_pnl_e7:pnl,
+            }
+        };
+        insurance.liquidations=insurance.liquidations.checked_add(1).ok_or(PerpError::Overflow)?;
+        save_wallet(&e,&p.long,&wl);
+        save_wallet(&e,&p.short,&ws);
+        save_wallet(&e,&keeper,&wk);
+        e.storage().instance().set(&Key::Totals,&totals);
+        m13::save(&e,&f);
+        m14::save(&e,&insurance);
+        require_solvency(&e)?;
+        Liquidated {
+            id,keeper,quantity_closed_e7:result.quantity_closed_e7,
+            fully_closed:result.fully_closed,insurance_used_e7:result.insurance_used_e7,
+            keeper_reward_e7:result.keeper_reward_e7,
+        }.publish(&e);
+        Ok(result)
+    }
+
     pub fn solvent(e:Env)->bool {require_solvency(&e).is_ok()}
     /// Keep instance, account, and matching position-ID record alive to
     /// prevent replay after archival. Contract operation requires a
