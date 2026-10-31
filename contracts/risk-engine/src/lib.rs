@@ -238,7 +238,7 @@ mod tests {
         let env=Env::default();
         let contract=env.register(RiskGate,());
         let client=RiskGateClient::new(&env,&contract);
-        let report=client.preview(&Vec::new(&env),&Vec::new(&env),&Vec::new(&env),&0);
+        let report=client.preview(&Vec::new(&env),&Vec::new(&env),&Vec::new(&env),&Vec::new(&env),&0);
         assert_eq!(report.state,0);
         assert_eq!(report.available_margin_e7,0);
         assert!(!report.execution_permitted);
