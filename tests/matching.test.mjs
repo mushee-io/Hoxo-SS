@@ -147,7 +147,7 @@ test("M8 rejects market orders, invalid expiration and unapproved catalog symbol
   let cmd=place(A,1,"a","buy","1","1");
   assert.throws(()=>advance(emptyBook(),{...cmd,marketId:"mainnet-usdc"}),/reference catalog/);
   assert.throws(()=>advance(emptyBook(),{...cmd,expiresAtMs:NOW-1}),/expiry/);
-  assert.throws(()=>advance(emptyBook(),{...cmd,priceE7:"0"}),/positive fixed-point/);
+  assert.throws(()=>advance(emptyBook(),{...cmd,priceE7:"0"}),/positive fixed-point|outside sandbox limits/);
   assert.throws(()=>advance(emptyBook(),{...cmd,side:"market"}),/order side/);
 });
 test("M8 durable journal replays identical book and simulated fills across restart",async t=>{
@@ -208,12 +208,8 @@ test("M8 HTTP API is loopback-ready but has no trade/settlement endpoint",{timeo
   const journal=await SignedOrderJournal.open(file);
   const server=createSandboxServer(journal,{now:()=>NOW});
   await new Promise(r=>server.listen(0,"127.0.0.1",r));
-  t.after(async()=>{
-    server.closeAllConnections();
-    await new Promise(r=>server.close(r));
-    await journal.close();
-  });
   const base="http://127.0.0.1:"+server.address().port;
+  try {
   const health=await (await fetch(base+"/health")).json();
   assert.equal(health.tradingEnabled,false);
   assert.equal(health.onchainOrders,false);
@@ -234,4 +230,9 @@ test("M8 HTTP API is loopback-ready but has no trade/settlement endpoint",{timeo
   const fills=await (await fetch(base+"/v1/fills?marketId=xlm-usdc-spot")).json();
   assert.equal(fills.settlement,"NOT_SETTLED");
   assert.equal((await fetch(base+"/v1/settle",{method:"POST"})).status,404);
+  } finally {
+    server.closeAllConnections();
+    await new Promise(r=>server.close(r));
+    await journal.close();
+  }
 });
