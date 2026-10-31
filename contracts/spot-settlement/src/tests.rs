@@ -3,6 +3,7 @@
 
     fn setup() -> (Env,Address,Address,Address,Address,Address,Address) {
         let e=Env::default();
+        e.ledger().set_network_id(TESTNET_NETWORK_ID);
         e.mock_all_auths(); // Positive-path signing is mocked in native tests.
         let admin=Address::generate(&e);
         let maker=Address::generate(&e);
@@ -199,4 +200,18 @@
         c.keepalive(&fill.match_id,&base,&quote);
         assert!(c.receipt(&fill.match_id).is_some());
         assert!(c.is_settled(&fill.match_id));
+    }
+
+    #[test]
+    fn forced_mainnet_network_id_rejects_even_dual_authorised_spot_trade(){
+        let (e,id,_,maker,taker,base,quote)=setup();
+        open(&e,&id);
+        let c=SpotSettlementClient::new(&e,&id);
+        let fill=terms(&e,&maker,&taker,&base,&quote,40,0);
+        let b=token::TokenClient::new(&e,&base);
+        let maker_before=b.balance(&maker);
+        e.ledger().set_network_id([0u8;32]);
+        assert!(c.try_settle(&fill).is_err());
+        assert_eq!(b.balance(&maker),maker_before);
+        assert!(!c.is_settled(&fill.match_id));
     }

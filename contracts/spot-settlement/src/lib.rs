@@ -13,6 +13,13 @@ use soroban_sdk::{
     token, Address, BytesN, Env,
 };
 
+// SHA256("Test SDF Network ; September 2015"), the canonical network ID.
+const TESTNET_NETWORK_ID:[u8;32]=[
+    0xce,0xe0,0x30,0x2d,0x59,0x84,0x4d,0x32,
+    0xbd,0xca,0x91,0x5c,0x82,0x03,0xdd,0x44,
+    0xb3,0x3f,0xbb,0x7e,0xdc,0x19,0x05,0x1e,
+    0xa3,0x7a,0xbe,0xdf,0x28,0xec,0xd4,0x72,
+];
 const SCALE:i128=10_000_000;
 const MAX_AMOUNT:i128=1_000_000_000_000_000; // 100m assets at 7 decimals
 const MAX_PRICE_E7:i128=10_000_000_000_000_000; // 1b quote/base at 7 decimals
@@ -93,6 +100,13 @@ pub enum SettlementError {
     Overflow=11,
     Paused=12,
     InvalidOrderIds=13,
+    WrongNetwork=14,
+}
+fn verify_testnet(e:&Env)->Result<(),SettlementError>{
+    if e.ledger().network_id()!=BytesN::<32>::from_array(e,&TESTNET_NETWORK_ID){
+        return Err(SettlementError::WrongNetwork);
+    }
+    Ok(())
 }
 fn admin(e:&Env)->Address {
     e.storage().instance().get(&Key::Admin).expect("constructor required")
@@ -160,6 +174,7 @@ pub struct SpotSettlement;
 #[contractimpl]
 impl SpotSettlement {
     pub fn __constructor(e:Env,owner:Address) {
+        if verify_testnet(&e).is_err(){panic!("HOXO spot deployment requires Stellar Testnet");}
         owner.require_auth();
         e.storage().instance().set(&Key::Admin,&owner);
         e.storage().instance().set(&Key::Paused,&true); // fail closed by default
@@ -215,6 +230,7 @@ impl SpotSettlement {
         keep_instance(&e);
     }
     pub fn settle(e:Env,terms:MatchTerms)->Result<SettlementReceipt,SettlementError> {
+        verify_testnet(&e)?;
         if Self::paused(e.clone()){return Err(SettlementError::Paused);}
         if terms.maker==terms.taker{return Err(SettlementError::InvalidParticipants);}
         if terms.base_token==terms.quote_token{return Err(SettlementError::InvalidAssets);}
