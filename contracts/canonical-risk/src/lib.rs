@@ -52,9 +52,21 @@ pub struct Price{
 pub trait PriceOracle{
     fn current(env:Env,market_id:u32)->Price;
 }
+#[contractclient(name="SpotPortfolioClient")]
+pub trait SpotPortfolio{
+    fn spot_reservation_safe(env:Env,owner:Address,amount_e7:i128)->bool;
+}
+#[contractclient(name="CreditLedgerClient")]
+pub trait CreditLedger{
+    fn current_outstanding_debt_e7(env:Env)->i128;
+}
+#[contractclient(name="PerpPositionsClient")]
+pub trait PerpPositionsLedger{
+    fn active_positions(env:Env)->u32;
+}
 #[contracttype]
 #[derive(Clone)]
-enum Key{Admin,Vault,Asset,Oracle,Market,Paused,MaxReservation,Pending(Address)}
+enum Key{Admin,Vault,Asset,Oracle,Market,Paused,MaxReservation,Pending(Address),Portfolio,Lending,Perp}
 #[contracttype]
 #[derive(Clone,Debug,PartialEq,Eq)]
 pub struct ReservationPermit{
@@ -69,6 +81,7 @@ pub struct Status{
     pub paused:bool,
     pub max_owner_reserved_e7:i128,
     pub spot_only:bool,
+    pub cross_product_checks_bound:bool,
     pub cross_product_margin_active:bool,
     pub borrowing_allowed:bool,
     pub perps_allowed:bool,
@@ -89,7 +102,10 @@ fn keep_instance(e:&Env){
     e.storage().instance().extend_ttl(TTL_THRESHOLD,TTL_TARGET);
 }
 fn approved(e:&Env)->bool{
-    testnet(e)&&!e.storage().instance().get::<_,bool>(&Key::Paused).unwrap_or(true)
+    testnet(e)&&!e.storage().instance().get::<_,bool>(&Key::Paused).unwrap_or(true)&&
+        e.storage().instance().has(&Key::Portfolio)&&
+        e.storage().instance().has(&Key::Lending)&&
+        e.storage().instance().has(&Key::Perp)
 }
 /// Oracle may be read from a nested call because it does not call M15.
 /// The margin vault itself must ONLY be read at the separate preflight step.
@@ -148,14 +164,56 @@ impl CanonicalRisk{
             max_owner_reserved_e7:e.storage().instance()
                 .get(&Key::MaxReservation).unwrap_or(0),
             spot_only:true,
+            cross_product_checks_bound:e.storage().instance().has(&Key::Portfolio)&&
+                e.storage().instance().has(&Key::Lending)&&
+                e.storage().instance().has(&Key::Perp),
             cross_product_margin_active:false,
             borrowing_allowed:false,
             perps_allowed:false,
         }
     }
+    /// Admin configures the only accepted cross-product liabilities BEFORE
+    /// unpausing spot risk. Never permits switching a live risk provider.
+    /// External source/WASM identity still requires independent review.
+    pub fn bind_products(e:Env,portfolio:Address,lending:Address,perp:Address)
+        ->Result<(),GuardError>{
+        if !testnet(&e){return Err(GuardError::WrongNetwork);}
+        admin(&e).require_auth();
+        if !e.storage().instance().get::<_,bool>(&Key::Paused).unwrap_or(true)||
+           e.storage().instance().has(&Key::Portfolio)||
+           e.storage().instance().has(&Key::Lending)||
+           e.storage().instance().has(&Key::Perp)||
+           portfolio==lending||portfolio==perp||lending==perp||
+           portfolio==e.current_contract_address()||
+           lending==e.current_contract_address()||
+           perp==e.current_contract_address(){
+            return Err(GuardError::Unauthorized);
+        }
+        let vault:Address=e.storage().instance().get(&Key::Vault).unwrap();
+        let asset:Address=e.storage().instance().get(&Key::Asset).unwrap();
+        let oracle:Address=e.storage().instance().get(&Key::Oracle).unwrap();
+        if portfolio==vault||portfolio==asset||portfolio==oracle||
+           lending==vault||lending==asset||lending==oracle||
+           perp==vault||perp==asset||perp==oracle{
+            return Err(GuardError::InvalidInput);
+        }
+        // Read on-chain source ABI now; no offline/caller-supplied liabilities.
+        let _=CreditLedgerClient::new(&e,&lending).current_outstanding_debt_e7();
+        let _=PerpPositionsClient::new(&e,&perp).active_positions();
+        e.storage().instance().set(&Key::Portfolio,&portfolio);
+        e.storage().instance().set(&Key::Lending,&lending);
+        e.storage().instance().set(&Key::Perp,&perp);
+        keep_instance(&e);
+        Ok(())
+    }
     pub fn pause(e:Env,paused:bool)->Result<(),GuardError>{
         if !testnet(&e){return Err(GuardError::WrongNetwork);}
         admin(&e).require_auth();
+        if !paused&&(!e.storage().instance().has(&Key::Portfolio)||
+           !e.storage().instance().has(&Key::Lending)||
+           !e.storage().instance().has(&Key::Perp)){
+            return Err(GuardError::NotConfigured);
+        }
         e.storage().instance().set(&Key::Paused,&paused);
         keep_instance(&e);
         Ok(())
@@ -189,6 +247,17 @@ impl CanonicalRisk{
         let held=token::TokenClient::new(&e,&asset).balance(&vault);
         if held<totals.user_claims_e7||totals.user_claims_e7<=0{return false;}
         if !live_price(&e){return false;}
+        // Two-phase risk check: this independently reads real M15, M11, M12.
+        // It runs BEFORE M15.reserve, so PortfolioAccounting can safely
+        // query M15 without prohibited contract re-entry.
+        let portfolio:Address=e.storage().instance().get(&Key::Portfolio).unwrap();
+        let lend:Address=e.storage().instance().get(&Key::Lending).unwrap();
+        let perp:Address=e.storage().instance().get(&Key::Perp).unwrap();
+        if CreditLedgerClient::new(&e,&lend).current_outstanding_debt_e7()!=0||
+           PerpPositionsClient::new(&e,&perp).active_positions()!=0||
+           !SpotPortfolioClient::new(&e,&portfolio).spot_reservation_safe(&owner,&amount_e7){
+            return false;
+        }
         let expiry=match e.ledger().sequence().checked_add(20){
             Some(v)=>v,None=>return false,
         };
@@ -227,6 +296,16 @@ impl CanonicalRisk{
         };
         if permit.id!=id||permit.product!=1||permit.amount_e7!=amount_e7||
            e.ledger().sequence()>permit.expires_at_ledger||!live_price(&e){
+
+            return false;
+        }
+        // Recheck risk even if a new loan/position was added AFTER preflight.
+        // Never query PortfolioAccounting here: it calls M15, which is
+        // already executing and Soroban forbids contract re-entry.
+        let lend:Address=e.storage().instance().get(&Key::Lending).unwrap();
+        let perp:Address=e.storage().instance().get(&Key::Perp).unwrap();
+        if CreditLedgerClient::new(&e,&lend).current_outstanding_debt_e7()!=0||
+           PerpPositionsClient::new(&e,&perp).active_positions()!=0{
             return false;
         }
         // If the parent M15 reserve fails, Soroban atomically rolls back this
