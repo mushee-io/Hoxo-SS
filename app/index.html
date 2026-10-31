@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0b0c0e">
+<meta name="description" content="HOXO SS — Stellar Testnet trading interface. Spot, perps, money markets; unified margin in development.">
+<title>HOXO SS | Stellar Testnet Terminal</title>
+<link rel="stylesheet" href="./terminal.css">
+<script src="https://unpkg.com/@stellar/freighter-api@6.0.1/build/index.min.js" defer></script>
+<script src="./terminal.js" type="module"></script>
+<script src="./wallet-ui.mjs" type="module"></script>
+<script src="./terminal-ui.mjs" type="module"></script>
+<script src="./infra-ui.mjs" type="module"></script>
+<script src="./network-market-ui.mjs" type="module"></script>
+</head>
+<body>
+<a class="skip-terminal" href="#tradeView">Skip to trading workspace</a>
+<header class="global-header">
+  <a class="logo" href="../" aria-label="Hoxo SS home"><span class="logo-icon">✳</span>HOXO<span class="slash">/</span>SS</a>
+  <nav class="topnav" aria-label="Terminal navigation"><button class="toplink selected" data-view="trade">Trade</button><button class="toplink" data-view="portfolio">Portfolio</button><button class="toplink" data-view="earn">Earn</button><button class="toplink" data-view="network">Network</button><a href="../docs/milestones.md" class="toplink external">Roadmap ↗</a></nav>
+  <div class="header-right"><span class="network-badge"><i></i> STELLAR TESTNET</span><button type="button" id="walletButton" class="wallet-button" aria-describedby="walletStatus">CONNECT FREIGHTER</button></div>
+</header>
+<div class="announcement"><span>✳ TESTNET DEVELOPMENT PREVIEW</span><span>WALLET BALANCES ARE LIVE WHEN CONNECTED. SPOT/PERP EXECUTION, LENDING AND UNIFIED-MARGIN CONTRACTS ARE NOT YET DEPLOYED.</span><a target="_blank" rel="noopener noreferrer" href="https://github.com/mushee-io/Hoxo-SS">SOURCE ↗</a></div>
+<div class="market-line"><div class="market-picker"><button type="button" class="market-trigger" id="marketTrigger" aria-expanded="false" aria-controls="marketMenu" aria-haspopup="dialog"><span class="coin">✳</span><span class="market-current"><b id="marketLabel">XLM/USDC</b><small id="marketSubheading">SPOT REFERENCE · NOT LISTED</small></span><span class="market-chevron" aria-hidden="true">⌄</span></button>
+<div class="market-menu hidden" id="marketMenu" role="dialog" aria-label="Choose reference instrument"><p class="market-menu-title">REFERENCE INSTRUMENTS <span>NOT LISTED</span></p><label class="sr-only" for="marketSearch">Search reference instruments</label><input id="marketSearch" type="search" autocomplete="off" placeholder="Search XLM, BTC, spot, perps…"><div class="market-filters" role="group" aria-label="Market type filter"><button type="button" data-market-filter="all" class="selected" aria-pressed="true">All</button><button type="button" data-market-filter="spot" aria-pressed="false">Spot</button><button type="button" data-market-filter="perp" aria-pressed="false">Perps</button></div><div id="marketResults" class="market-results"></div><p class="market-menu-foot">Reference selections are not deployable tokens or executable markets.</p></div></div>
+  <div class="market-stat"><small id="marketPrimaryStat">REFERENCE PRICE</small><b>—</b></div><div class="market-stat"><small>INDEX PRICE</small><b>—</b></div><div class="market-stat"><small>24H CHANGE</small><b>—</b></div><div class="market-stat hide-small"><small>24H VOLUME</small><b>—</b></div><div class="market-stat hide-small"><small>OPEN INTEREST</small><b>—</b></div><div class="market-stat hide-small"><small id="fundingStatLabel">FUNDING / 1H</small><b>—</b></div><div class="market-stat ledger"><small>NETWORK LEDGER</small><b id="ledgerValue">CHECKING...</b></div>
+</div>
+<main class="terminal-grid" id="tradeView">
+<section class="chart-panel panel" aria-label="Market chart workspace">
+  <div class="tabbar"><button class="tab active" data-chart-view="price">Price</button><button class="tab" data-chart-view="depth">Depth</button><button class="tab" data-chart-view="funding">Funding</button><div class="tab-right">STELLAR TESTNET · VERIFIED DATA ONLY</div></div>
+  <div class="chart-tools"><div class="timeframes" role="group" aria-label="Chart interval"><button type="button" data-timeframe="1m" aria-pressed="false">1m</button><button type="button" data-timeframe="30m" class="active" aria-pressed="true">30m</button><button type="button" data-timeframe="1h" aria-pressed="false">1h</button><button type="button" data-timeframe="4h" aria-pressed="false">4h</button><button type="button" data-timeframe="1d" aria-pressed="false">1D</button></div><span class="chart-tool-label">CANDLES / <span id="currentTimeframe">30m</span> <span class="offline-accent">● OFFLINE</span></span></div>
+  <div class="chart-canvas"><div class="chart-grid"></div><div class="chart-watermark" aria-hidden="true">HOXO<span>/</span>SS</div><div class="chart-empty"><span class="crosshair">✳</span><p class="strong" id="chartEmptyTitle">NO VERIFIED MARKET DATA</p><p id="chartEmptyDescription">XLM/USDC candles require a verified Testnet market-data feed.</p><span class="chip">MARKET DATA: NOT CONFIGURED</span></div><div class="chart-yaxis"><span>—</span><span>—</span><span>—</span><span>—</span><span>—</span></div></div>
+  <div class="chart-bottom"><span id="chartMarketStatus">XLM/USDC / NO TESTNET CANDLE FEED</span><span>UTC &nbsp; <span id="clock">--:--:--</span></span></div>
+</section>
+<section class="book-panel panel">
+<div class="tabbar"><button class="tab active" data-book-view="book">Order Book</button><button class="tab" data-book-view="trades">Trades</button></div>
+<div class="book-meta"><span id="bookPriceHeading">PRICE (USDC)</span><span id="bookSizeHeading">SIZE (XLM)</span><span>TOTAL</span></div>
+<div class="order-empty"><span>↕</span><strong id="bookEmptyTitle">ORDER BOOK OFFLINE</strong><p id="bookEmptyDescription">Real order-book updates will appear after the matching and indexing engines are deployed.</p></div>
+<section class="testnet-trade-activity" aria-label="Independent Stellar Testnet activity">
+ <div class="observed-activity-top"><strong>STELLAR TESTNET NETWORK TRADES</strong><span>NOT HOXO FILLS</span></div>
+ <p id="observedActivityState" role="status" aria-live="polite">Checking network source...</p>
+ <div id="observedActivityRows" class="observed-activity-rows"></div>
+ <button type="button" id="observedActivityRefresh">REFRESH NETWORK ACTIVITY ↻</button>
+ <p class="observed-activity-warning">Public Stellar network trade observations are unrelated to HOXO orders. No verified HOXO markets, quotes, candles or oracle prices exist yet.</p>
+</section>
+<div class="book-bottom"><span>SPREAD</span><b>—</b></div>
+</section>
+<section class="order-panel panel">
+  <div class="order-head"><div class="margin-chip" id="marginMode">SPOT · NO MARGIN</div><div class="margin-chip">LEVERAGE · UNAVAILABLE</div></div>
+  <div class="order-tabs" role="group" aria-label="Draft order type"><button type="button" class="active" aria-pressed="true" data-order-type="Market">Market</button><button type="button" aria-pressed="false" data-order-type="Limit">Limit</button><button type="button" aria-pressed="false" data-order-type="Advanced">Advanced</button></div>
+  <div class="order-info"><span>Available margin</span><strong id="marginBalance">—</strong></div><div class="order-info"><span>Position</span><strong>—</strong></div>
+  <div class="side-selection" role="group" aria-label="Order side"><button type="button" id="buySide" class="buy selected" aria-pressed="true">BUY</button><button type="button" id="sellSide" class="sell" aria-pressed="false">SELL</button></div>
+  <div class="draft-label">LOCAL ORDER DRAFT <span>NO TRANSACTION WILL BE SIGNED</span></div><label class="input-label" for="orderSize">ORDER SIZE <span id="sizeAssetLabel">XLM</span></label><div class="sizebox"><input id="orderSize" type="text" inputmode="decimal" placeholder="0.0000000" autocomplete="off" aria-describedby="draftFeedback"><span id="sizeAssetSuffix">XLM</span></div><div id="limitPriceRow" class="limit-field hidden"><label class="input-label" for="limitPrice">LIMIT PRICE <span>USDC</span></label><div class="sizebox"><input id="limitPrice" type="text" inputmode="decimal" autocomplete="off" placeholder="0.0000000" aria-describedby="draftFeedback"><span>USDC</span></div></div><div id="draftFeedback" class="draft-feedback" aria-live="polite">Enter a size to prepare a non-executable draft.</div>
+  <div class="draft-helper">EXCHANGE RISK ENGINE / NOT DEPLOYED</div>
+  <div class="order-toggles"><label><input type="checkbox" disabled> Reduce only</label><label><input type="checkbox" disabled> TP / SL</label></div>
+  <button id="tradeButton" class="trade-disabled" disabled>EXECUTION UNAVAILABLE ON TESTNET</button>
+  <div class="summary"><div><span>Selected instrument</span><b id="ticketMarket">XLM/USDC</b></div><div><span>Order size (draft)</span><b id="ticketSize">—</b></div><div><span>Input-only notional</span><b id="ticketNotional">—</b></div><div><span>Available margin</span><b>—</b></div></div>
+  <div class="order-warning" role="note"><strong>TESTNET DESIGN MODE</strong><p>No verified market quotes or margin are available. These inputs create a local draft only: they cannot sign, submit or broadcast orders. Execution requires verified Testnet contracts, market data and risk checks.</p></div>
+</section>
+<section class="portfolio-panel panel" id="portfolio" aria-label="Portfolio data"><div class="tabbar position-tabs"><button class="tab active" data-portfolio-tab="Balances">Balances</button><button class="tab" data-portfolio-tab="Positions">Positions</button><button class="tab" data-portfolio-tab="Open Orders">Open Orders</button><button class="tab" data-portfolio-tab="Trade History">Trade History</button><button class="tab" data-portfolio-tab="Funding">Funding</button><button class="tab" data-portfolio-tab="Borrowing">Borrowing</button></div><div id="portfolioBody" class="portfolio-body"><span class="empty-icon">◎</span><strong>CONNECT A TESTNET WALLET</strong><p>Authorise Freighter to show your real Stellar Testnet asset balances.</p></div></section>
+<section class="account-panel panel"><div class="account-title"><strong>ACCOUNT</strong><span class="small-tag">TESTNET</span></div><div class="wallet-status" id="walletStatus" role="status" aria-live="polite">NOT CONNECTED · STELLAR TESTNET ONLY</div>
+<div class="account-address" id="accountAddress">No wallet connected</div>
+<div class="wallet-toolbar"><button type="button" id="refreshWallet" disabled>REFRESH BALANCES ↻</button><button type="button" id="copyWallet" disabled>COPY ADDRESS</button></div>
+<a class="wallet-explorer hidden" id="walletExplorer" href="https://stellar.expert/explorer/testnet" target="_blank" rel="noopener noreferrer">VIEW ON STELLAR TESTNET EXPLORER ↗</a><div class="account-metric"><span>Collateral (vault)</span><b>—</b></div><div class="account-metric"><span>Margin health</span><b>—</b></div><div class="account-metric"><span>Borrow balance</span><b>—</b></div><div class="account-metric"><span>Available margin</span><b>—</b></div><div class="account-actions"><button disabled>DEPOSIT</button><button disabled>WITHDRAW</button></div><button type="button" class="faucet-btn" id="faucetButton" disabled>REQUEST TEST XLM VIA FRIENDBOT ↗</button>
+<div class="faucet-confirm hidden" id="faucetConfirm" role="group" aria-label="Confirm testnet funding">
+  <p>Request valueless XLM from Stellar Testnet Friendbot for the currently connected, unfunded wallet? No account key is shared.</p>
+  <div><button type="button" id="confirmFaucet">CONFIRM REQUEST</button><button type="button" id="cancelFaucet">CANCEL</button></div>
+</div>
+<div class="wallet-help"><a href="https://freighter.app/" target="_blank" rel="noopener noreferrer">GET FREIGHTER ↗</a><span>DESKTOP EXTENSION · TESTNET</span></div><p class="account-note">Stellar wallet balances are read from verified Testnet Horizon. They are NOT exchange vault deposits, available margin or borrowing collateral. No wallet seed or private key is requested.</p></section>
+</main>
+<section class="alternate hidden" id="alternateView"><div class="alternate-heading" id="altTitle">PORTFOLIO</div><p id="altDescription">This area is being developed.</p><div class="alternate-cards" id="alternateCards"><article><span>01 / ACCOUNT</span><h2>TESTNET BALANCES</h2><p>Real wallet balances are distinct from exchange collateral.</p></article><article><span>02 / UNIFIED MARGIN</span><h2>NOT DEPLOYED</h2><p>Account positions and margin health require Soroban clearing and risk contracts.</p></article><article><span>03 / MONEY MARKETS</span><h2>NOT DEPLOYED</h2><p>Supply and borrowing are unavailable until Soroban lending pools are verified.</p></article></div>
+<section id="networkPanel" class="network-panel hidden" aria-label="Stellar Testnet infrastructure diagnostics">
+  <p class="infra-caution">READ-ONLY NETWORK DIAGNOSTICS. THIS IS NOT EXCHANGE CONTRACT READINESS. NO SPOT, PERPETUAL OR LENDING CONTRACTS ARE LIVE.</p>
+  <div class="infra-grid">
+    <article><span>01 / HORIZON</span><h2 id="infraHorizonStatus">NOT CHECKED</h2><p class="infra-url" id="infraHorizonUrl">https://horizon-testnet.stellar.org</p><div class="infra-property"><span>Latest verified ledger</span><b id="infraHorizonLedger">—</b></div><p id="infraHorizonDetail">Read-only network proof pending.</p></article>
+    <article><span>02 / STELLAR RPC</span><h2 id="infraRpcStatus">NOT CHECKED</h2><p class="infra-url" id="infraRpcUrl">https://soroban-testnet.stellar.org</p><div class="infra-property"><span>Latest verified ledger</span><b id="infraRpcLedger">—</b></div><p id="infraRpcDetail">RPC network, health and latest ledger checks pending.</p></article>
+    <article><span>03 / CONTRACT REGISTRY</span><h2 id="infraRegistryStatus">NOT CHECKED</h2><p class="infra-url">registry/testnet.json</p><div class="infra-property"><span>Verified Hoxo contracts</span><b id="infraVerifiedContracts">0</b></div><p id="infraRegistryDetail">No deployed contracts are registered.</p></article>
+  </div>
+  <div class="infra-verdict" role="status" aria-live="polite"><span>NETWORK READINESS</span><strong id="infraOverall">NOT CHECKED</strong><p id="infraOverallDetail">Horizon, Stellar RPC and contract registry must be checked independently.</p></div>
+  <button type="button" class="infra-refresh" id="infraRefresh">REFRESH STELLAR TESTNET DIAGNOSTICS ↻</button>
+  <div class="infra-contracts"><h3>PLANNED SMART CONTRACT MODULES</h3><div id="infraContractList">Loading registry…</div></div>
+  <p class="infra-foot">The network can be healthy while all Hoxo smart contracts remain undeployed. Contract IDs, issuers, oracle feeds and settlement permissions will be added only after independent on-chain verification.</p>
+</section>
+<button type="button" id="backToTrade">← BACK TO TERMINAL</button></section>
+<footer class="terminal-footer"><div class="footer-left"><span class="status-dot"></span><span id="networkStatus">CONNECTING TO STELLAR TESTNET</span></div><a href="https://stellar.expert/explorer/testnet" target="_blank" rel="noopener noreferrer">STELLAR EXPLORER ↗</a><a href="https://github.com/mushee-io/Hoxo-SS" target="_blank" rel="noopener noreferrer">GITHUB ↗</a><span>DEVELOPMENT BUILD 0.1</span></footer>
+<div class="toast hidden" role="status" id="toast"></div>
+</body></html>

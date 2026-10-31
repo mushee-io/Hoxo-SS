@@ -1,0 +1,15 @@
+[package]
+name = "hoxo-spot-settlement"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Atomic dual-authorised Stellar Testnet spot token settlement"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+soroban-sdk = "=29.0.1"
+
+[dev-dependencies]
+soroban-sdk = { version = "=29.0.1", features = ["testutils"] }

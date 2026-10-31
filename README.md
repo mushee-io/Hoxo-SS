@@ -8,27 +8,52 @@ Hoxo-SS is a proposed non-custodial exchange for Stellar. The intended product c
 - **Money markets:** supply, redeem, borrow and repay with risk-controlled collateral usage.
 - **Unified margin:** a single collateral ledger and conservative account-wide risk calculation.
 
-**Status: early development.** This repository is not a deployed exchange. No contracts, user funds, production trading, audited risk model or live Stellar integration should be assumed. Testnet-first. No synthetic volumes or fake live market data.
+**Status: early development.** M4 read-only Stellar Testnet RPC + Horizon infrastructure is verified in CI; M5 provides read-only market-data adapters; M6–M9 Soroban source passes native contract tests; M9 builds as an optimized WASM artifact using the official Stellar CLI, but no HOXO contract is deployed. **No HOXO contracts are deployed, no wallet-controlled spot swaps or deposits have been executed, and there is no audited unified-margin risk engine.** Testnet-first. No synthetic volumes or fake live market data.
+
+[M1–M8 audited implementation and blockers](docs/m1-m8-audit.md) · `npm run check:readiness` verifies no premature real-trading claims.
 
 ## Technical direction
 
 Stellar smart contracts (Rust `soroban-sdk`) for vaults, settlement and enforcement; deterministic fixed-point shared risk math; oracle staleness checks; off-chain matching and indexer where necessary; wallet-signed Stellar transactions. A single risk-accounting specification must govern spot, perps and lending, and state-changing actions must be enforced **on-chain**, never merely by frontend checks.
 
-## Milestones
-1. Product/risk specification, deterministic account risk library and CI.
-2. Soroban unified collateral vault, asset allowlist and authenticated deposits/withdrawals.
-3. Spot execution adapter and verifiable settlement accounting.
-4. Lending pool contracts (supply, borrow, accrual, liquidations).
-5. Perpetual position and funding contracts, order matching and settlement.
-6. Integration: unified collateral, synchronized risk invariants, oracle guards, keeper/liquidator.
-7. Real testnet wallet flows, invariants/fuzz tests, independent audit and production readiness review.
+## Product experience
 
-See [architecture](docs/architecture.md), [risk model](docs/risk-model.md) and [delivery gates](docs/delivery.md).
+- [Landing page](index.html): Nado-inspired original visual identity for HOXO SS.
+- [Stellar Testnet trading terminal](app/index.html): responsive market workspace, Freighter-approved wallet identity, Testnet-only Horizon account balances and explicit not-deployed states for trading and lending.
+- [M3 wallet verification and manual acceptance plan](docs/m3-wallet.md): strict Testnet validation, wallet-session lifecycle, guarded Friendbot and real-extension test criteria.
+- [M4 Testnet infrastructure](docs/m4-infrastructure.md): verified Horizon + Stellar RPC, configurable HTTPS endpoints, read-only diagnostic terminal and undeployed contract registry.
+- [M5 Testnet market-data adapters](docs/m5-market-data.md): live independent SDEX network observations, canonical issuer-pair parser, fixed-point OHLC and fail-closed, non-executable oracle review.
+- [M6 Soroban collateral vault](docs/m6-vault.md): token allowlist, owner-signed deposits/withdrawals and isolated wallet balances. Requires Rust compilation, contract deployment and real Testnet tests.
+- [M7 Risk-preview contract](docs/m7-risk.md): deterministic Rust portfolio risk and read-only Soroban previews; execution authorization remains hard-disabled pending authenticated state.
+- [M8 Sandbox Matching Engine](docs/m8-matching.md): signed off-chain testnet-domain order intents, price/time matching, self-trade prevention, cancellation and deterministic restart replay. **No orders are settled or risk-authorised.**
+- [M9 Soroban bilateral spot settlement](docs/m9-spot-settlement.md): two-wallet atomic token DvP, Testnet-only network ID, maker/taker limit checks, ledger expiry, receipt/replay protection and M8 non-executable proposal handoff. **No live deployment or signed on-chain settlement yet.**
+- [Full development roadmap — M0–M24](docs/milestones.md): 25 stages from product design to audited mainnet readiness, with verifiable acceptance gates.
+- [Architecture](docs/architecture.md), [risk model](docs/risk-model.md), [delivery gates](docs/delivery.md).
 
-## Local risk-engine checks
+### Milestone summary
+
+| Phase | Milestones |
+| --- | --- |
+| Foundation and interface | M0–M4 |
+| Exchange and spot execution | M5–M9 |
+| Lending and perpetuals | M10–M14 |
+| Unified margin and portfolio | M15–M18 |
+| APIs, security, testnet beta and readiness | M19–M24 |
+
+**Important:** the terminal is a testnet development UI, **not** a deployed trading protocol. It does not submit orders, transfer collateral or show invented order-book/price data. The reference risk library is not contract enforcement.
+
+## Verification
 ```sh
-npm test
+npm test                   # Deterministic M0–M4 tests
+npm run check:registry     # Validates canonical Testnet asset/contract registry
+npm run check:testnet      # Live read-only Stellar Testnet Horizon check
+npm run check:infra        # Live read-only Stellar RPC + Horizon + registry gate
+npm run test:matching      # Signed matching journal and HTTP sandbox tests
+npm run test:spot-preview  # Non-executable M8→M9 settlement proposal tests
+npm run dev:matching      # Local sandbox API on 127.0.0.1:8788 (NO exchange execution)
 ```
+
+The live check requires internet access and **does not** prove deployed exchange contracts.
 
 The JS reference engine is **not smart-contract authorization** and must not be used to safeguard funds on its own.
 

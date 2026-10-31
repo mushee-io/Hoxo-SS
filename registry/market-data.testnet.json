@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "network": "testnet",
+  "passphrase": "Test SDF Network ; September 2015",
+  "note": "Reference instruments are NOT market listings. No Testnet USDC issuer, oracle contracts, or Hoxo settlements have been verified. Data adapters remain inactive for all displayed pairs.",
+  "markets": [
+    {
+      "id": "xlm-usdc-spot",
+      "kind": "spot",
+      "base": {
+        "type": "native"
+      },
+      "quote": null,
+      "status": "unconfigured"
+    },
+    {
+      "id": "btc-usdc-spot",
+      "kind": "spot",
+      "base": null,
+      "quote": null,
+      "status": "unconfigured"
+    },
+    {
+      "id": "xlm-usdc-perp",
+      "kind": "perp",
+      "base": null,
+      "quote": null,
+      "status": "unconfigured"
+    },
+    {
+      "id": "btc-usdc-perp",
+      "kind": "perp",
+      "base": null,
+      "quote": null,
+      "status": "unconfigured"
+    },
+    {
+      "id": "eth-usdc-perp",
+      "kind": "perp",
+      "base": null,
+      "quote": null,
+      "status": "unconfigured"
+    }
+  ],
+  "oracle": {
+    "sources": [],
+    "minIndependentSources": 2,
+    "maxAgeMs": 120000,
+    "maxSourceDeviationBps": 150,
+    "maxMarkDeviationBps": 250,
+    "halt": true,
+    "positionPricingEnabled": false
+  }
+}

@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="HOXO SS — One margin account. Every market.">
+  <meta property="og:description" content="A Stellar Testnet development exchange interface for spot, perps and money markets. No live trading yet.">
+  <link rel="icon" type="image/svg+xml" href="./assets/icon.svg">
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f3f3ef">
+  <title>HOXO SS — Every market. One margin account.</title>
+  <meta name="description" content="HOXO SS is building a unified-margin spot, perpetuals and money-market exchange on Stellar. Explore the Stellar Testnet development terminal.">
+  <link rel="stylesheet" href="./assets/site.css">
+  <script type="module" src="./assets/landing.mjs"></script>
+</head>
+<body class="landing">
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  <header class="land-nav">
+    <a class="brand brand-dark" href="./" aria-label="HOXO SS home"><span class="brand-mark">✳</span> HOXO<span class="brand-slash">/</span>SS</a>
+    <nav class="land-links" id="primaryNavigation" aria-label="Main navigation">
+      <a href="./app/">Terminal</a><a href="./app/#portfolio">Portfolio</a>
+      <a href="./docs/architecture.md">Architecture</a><a href="https://github.com/mushee-io/Hoxo-SS" rel="noopener noreferrer" target="_blank">GitHub ↗</a>
+    </nav>
+    <button type="button" class="mobile-menu-button" id="menuToggle" aria-expanded="false" aria-controls="primaryNavigation" aria-label="Toggle navigation">MENU ☰</button>
+    <a class="nav-launch" href="./app/"><span class="launch-desktop">LAUNCH TESTNET TERMINAL</span><span class="launch-mobile">OPEN APP</span><span aria-hidden="true">↗</span></a>
+  </header>
+  <main id="main-content">
+    <section class="hero">
+      <div class="hero-main">
+        <div class="hero-eyebrow"><span class="pulse"></span> STELLAR TESTNET / IN DEVELOPMENT <span class="line"></span> 01—26</div>
+        <h1 class="wordmark">HOXO<span class="outlined">SS</span><span class="tiny-star">✳</span></h1>
+        <div class="hero-layout">
+          <div class="hero-copy">
+            <span class="mono overline">[ THE UNIFIED EXCHANGE ]</span>
+            <h2>EVERY MARKET.<br>ONE MARGIN<br><em>ACCOUNT.</em></h2>
+            <p>Spot. Perpetuals. Money markets. One account designed for unified collateral, built on Stellar.</p>
+            <div class="hero-actions">
+              <a href="./app/" class="button-lime">ENTER TERMINAL <span>↗</span></a>
+              <a href="https://github.com/mushee-io/Hoxo-SS" class="link-underline" target="_blank" rel="noopener noreferrer">[ VIEW SOURCE ]</a>
+            </div>
+          </div>
+          <div class="orb-wrap" aria-hidden="true">
+            <div class="orb-grid"></div><div class="orbit orbit-a"></div><div class="orbit orbit-b"></div><div class="orbit orbit-c"></div>
+            <div class="orb-core"><span>H</span><small>SS</small></div>
+            <div class="orbit-dot dot-a"></div><div class="orbit-dot dot-b"></div><div class="orbit-dot dot-c"></div>
+            <div class="orb-label o-l1">COLLATERAL / 01</div><div class="orb-label o-l2">EXPOSURE / 02</div><div class="orb-label o-l3">RISK / 03</div>
+          </div>
+        </div>
+      </div>
+      <aside class="hero-aside">
+        <div class="aside-top">
+          <span>HOXO / SS</span><span>BUILD LOG — 001</span>
+        </div>
+        <div class="network-unit">
+          <p class="mono">[ ENVIRONMENT ]</p><strong>STELLAR<br>TESTNET</strong>
+          <span class="status-pill"><span class="pulse"></span> TEST ENVIRONMENT ONLY</span>
+          <div class="network-live" aria-label="Live Stellar Testnet network check">
+            <div class="network-live-top"><span>HORIZON / LIVE CHECK</span><span class="network-status-dot" id="networkStatusDot" aria-hidden="true"></span></div>
+            <strong id="networkCheckState" role="status" aria-live="polite">CHECKING...</strong>
+            <div class="network-live-row"><span>LAST VERIFIED LEDGER</span><b id="testnetLedger">—</b></div>
+            <div class="network-live-row"><span>LEDGER CLOSE</span><b id="testnetClose">—</b></div>
+            <p id="networkCheckDetail">Querying Stellar Testnet Horizon. This checks the network only, not exchange readiness.</p>
+            <button class="network-refresh" id="refreshTestnet" type="button">REFRESH NETWORK STATUS ↻</button>
+          </div>
+        </div>
+        <div class="spec">
+          <div><span>01 / SPOT</span><b>TRADE</b></div><div><span>02 / PERPETUALS</span><b>HEDGE</b></div><div><span>03 / MONEY MARKETS</span><b>BORROW</b></div><div><span>04 / MARGIN</span><b>UNIFY</b></div>
+        </div>
+        <div class="aside-note">HORIZON CONNECTIVITY DOES NOT MEAN SPOT, PERPETUALS OR LENDING ARE DEPLOYED.<br><br>EARLY ACCESS INTERFACE. CONTRACT TRADING AND LENDING ARE NOT YET DEPLOYED. NO LIVE MARKET DATA IS IMPLIED.</div>
+      </aside>
+    </section>
+    <section class="rail"><span>01 / TRADE</span><span>↗</span><span>02 / BORROW</span><span>↗</span><span>03 / HEDGE</span><span>↗</span><span>04 / MANAGE</span></section>
+    <section class="pillars">
+      <div class="pillar-heading"><p>THE STRUCTURE / 002</p><h2>ONE INTERFACE.<br>THREE MARKETS.</h2></div>
+      <div class="pillars-list">
+        <article><span>01—</span><div><h3>SPOT MARKETS</h3><p>Execute asset trades with the same portfolio view used for lending and derivatives.</p></div><span class="pillar-arrow">↗</span></article>
+        <article><span>02—</span><div><h3>PERPETUALS</h3><p>Portfolio-aware positions, funding, liquidation and cross-market risk controls.</p></div><span class="pillar-arrow">↗</span></article>
+        <article><span>03—</span><div><h3>MONEY MARKETS</h3><p>Supply and borrow assets through isolated pools connected to a shared risk model.</p></div><span class="pillar-arrow">↗</span></article>
+      </div>
+    </section>
+    <section class="testnet-notice" aria-label="Testnet development scope"><span>✳ / TESTNET BUILD</span><p>THE NETWORK CHECK IS LIVE. THE EXCHANGE IS NOT. TRADING, BORROWING, MARGIN TRANSFERS AND CONTRACT DEPOSITS REMAIN DISABLED UNTIL VERIFIED ON-CHAIN TESTNET DEPLOYMENTS.</p><a href="./docs/milestones.md">FOLLOW DEVELOPMENT ↗</a></section>
+  </main>
+  <footer class="land-footer"><span>© 2026 HOXO SS / STELLAR TESTNET</span><span>TESTNET DEVELOPMENT BUILD — NO REAL FUNDS</span><a href="./app/">OPEN THE TERMINAL ↗</a></footer>
+</body>
+</html>

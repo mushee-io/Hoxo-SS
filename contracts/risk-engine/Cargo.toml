@@ -1,0 +1,16 @@
+[package]
+name = "hoxo-risk-gate"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Soroban risk preview contract, execution hard-disabled pending vault/oracle integration"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+soroban-sdk = "=29.0.1"
+hoxo-risk-math = { path = "../../crates/risk-math" }
+
+[dev-dependencies]
+soroban-sdk = { version = "=29.0.1", features = ["testutils"] }
