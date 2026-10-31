@@ -9,7 +9,7 @@ const UNIT:i128=10_000_000;
 struct TestOnlyDenyMarginRisk;
 #[contractimpl]
 impl TestOnlyDenyMarginRisk{
-    pub fn authorization_enabled()->bool{false}
+    pub fn authorization_enabled()->bool{true}
     pub fn approve_reservation(
         _env:Env,_owner:Address,_vault:Address,_asset:Address,
         _role:u32,_id:BytesN<32>,_amount:i128
