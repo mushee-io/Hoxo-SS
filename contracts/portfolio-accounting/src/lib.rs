@@ -114,6 +114,35 @@ pub struct PerpOwnerExposure {
     pub any_liquidation_required:bool,
     pub executable_margin_approved:bool,
 }
+#[contracttype]
+#[derive(Clone,Debug,PartialEq,Eq)]
+pub struct PerpMarketExposure {
+    pub as_of_sec:u64,
+    pub market_id:u32,
+    pub active_positions:u32,
+    pub indexed_positions:u32,
+    pub indexed_owners:u32,
+    pub open_notional_e7:i128,
+    pub locked_margin_e7:i128,
+    pub wallet_locked_e7:i128,
+    pub long_mark_pnl_e7:i128,
+    pub pending_funding_e7:i128,
+    pub long_net_pnl_e7:i128,
+    pub total_maintenance_e7:i128,
+    pub maintenance_deficit_e7:i128,
+    pub gross_insolvency_e7:i128,
+    pub insurance_available_e7:i128,
+    pub insurance_shortfall_e7:i128,
+    pub positions_liquidatable:u32,
+    pub actual_cash_e7:i128,
+    pub total_claims_e7:i128,
+    pub token_book_backed:bool,
+    pub index_complete:bool,
+    pub paired_pnl_zero_sum:bool,
+    pub insurance_snapshot_covered:bool,
+    pub system_risk_approved:bool,
+    pub financial_beta_approved:bool,
+}
 #[contractclient(name="PerpClient")]
 pub trait Perp {
     fn collateral_asset(env:Env)->Address;
@@ -121,6 +150,7 @@ pub trait Perp {
     fn market(env:Env)->PerpMarket;
     fn reconciliation(env:Env)->PerpReconciliation;
     fn owner_exposure(env:Env,owner:Address)->PerpOwnerExposure;
+    fn market_exposure(env:Env)->PerpMarketExposure;
 }
 #[contracttype]
 #[derive(Clone)]
@@ -166,6 +196,12 @@ pub struct PortfolioExposure {
     pub m12_fee_liabilities_e7:i128,
     pub m12_insurance_liabilities_e7:i128,
     pub m12_global_open_positions:u32,
+    pub m12_global_index_complete:bool,
+    pub m12_global_locked_e7:i128,
+    pub m12_global_maint_gap_e7:i128,
+    pub m12_global_insolvency_e7:i128,
+    pub m12_insurance_shortfall_e7:i128,
+    pub m12_insurance_snapshot_ok:bool,
     pub m15_token_backed:bool,
     pub m11_token_cash_backed:bool,
     pub m12_token_backed:bool,
@@ -270,6 +306,8 @@ impl PortfolioAccounting {
             Ok(v)=>v,Err(_)=>return false,
         };
         view.nominal_book_covered&&view.no_open_credit_or_perp_risk&&
+        view.full_perp_exposure_enumerated&&view.m12_insurance_snapshot_ok&&
+        view.m12_insurance_shortfall_e7==0&&
         view.liquidity_only_coverage&&view.m12_owner_marked_complete&&
         view.m12_owner_positions==0&&view.m11_borrower_debt_e7==0&&
         view.m15_available_e7>=amount_e7&&
@@ -293,6 +331,7 @@ impl PortfolioAccounting {
         let position=p.wallet(&owner);
         let marked=p.owner_exposure(&owner);
         let market=p.market();
+        let global=p.market_exposure();
         let rec=p.reconciliation();
         if m.collateral_asset()!=asset||loan.asset!=asset||
            market.collateral_token!=asset||p.collateral_asset()!=asset||
@@ -304,7 +343,14 @@ impl PortfolioAccounting {
            marked.owner!=owner||marked.as_of_sec!=e.ledger().timestamp()||
            marked.available_e7!=position.available_e7||
            marked.locked_e7!=position.locked_e7||
-           !marked.index_complete||!marked.price_current{
+           !marked.index_complete||!marked.price_current||
+           global.as_of_sec!=e.ledger().timestamp()||
+           global.market_id!=market.market_id||
+           global.active_positions!=market.open_positions||
+           global.indexed_positions!=market.open_positions||
+           global.insurance_available_e7!=rec.insurance_reserve_e7||
+           global.actual_cash_e7!=rec.actual_cash_e7||
+           !global.index_complete||!global.paired_pnl_zero_sum{
 
             return Err(AccountingError::AssetMismatch);
         }
@@ -317,6 +363,9 @@ impl PortfolioAccounting {
             position.available_e7,position.locked_e7,
             marked.maintenance_req_e7,marked.maintenance_deficit_e7,
             marked.insolvency_deficit_e7,
+            global.locked_margin_e7,global.wallet_locked_e7,
+            global.total_maintenance_e7,global.maintenance_deficit_e7,
+            global.gross_insolvency_e7,global.insurance_shortfall_e7,
             rec.actual_cash_e7,rec.user_claims_e7,
             rec.accrued_fees_e7,rec.insurance_reserve_e7,
         ])?;
@@ -379,13 +428,21 @@ impl PortfolioAccounting {
             m12_fee_liabilities_e7:rec.accrued_fees_e7,
             m12_insurance_liabilities_e7:rec.insurance_reserve_e7,
             m12_global_open_positions:rec.open_positions,
+            m12_global_index_complete:global.index_complete,
+            m12_global_locked_e7:global.locked_margin_e7,
+            m12_global_maint_gap_e7:global.maintenance_deficit_e7,
+            m12_global_insolvency_e7:global.gross_insolvency_e7,
+            m12_insurance_shortfall_e7:global.insurance_shortfall_e7,
+            m12_insurance_snapshot_ok:global.insurance_snapshot_covered,
             m15_token_backed:m15_backed,m11_token_cash_backed:m11_backed,
             m12_token_backed:m12_backed,
             nominal_book_covered:nominal_covered,
             no_open_credit_or_perp_risk:no_external_risk,
-            // Only this owner's active positions are marked. System-wide
-            // per-account exposure has not been enumerated across all users.
-            full_perp_exposure_enumerated:rec.open_positions==0,
+            // Index and locked amounts are exhaustively checked for the
+            // bounded current market. This does not mean an audit passed.
+            full_perp_exposure_enumerated:global.index_complete&&
+                global.indexed_positions==rec.open_positions&&
+                global.wallet_locked_e7==global.locked_margin_e7,
             borrow_credit_loss_risk_priced:false,
             liquidity_only_coverage:nominal_covered&&liquid_surplus>=0&&no_external_risk,
             unified_leverage_authorized:false,financial_beta_authorized:false,
