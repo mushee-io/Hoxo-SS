@@ -39,3 +39,16 @@ M17 tests use actual in-memory Ed25519 wallet signing and verify that replayed j
 4. Deploy, externally audit and exercise independent signed Stellar Testnet wallets through real settlement and reconciliation. Until then real spot/perp trade buttons, custody and borrowing remain **disabled**.
 
 **Do not advertise M17 as operational trading. It is deterministic, signed, auditable advanced-order sandbox engineering only.**
+
+## Verified M17 CI — 31 October 2026
+
+[GitHub Actions run 41219081680](https://github.com/mushee-io/Hoxo-SS/actions/runs/41219081680) passed all **7/7 jobs** for implementation and safety-check commit `475df3601cf241517f8ec96a2801a6dc9335d342`.
+
+- **14/14 new M17 advanced-order tests**, including actual Ed25519 signed-operator and wallet commands, market/limit and TP/SL behavior, simulated reduce-only quantity checks, fail-closed tick validation, terminal statuses, journal replay/tamper resistance and local read-only HTTP endpoints.
+- **15/15 existing M8 matching-engine tests**, proving compatibility with the original Testnet signed price/time book and hash-chain journal.
+- **105/105 total JavaScript tests**; **8/8 Chromium browser tests**.
+- **135/135 Rust/Soroban tests**, plus pinned official Stellar CLI WASM builds for existing M7/M9/M11/M14/M15 contracts.
+- Live **read-only** Stellar Testnet RPC/Horizon connectivity and registry checks passed. These are **not** actual trading, collateral or liquidation transaction receipts.
+- The `check:readiness` safety checks report **NOT_LIVE**, no approved oracle, no deployed Hoxo exchange contracts, blocked trading/custody controls and a distinct signed-sandbox-tick provenance requirement.
+
+**M17 builds no new on-chain contract**. Therefore there is no M17 WASM file to download. Source integration and signed journal tests constitute the implemented milestone. No order from M17 has legally or technically authorized the spending of any Stellar wallet; all simulated PnL and positions remain unauthenticated local reference data.
