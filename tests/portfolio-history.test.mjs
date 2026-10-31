@@ -251,3 +251,49 @@ test("M18 HTTP exposes distinct public Horizon wallet transfers and sandbox orde
     await journal.close();
   }
 });
+
+
+test("M18 follows official Horizon payment object where operation ledger is absent",async()=>{
+  const actual=payment(300);
+  delete actual.ledger;
+  const m=mockNetwork({pages:[[actual]]});
+  const data=await loadStellarWalletActivity(A.owner,{fetchImpl:m.fetchImpl,nowMs:NOW});
+  assert.equal(data.payments.length,1);
+  assert.equal(data.payments[0].ledger,null);
+  assert.equal(data.observedLedger,5000000);
+  assert.equal(data.payments[0].txHash.length,64);
+  assert.equal(data.executionPermitted,false);
+});
+test("M18 account creation is recognized as a native transfer, not a Hoxo deposit",()=>{
+  const creation=payment(301,B.owner,A.owner,{
+    type:"create_account",funder:B.owner,account:A.owner,starting_balance:"5.0000000"
+  });
+  delete creation.ledger;
+  const normalized=normalizePayment(creation,A.owner,5000000,NOW);
+  assert.equal(normalized.type,"ACCOUNT_CREATION");
+  assert.equal(normalized.direction,"IN");
+  assert.equal(normalized.amount,"5.0000000");
+  assert.equal(normalized.code,"XLM");
+  assert.equal(normalized.hoxoDeposit,false);
+  assert.equal(normalized.ledger,null);
+});
+test("M18 complex path-payment operations are explicitly excluded, not counted as transfers",async()=>{
+  const path=payment(200,B.owner,A.owner,{type:"path_payment_strict_receive"});
+  delete path.ledger;
+  const simple=payment(199,B.owner,A.owner);
+  delete simple.ledger;
+  const m=mockNetwork({pages:[[path,simple]]});
+  const data=await loadStellarWalletActivity(A.owner,{fetchImpl:m.fetchImpl,nowMs:NOW,limit:2});
+  assert.equal(data.payments.length,1);
+  assert.deepEqual(data.excludedOperationTypes,["path_payment_strict_receive"]);
+  assert.equal(data.nextCursor,"199");
+  assert.equal(data.payments[0].operationId,"199");
+});
+test("M18 unsupported payment-like page still advances cursor without inventing a transfer",async()=>{
+  const ignored=payment(200,B.owner,A.owner,{type:"account_merge"});
+  const m=mockNetwork({pages:[[ignored]]});
+  const data=await loadStellarWalletActivity(A.owner,{fetchImpl:m.fetchImpl,nowMs:NOW,limit:1});
+  assert.deepEqual(data.payments,[]);
+  assert.deepEqual(data.excludedOperationTypes,["account_merge"]);
+  assert.equal(data.nextCursor,"200");
+});

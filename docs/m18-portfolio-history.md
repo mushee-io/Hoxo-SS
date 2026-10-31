@@ -6,7 +6,7 @@
 
 `portfolio/stellar-history.mjs` exposes `loadStellarWalletActivity(owner, {fetchImpl,nowMs,limit,cursor})`, using only `https://horizon-testnet.stellar.org`, `GET /` to validate the **exact Testnet passphrase** and fresh latest ledger, `GET /accounts/{owner}` to validate the account ID and real Horizon balances, then `GET /accounts/{owner}/payments` to retrieve confirmed *public indexer-reported* payment operations.
 
-Every returned operation is checked for payment type, successful transaction flag, transaction hash, ledger within the observed range, non-future creation time, exact decimal amount, valid Stellar source/destination G-address, actual account involvement and genuine asset issuer identification. Duplicate operation IDs/paging tokens, unsupported path-payment route data, malformed values, wrong network, mismatched account IDs or stale network proof **fail closed** rather than being presented as history.
+Every returned supported operation is checked for payment type, successful transaction flag, transaction hash, optional operation-ledger field when present, non-future creation time, exact decimal amount, valid Stellar source/destination G-address, actual account involvement and genuine asset issuer identification. Duplicate operation IDs/paging tokens, malformed values, wrong network, mismatched account IDs or stale network proof **fail closed**. Stellar Horizon commonly omits a ledger number on payment operations: M18 exposes `ledger:null` in that case, never inventing a number from the latest ledger. Simple payment and account-creation amounts are supported; path payments, account merges and other complex payment-like operations are **excluded with explicit type counts**, not falsely represented as ordinary transfers. Pagination still advances across excluded records.
 
 Results carry `provenance: STELLAR_TESTNET_HORIZON_REPORTED`, `hoxoTrade:false`, `hoxoDeposit:false`, `executionPermitted:false`. A Horizon response is a public network indexer observation, **not independent cryptographic transaction verification or proof the requester owns that account**. In the UI this query is restricted to a Freighter-connected, Testnet-verified wallet identity. Public API queries remain publicly address-queryable, not proof-of-ownership endpoints. Payment records are **not** Stellar SDEX trades, Soroban vault settlements, Hoxo PnL or proof of on-chain margin.
 
@@ -42,7 +42,7 @@ npm run check:readiness
 npm run test:browser
 ```
 
-CI covers stale/wrong network, mismatched account, invalid issuer, ledger/tx hash failures, duplicate pagination records, cursor injection, no fabricated unfunded history, incoming/outgoing/self-transfer attribution, testnet ledger provenance, owner-scoped replay, tamper resistance, no fake real PnL, read-only HTTP and disabled transaction routes.
+CI covers official payment records without a ledger field, excluded complex operations, stale/wrong network, mismatched account, invalid issuer, optional ledger/tx hash failures, duplicate pagination records, cursor injection, no fabricated unfunded history, incoming/outgoing/self-transfer attribution, testnet ledger provenance, owner-scoped replay, tamper resistance, no fake real PnL, read-only HTTP and disabled transaction routes.
 
 ## Remaining M18 acceptance gates
 

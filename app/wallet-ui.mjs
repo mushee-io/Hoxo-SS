@@ -13,7 +13,7 @@ const explorer=$("walletExplorer");
 const body=$("portfolioBody");
 let activeTab="Balances";
 let busy=false;
-let transferState={owner:null,rows:[],nextCursor:null,loading:false,error:null,ledger:null};
+let transferState={owner:null,rows:[],excluded:[],nextCursor:null,loading:false,error:null,ledger:null};
 let transferRequest=0;
 async function fetchTransfers(owner,{more=false}={}){
   if(!owner)return;
@@ -31,6 +31,7 @@ async function fetchTransfers(owner,{more=false}={}){
     transferState={
       owner,rows:more?[...transferState.rows,...next.payments]:next.payments,
       nextCursor:next.nextCursor,ledger:next.observedLedger,
+      excluded:more?[...transferState.excluded,...next.excludedOperationTypes]:next.excludedOperationTypes,
       loading:false,error:null,
     };
   }catch(error){
@@ -68,7 +69,7 @@ function showTransferHistory(){
       const amount=document.createElement("span");
       amount.textContent=payment.amount+" "+payment.code;
       const link=document.createElement("a");
-      link.textContent="#"+payment.ledger+" · VIEW TX";
+      link.textContent=(payment.ledger===null?"PAYMENT":"#"+payment.ledger)+" · VIEW TX";
       link.href="https://stellar.expert/explorer/testnet/tx/"+payment.txHash;
       link.target="_blank";link.rel="noopener noreferrer";
       rows.append(direction,amount,link);
@@ -78,6 +79,13 @@ function showTransferHistory(){
     const noRows=document.createElement("p");
     noRows.textContent=transferState.owner?"NO PAYMENT RECORDS ON THIS HORIZON PAGE.":"TRANSFER HISTORY NOT LOADED.";
     section.append(noRows);
+  }
+  if(transferState.excluded.length){
+    const note=document.createElement("p");
+    note.textContent=transferState.excluded.length+
+      " complex payment-like operations omitted (not classified as simple transfers): "+
+      [...new Set(transferState.excluded)].join(", ");
+    section.append(note);
   }
   if(transferState.nextCursor&&!transferState.loading){
     const more=document.createElement("button");
@@ -160,7 +168,7 @@ function render(state){
   const connected=["connected","unfunded"].includes(state.status);
   if(state.address!==transferState.owner){
     transferRequest++;
-    transferState={owner:null,rows:[],nextCursor:null,loading:false,error:null,ledger:null};
+    transferState={owner:null,rows:[],excluded:[],nextCursor:null,loading:false,error:null,ledger:null};
   }
   const pending=["connecting","loading","funding"].includes(state.status);
   const hasAddress=typeof state.address==="string"&&state.address.startsWith("G");

@@ -229,3 +229,33 @@ test("M4 Testnet network panel verifies Horizon/RPC and never claims deployed ex
     assert.deepEqual(errors,[]);
   }finally{await context.close();}
 });
+
+test("M18 Transfers tab shows verified Testnet public payment without presenting a HOXO trade",async()=>{
+  const {page,context,errors}=await openWalletHarness();
+  const transaction="a".repeat(64);
+  await context.route("**/accounts/*/payments?*",async route=>{
+    await route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({
+      _embedded:{records:[{
+        id:"123456789",paging_token:"123456789",
+        transaction_successful:true,transaction_hash:transaction,
+        type:"payment",created_at:new Date().toISOString(),
+        from:TEST_G,to:TEST_G,amount:"2.5000000",asset_type:"native"
+      }]}
+    })});
+  });
+  try{
+    await page.locator("#walletButton").click();
+    await page.getByText("10000.0000000").waitFor();
+    await page.locator('[data-portfolio-tab="Transfers"]').click();
+    await page.getByText("2.5000000 XLM").waitFor();
+    assert.match(await page.locator("#portfolioBody").innerText(),/NOT HOXO TRADES/);
+    assert.match(await page.locator("#portfolioBody").innerText(),/PAYMENT · VIEW TX/);
+    assert.equal(await page.locator("#tradeButton").isDisabled(),true);
+    assert.equal(await page.locator(".account-actions button:disabled").count(),2);
+    assert.equal(await page.locator("#portfolioBody a").first().getAttribute("href"),
+      "https://stellar.expert/explorer/testnet/tx/"+transaction);
+    await page.locator('[data-portfolio-tab="Trade History"]').click();
+    assert.match(await page.locator("#portfolioBody").innerText(),/NOT DEPLOYED/);
+    assert.deepEqual(errors,[]);
+  }finally{await context.close();}
+});
