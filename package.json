@@ -1,0 +1,14 @@
+{
+  "name": "hoxo-ss",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Stellar spot, perps and money markets unified-margin development foundation",
+  "scripts": {
+    "test": "node --test packages/risk-engine/test/*.test.mjs",
+    "check": "npm test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
