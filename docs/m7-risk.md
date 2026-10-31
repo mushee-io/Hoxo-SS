@@ -21,3 +21,7 @@ What is needed for full M7:
 6. Protocol 30 Testnet migration checks (vote scheduled for November 3, 2026).
 
 Until these exist, M7 is **preview functionality only** and M8's matching engine must not enable settlement, credit or actual leveraged trading.
+
+## CI confirmation
+
+[GitHub Actions 41191757442](https://github.com/mushee-io/Hoxo-SS/actions/runs/41191757442): Pure math **14/14** and Soroban preview **2/2** tests pass on SDK29.0.1. These do not prove authentic on-chain portfolio state, enforced margin or live deployed contract code.

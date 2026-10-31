@@ -15,3 +15,7 @@ Build/test: `cargo test -p hoxo-collateral-vault --lib`, then use Stellar CLI `s
 **Security gates still open:** public asset/issuer review, protocol upgrade (Bell/Protocol 30 vote planned for 3 Nov 2026), WASM build and size check, genuine funded wallet deposit→withdraw verification, archival TTL runbook, invariant/fuzz tests, external security review and mainnet rejection.
 
 No contract ID, deployment transaction hash or user funds are asserted by this milestone.
+
+## CI confirmation
+
+[GitHub Actions 41191757442](https://github.com/mushee-io/Hoxo-SS/actions/runs/41191757442): Soroban native vault tests **3/3 pass** on SDK29.0.1. No release WASM, RPC deployment, contract ID, transaction hash or account funding proof was produced by these tests.
