@@ -1087,3 +1087,45 @@ fn market_wide_partial_keeper_liquidation_recomputes_actual_remaining_margin(){
     assert_eq!(finished.locked_margin_e7,0);
     assert!(finished.token_book_backed);
 }
+
+
+#[test]
+fn market_global_maximum_64_open_pairs_remains_index_complete_and_blocks_sixty_fifth(){
+    let (e,market,admin,long,short,asset)=setup();
+    configure(&e,&market);
+    let c=PerpClearinghouseClient::new(&e,&market);
+    let long2=Address::generate(&e);
+    let short2=Address::generate(&e);
+    let third=Address::generate(&e);
+    let fourth=Address::generate(&e);
+    let mint=token::StellarAssetClient::new(&e,&asset);
+    for x in [&long2,&short2,&third,&fourth]{
+        mint.mint(x,&(500*UNIT));
+    }
+    for x in [&long,&short,&long2,&short2,&third,&fourth]{
+        c.deposit(x,&(400*UNIT));
+    }
+    for i in 0..32u8{
+        open(&e,&market,&long,&short,1+i);
+        open(&e,&market,&long2,&short2,80+i);
+    }
+    assert_eq!(c.market().open_positions,64);
+    assert_eq!(c.owner_position_ids(&long).len(),32);
+    assert_eq!(c.owner_position_ids(&long2).len(),32);
+    let whole=c.market_exposure();
+    assert_eq!(whole.active_positions,64);
+    assert_eq!(whole.indexed_positions,64);
+    assert_eq!(whole.indexed_owners,4);
+    assert_eq!(whole.locked_margin_e7,1280*UNIT);
+    assert_eq!(whole.wallet_locked_e7,1280*UNIT);
+    assert_eq!(whole.actual_cash_e7,2400*UNIT);
+    assert_eq!(whole.total_claims_e7,2400*UNIT);
+    assert!(whole.index_complete&&whole.token_book_backed);
+    assert!(!whole.system_risk_approved);
+    assert!(c.try_open(&id(&e,180),&third,&fourth,&(4*UNIT),
+        &(12*UNIT),&(8*UNIT),&(e.ledger().sequence()+20)).is_err());
+    assert_eq!(c.market_position_ids().len(),64);
+    assert_eq!(c.market_exposure().locked_margin_e7,1280*UNIT);
+    assert!(c.solvent());
+    let _=admin;
+}
