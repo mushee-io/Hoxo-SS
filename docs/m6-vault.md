@@ -19,3 +19,7 @@ No contract ID, deployment transaction hash or user funds are asserted by this m
 ## CI confirmation
 
 [GitHub Actions 41191757442](https://github.com/mushee-io/Hoxo-SS/actions/runs/41191757442): Soroban native vault tests **3/3 pass** on SDK29.0.1. No release WASM, RPC deployment, contract ID, transaction hash or account funding proof was produced by these tests.
+
+## Additional authorization tests
+
+On 31 October 2026, two additional negative tests were introduced: owner withdrawal without a signer and admin pause without a signer, both with `Env::set_auths(&[])` to disable the permissive test mocks. The M6 vault has **5 passing tests** in GitHub Actions run 41192089391. These tests do not replace a live multiwallet Testnet authorization assessment.

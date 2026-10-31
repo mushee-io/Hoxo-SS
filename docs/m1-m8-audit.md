@@ -9,7 +9,7 @@
 | M3 | Freighter API approval, passphrase/StrKey verification, Horizon holdings and explicit Friendbot flow | Only mocked extension/browser testing; actual wallet authorisations and funded wallet transactions unverified |
 | M4 | Live RPC/Horizon passphrase, health and ledger cross-check; strict registry | No Hoxo deployed contract IDs or independently verified contract instances |
 | M5 | Live *unrelated network* SDEX trade observations, canonical issuer/pair validation, OHLC/book parsers, mathematical oracle review | Zero approved asset pairs; no authenticated live on-chain index/mark oracle; all risk-pricing disabled |
-| M6 | Soroban token vault source: admin constructor, approved deposits, owner-only withdrawals, per-account amounts, total accounting, TTL maintenance | 3/3 Soroban contract tests pass; still needs WASM release build, deployment, issuer approval and **real signed Testnet deposit/withdrawal** |
+| M6 | Soroban token vault source: admin constructor, approved deposits, owner-only withdrawals, per-account amounts, total accounting, TTL maintenance | 5/5 Soroban contract tests pass (including unauthorised-withdraw and unauthorised-admin rejection); still needs WASM release build, deployment, issuer approval and **real signed Testnet deposit/withdrawal** |
 | M7 | Shared deterministic Rust portfolio math + Soroban preview interface; no permission to trade or withdraw | 14/14 Rust math and 2/2 Soroban preview tests pass; caller-provided snapshots still prevent canonical margin enforcement |
 | M8 | Signed matching-intent engine with price/time FIFO, partial fills, cancel/replace, local durable journal and loopback API | Order matches are explicitly **unsettled**; no funds, smart contract settlement, cross-product margin reservations or distributed exchange hosting |
 
@@ -40,3 +40,7 @@ Run `npm run check:readiness` to verify code-level no-live-execution invariants.
 On 31 October 2026, [GitHub Actions run 41191757442](https://github.com/mushee-io/Hoxo-SS/actions/runs/41191757442) passed **all six** jobs: 76/76 JS tests, 8/8 Chromium smoke tests, 14/14 `hoxo-risk-math` tests, 3/3 `hoxo-collateral-vault` tests, 2/2 `hoxo-risk-gate` tests, read-only Horizon and RPC Testnet checks, and M8 signed matching journal/API tests.
 
 Rust packages use pinned patched `soroban-sdk=29.0.1`. This demonstrates native contract tests, **not** a compiled deployable WASM artifact or actual Testnet contract invocation. Stellar's published CLI 28.1.0 predates SDK29; verify a compatible Stellar CLI major version before attempting the recommended `stellar contract build`. The Bell Protocol 30 Testnet vote is scheduled for 3 November 2026; repeat network/SDK compatibility checks after that event.
+
+## M6 authorisation regression — 31 October 2026
+
+[GitHub Actions run 41192089391](https://github.com/mushee-io/Hoxo-SS/actions/runs/41192089391) verifies that the M6 vault rejects owner withdrawals and admin pauses when Soroban's test authorisation mocks are explicitly disabled (`Env::set_auths(&[])`). This increases confidence that authentication checks are present, but is still not a real signed Testnet transaction from an independent wallet.
