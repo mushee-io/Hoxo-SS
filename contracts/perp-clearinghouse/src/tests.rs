@@ -944,3 +944,188 @@ fn m12_owner_index_capacity_fails_before_reserving_an_unenumerated_position(){
     assert_eq!(c.wallet(&long).locked_e7,320*UNIT);
     assert!(c.solvent());
 }
+
+
+#[test]
+fn market_wide_complete_index_pairs_two_wallets_and_reconciles_actual_cash(){
+    let (e,market,_,long,short,asset)=setup();
+    let oracle=configure(&e,&market);
+    fund(&e,&market,&long,&short);
+    let c=PerpClearinghouseClient::new(&e,&market);
+    let empty=c.market_exposure();
+    assert_eq!(empty.indexed_positions,0);
+    assert_eq!(empty.total_claims_e7,200*UNIT);
+    assert!(empty.index_complete&&empty.token_book_backed);
+    assert!(!empty.system_risk_approved&&!empty.financial_beta_approved);
+    open(&e,&market,&long,&short,201);
+    open(&e,&market,&long,&short,202);
+    assert_eq!(c.market_position_ids().len(),2);
+    MockOracleClient::new(&e,&oracle).set(&(11*UNIT),&(11*UNIT),&e.ledger().timestamp());
+    let v=c.market_exposure();
+    assert_eq!(v.active_positions,2);
+    assert_eq!(v.indexed_positions,2);
+    assert_eq!(v.indexed_owners,2);
+    assert_eq!(v.open_notional_e7,88*UNIT);
+    assert_eq!(v.locked_margin_e7,40*UNIT);
+    assert_eq!(v.wallet_locked_e7,40*UNIT);
+    assert_eq!(v.long_mark_pnl_e7,8*UNIT);
+    assert_eq!(v.long_net_pnl_e7,8*UNIT);
+    assert_eq!(v.total_maintenance_e7,264*UNIT/10);
+    assert_eq!(v.gross_insolvency_e7,0);
+    assert_eq!(v.insurance_shortfall_e7,0);
+    assert_eq!(v.actual_cash_e7,200*UNIT);
+    assert_eq!(v.total_claims_e7,200*UNIT);
+    assert!(v.paired_pnl_zero_sum);
+    assert!(v.insurance_snapshot_covered);
+    assert!(v.token_book_backed);
+    assert!(!v.system_risk_approved);
+    c.close(&id(&e,201));
+    assert_eq!(c.market_position_ids().len(),1);
+    assert_eq!(c.market_exposure().locked_margin_e7,20*UNIT);
+    c.close(&id(&e,202));
+    assert_eq!(c.market_position_ids().len(),0);
+    assert_eq!(c.market_exposure().locked_margin_e7,0);
+    assert_eq!(token::TokenClient::new(&e,&asset).balance(&market),200*UNIT);
+    assert!(c.solvent());
+}
+#[test]
+fn market_wide_conservative_insurance_covers_all_bankrupt_sides_not_one_position(){
+    let (e,market,_,long,short,_)=setup();
+    let oracle=configure(&e,&market);
+    fund(&e,&market,&long,&short);
+    let c=PerpClearinghouseClient::new(&e,&market);
+    open(&e,&market,&long,&short,203);
+    open(&e,&market,&long,&short,204);
+    MockOracleClient::new(&e,&oracle).set(&(6*UNIT),&(6*UNIT),&e.ledger().timestamp());
+    let z=c.market_exposure();
+    assert_eq!(z.positions_liquidatable,2);
+    assert_eq!(z.gross_insolvency_e7,12*UNIT);
+    assert_eq!(z.insurance_available_e7,0);
+    assert_eq!(z.insurance_shortfall_e7,12*UNIT);
+    assert!(!z.insurance_snapshot_covered);
+    assert!(z.token_book_backed); // token claims still fully backed NOW
+    c.fund_insurance(&long,&(10*UNIT));
+    let partial=c.market_exposure();
+    assert_eq!(partial.insurance_shortfall_e7,2*UNIT);
+    assert!(!partial.insurance_snapshot_covered);
+    c.fund_insurance(&long,&(2*UNIT));
+    let full=c.market_exposure();
+    assert_eq!(full.insurance_shortfall_e7,0);
+    assert!(full.insurance_snapshot_covered);
+    assert_eq!(full.total_claims_e7,212*UNIT);
+    assert!(!full.financial_beta_approved);
+}
+#[test]
+fn market_wide_funding_and_stale_prices_fail_closed_for_every_open_leg(){
+    let (e,market,_,long,short,_)=setup();
+    let oracle=configure(&e,&market);
+    fund(&e,&market,&long,&short);
+    let c=PerpClearinghouseClient::new(&e,&market);
+    open(&e,&market,&long,&short,205);
+    e.ledger().with_mut(|l|{l.timestamp+=3600;l.sequence_number+=1;});
+    MockOracleClient::new(&e,&oracle).set(&(101*UNIT/10),&(10*UNIT),&e.ledger().timestamp());
+    let v=c.market_exposure();
+    assert_eq!(v.long_mark_pnl_e7,4*UNIT/10);
+    assert_eq!(v.pending_funding_e7,UNIT/20);
+    assert_eq!(v.long_net_pnl_e7,7*UNIT/20);
+    assert!(v.paired_pnl_zero_sum);
+    e.ledger().with_mut(|l|{l.timestamp+=28_801;l.sequence_number+=1;});
+    MockOracleClient::new(&e,&oracle).set(&(101*UNIT/10),&(10*UNIT),&e.ledger().timestamp());
+    assert!(c.try_market_exposure().is_err());
+    assert_eq!(c.market_position_ids().len(),1);
+    assert_eq!(c.market().open_positions,1);
+}
+#[test]
+fn full_liquidation_unindexes_global_market_without_ghost_locked_margin(){
+    let (e,market,_,long,short,_)=setup();
+    let oracle=configure(&e,&market);
+    fund(&e,&market,&long,&short);
+    let c=PerpClearinghouseClient::new(&e,&market);
+    open(&e,&market,&long,&short,206);
+    MockOracleClient::new(&e,&oracle).set(&(82*UNIT/10),&(82*UNIT/10),&e.ledger().timestamp());
+    assert!(c.market_exposure().maintenance_deficit_e7>0);
+    let keeper=Address::generate(&e);
+    let liq=c.liquidate(&id(&e,206),&keeper,&(4*UNIT));
+    assert!(liq.fully_closed);
+    assert_eq!(c.market_position_ids().len(),0);
+    assert_eq!(c.market_exposure().indexed_positions,0);
+    assert_eq!(c.market_exposure().wallet_locked_e7,0);
+    assert_eq!(c.market_exposure().total_claims_e7,c.reconciliation().user_claims_e7);
+    assert!(c.solvent());
+}
+
+
+#[test]
+fn market_wide_partial_keeper_liquidation_recomputes_actual_remaining_margin(){
+    let (e,market,_,long,short,asset)=setup();
+    let oracle=configure(&e,&market);
+    fund(&e,&market,&long,&short);
+    let c=PerpClearinghouseClient::new(&e,&market);
+    open(&e,&market,&long,&short,207);
+    MockOracleClient::new(&e,&oracle).set(&(82*UNIT/10),&(82*UNIT/10),&e.ledger().timestamp());
+    let start=c.market_exposure();
+    assert_eq!(start.active_positions,1);
+    assert!(start.maintenance_deficit_e7>0);
+    let keeper=Address::generate(&e);
+    let out=c.liquidate(&id(&e,207),&keeper,&(2*UNIT));
+    assert!(!out.fully_closed);
+    assert_eq!(c.market_position_ids().get(0),Some(id(&e,207)));
+    let marked=c.market_exposure();
+    assert_eq!(marked.active_positions,1);
+    assert_eq!(marked.indexed_positions,1);
+    assert_eq!(marked.locked_margin_e7,20*UNIT);
+    assert_eq!(marked.wallet_locked_e7,20*UNIT);
+    assert_eq!(c.owner_position_ids(&long).len(),1);
+    assert_eq!(c.owner_position_ids(&short).len(),1);
+    assert_eq!(marked.positions_liquidatable,0);
+    assert!(marked.insurance_snapshot_covered);
+    assert_eq!(marked.total_claims_e7,200*UNIT);
+    assert_eq!(token::TokenClient::new(&e,&asset).balance(&market),200*UNIT);
+    c.close(&id(&e,207));
+    let finished=c.market_exposure();
+    assert_eq!(finished.active_positions,0);
+    assert_eq!(finished.locked_margin_e7,0);
+    assert!(finished.token_book_backed);
+}
+
+
+#[test]
+fn market_global_maximum_64_open_pairs_remains_index_complete_and_blocks_sixty_fifth(){
+    let (e,market,admin,long,short,asset)=setup();
+    configure(&e,&market);
+    let c=PerpClearinghouseClient::new(&e,&market);
+    let long2=Address::generate(&e);
+    let short2=Address::generate(&e);
+    let third=Address::generate(&e);
+    let fourth=Address::generate(&e);
+    let mint=token::StellarAssetClient::new(&e,&asset);
+    for x in [&long2,&short2,&third,&fourth]{
+        mint.mint(x,&(500*UNIT));
+    }
+    for x in [&long,&short,&long2,&short2,&third,&fourth]{
+        c.deposit(x,&(400*UNIT));
+    }
+    for i in 0..32u8{
+        open(&e,&market,&long,&short,1+i);
+        open(&e,&market,&long2,&short2,80+i);
+    }
+    assert_eq!(c.market().open_positions,64);
+    assert_eq!(c.owner_position_ids(&long).len(),32);
+    assert_eq!(c.owner_position_ids(&long2).len(),32);
+    let whole=c.market_exposure();
+    assert_eq!(whole.active_positions,64);
+    assert_eq!(whole.indexed_positions,64);
+    assert_eq!(whole.indexed_owners,4);
+    assert_eq!(whole.locked_margin_e7,1280*UNIT);
+    assert_eq!(whole.wallet_locked_e7,1280*UNIT);
+    assert_eq!(whole.actual_cash_e7,2400*UNIT);
+    assert_eq!(whole.total_claims_e7,2400*UNIT);
+    assert!(whole.index_complete&&whole.token_book_backed);
+    assert!(!whole.system_risk_approved);
+    assert!(c.try_open(&id(&e,180),&third,&fourth,&(4*UNIT),
+        &(12*UNIT),&(8*UNIT),&(e.ledger().sequence()+20)).is_err());
+    assert_eq!(c.market_position_ids().len(),64);
+    assert_eq!(c.market_exposure().locked_margin_e7,1280*UNIT);
+    assert!(c.solvent());
+    let _=admin;
+}
