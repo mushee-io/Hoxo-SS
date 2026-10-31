@@ -27,7 +27,7 @@ function crc16(bytes){
   for(const b of bytes){
     crc^=b<<8;
     for(let i=0;i<8;i++)
-      crc=(crc&32768)?((crc<<1)^0x1021)&65535:(crc<<1)&65535);
+      crc=(crc&32768)?(((crc<<1)^0x1021)&65535):((crc<<1)&65535);
   }
   return crc;
 }
