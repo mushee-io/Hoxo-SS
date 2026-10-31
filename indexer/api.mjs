@@ -117,7 +117,7 @@ export function createIndexerApi({
           streams-=1;
           clearInterval(heartbeat);unsubscribe();
         };
-        res.on("close",stop);req.on("close",stop);
+        res.on("close",stop);
         return;
       }
       reply(res,404,{error:"Not found",tradingEnabled:false});

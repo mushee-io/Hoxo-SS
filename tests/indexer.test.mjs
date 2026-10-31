@@ -332,3 +332,62 @@ test("M19 append checkpoints publish deterministic live notification without spe
   assert.equal(store.status.executionPermitted,false);
   await store.close();
 });
+
+test("M19 multi-page getEvents maintains exact one-ledger scope and deduplicated cursor",async t=>{
+  const path=await temporary(t);
+  const store=await DurableEventIndex.open(path,{contracts});
+  const p=provider({latest:101});
+  const calls=[];
+  const rpc=async(method,params)=>{
+    calls.push({method,params});
+    if(method==="getEvents"){
+      if(params.pagination.cursor){
+        assert.equal(params.startLedger,undefined);
+        assert.equal(params.endLedger,undefined);
+        return {latestLedger:101,oldestLedger:95,
+          events:[event(101,C2,100)]};
+      }
+      assert.equal(params.startLedger,101);
+      assert.equal(params.endLedger,102);
+      return {latestLedger:101,oldestLedger:95,
+        cursor:"101-0000000100",
+        events:Array.from({length:100},(_,i)=>event(101,C1,i))};
+    }
+    return p.rpc(method,params);
+  };
+  const scanner=new RpcLedgerScanner({store,rpc,now:()=>NOW,startLedger:101});
+  await scanner.poll();
+  assert.equal(store.status.reportedEvents,101);
+  assert.equal(calls.filter(x=>x.method==="getEvents").length,2);
+  assert.equal(store.listEvents({role:"perp-clearinghouse"}).items.length,1);
+  await store.close();
+});
+test("M19 SSE stream sends checkpoint notifications, then releases subscriber on disconnect",async t=>{
+  const path=await temporary(t);
+  const store=await DurableEventIndex.open(path,{contracts});
+  const server=createIndexerApi({store,now:()=>NOW});
+  await new Promise(r=>server.listen(0,"127.0.0.1",r));
+  const origin="http://127.0.0.1:"+server.address().port;
+  const controller=new AbortController();
+  let reader;
+  try{
+    const response=await fetch(origin+"/v1/indexer/stream",{signal:controller.signal});
+    assert.equal(response.status,200);
+    assert.match(response.headers.get("content-type"),/text\/event-stream/);
+    reader=response.body.getReader();
+    const first=new TextDecoder().decode((await reader.read()).value);
+    assert.match(first,/event: status/);
+    assert.match(first,/CANDIDATE_OBSERVATION_ONLY/);
+    await store.commit(checkpoint(100,[event(100)]));
+    const next=new TextDecoder().decode((await reader.read()).value);
+    assert.match(next,/event: checkpoint/);
+    assert.match(next,/"ledger":100/);
+    assert.equal(store.status.executionPermitted,false);
+  }finally{
+    controller.abort();
+    await reader?.cancel().catch(()=>{});
+    server.closeAllConnections();
+    await new Promise(r=>server.close(r));
+    await store.close();
+  }
+});
