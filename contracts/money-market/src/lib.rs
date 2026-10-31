@@ -550,7 +550,7 @@ impl MoneyMarket {
     /// Permissionless keeper call; persistent share entry may have been
     /// archived before this is called and then needs explicit restoration.
     pub fn keepalive(e:Env,owner:Address){
-        let k=Key::Shares(owner);
+        let k=Key::Shares(owner.clone());
         if e.storage().persistent().has(&k){
             e.storage().persistent().extend_ttl(&k,TTL_THRESHOLD,TTL_TARGET);
         }
