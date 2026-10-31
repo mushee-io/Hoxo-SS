@@ -10,24 +10,25 @@ import { open, readFile, mkdir, unlink } from "node:fs/promises";
 import { dirname } from "node:path";
 import { createHash } from "node:crypto";
 import { verifySignedCommand } from "./auth.mjs";
-import { emptyBook, projectCommand, snapshot, orderById } from "./core.mjs";
+import { emptyBook, projectCommand, snapshot, orderById, advancedOrderById, orderTransitions, simulatedPosition } from "./core.mjs";
 
 const START_HASH = "0".repeat(64);
 function hashRecord(record) {
   return createHash("sha256").update(JSON.stringify(record)).digest("hex");
 }
 export class SignedOrderJournal {
-  constructor(path, file, lock, state, lastHash) {
+  constructor(path, file, lock, state, lastHash, tickSigner=null) {
     this.path = path;
     this.file = file;
     this.lock = lock;
     this.state = state;
     this.lastHash = lastHash;
+    this.tickSigner = tickSigner;
     this.halted = false;
     this.closed = false;
     this.queue = Promise.resolve();
   }
-  static async open(path) {
+  static async open(path,{tickSigner=null}={}) {
     if (typeof path !== "string" || path.length === 0) throw Error("Journal path required");
     await mkdir(dirname(path), { recursive: true, mode: 0o700 });
     const lockPath = path + ".lock";
@@ -50,13 +51,13 @@ export class SignedOrderJournal {
             unsigned.sequence !== state.sequence + 1 ||
             hash !== hashRecord(unsigned)) throw Error("Journal hash-chain/sequence mismatch");
         verifySignedCommand(unsigned.command, unsigned.signature);
-        const next = projectCommand(state, unsigned.command, unsigned.atMs);
+        const next = projectCommand(state,unsigned.command,unsigned.atMs,{tickSigner});
         if (next.result.sequence !== unsigned.sequence) throw Error("Journal replay mismatch");
         state = next.state;
         previousHash = hash;
       }
       file = await open(path, "a", 0o600);
-      return new SignedOrderJournal(path, file, lock, state, previousHash);
+      return new SignedOrderJournal(path,file,lock,state,previousHash,tickSigner);
     } catch (error) {
       if (file) await file.close().catch(() => {});
       await lock.close().catch(() => {});
@@ -69,7 +70,7 @@ export class SignedOrderJournal {
     const operation = async () => {
       if (this.closed || this.halted) throw Error("Matching journal is unavailable");
       verifySignedCommand(command, signature);
-      const { state, result } = projectCommand(this.state, command, atMs);
+      const { state, result } = projectCommand(this.state,command,atMs,{tickSigner:this.tickSigner});
       const unsigned = { version: 1, sequence: result.sequence, previousHash: this.lastHash, atMs, command, signature };
       const hash = hashRecord(unsigned);
       // No acceptance acknowledgment before durable append + fsync.
@@ -95,6 +96,9 @@ export class SignedOrderJournal {
   getOrder(orderId) {
     return orderById(this.state, orderId);
   }
+  getAdvancedOrder(orderId) {return advancedOrderById(this.state,orderId);}
+  getOrderTransitions(orderId) {return orderTransitions(this.state,orderId);}
+  getSimulatedPosition(owner,marketId) {return simulatedPosition(this.state,owner,marketId);}
   getFills(marketId, limit = 25) {
     if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) throw Error("Invalid fill limit");
     return this.state.fills.filter(f => f.marketId === marketId).slice(-limit).map(f => ({...f}));
@@ -102,6 +106,10 @@ export class SignedOrderJournal {
   getStatus() {
     return { status: this.halted ? "HALTED" : this.closed ? "CLOSED" : "SANDBOX_READY",
       sequence: this.state.sequence, openOrders: this.state.orders.size,
+      pendingConditionalOrders:this.state.conditionals.size,
+      sandboxPriceOperatorConfigured:!!this.tickSigner,
+      canonicalOracleIntegrated:false,
+      positionSource:"M8_M17_SIMULATED_MATCHES_NOT_ONCHAIN",
       simulatedFills: this.state.fills.length,
       settlement: "DISABLED", network: "STELLAR_TESTNET_REFERENCE_ONLY" };
   }

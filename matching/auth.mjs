@@ -33,6 +33,9 @@ const fieldsByType = Object.freeze({
   place: ["type", "networkPassphrase", "owner", "nonce", "clientOrderId", "marketId", "side", "priceE7", "quantityE7", "expiresAtMs"],
   cancel: ["type", "networkPassphrase", "owner", "nonce", "orderId"],
   replace: ["type", "networkPassphrase", "owner", "nonce", "orderId", "clientOrderId", "marketId", "side", "priceE7", "quantityE7", "expiresAtMs"],
+  advanced_place: ["type","networkPassphrase","owner","nonce","clientOrderId","marketId","side","orderType","priceE7","quantityE7","triggerPriceE7","protectionPriceE7","reduceOnly","expiresAtMs"],
+  advanced_cancel: ["type","networkPassphrase","owner","nonce","orderId"],
+  sandbox_tick: ["type","networkPassphrase","owner","nonce","marketId","markPriceE7","observedAtMs"],
 });
 
 export function canonicalPayload(command) {
@@ -44,7 +47,9 @@ export function canonicalPayload(command) {
   if (command.networkPassphrase !== TESTNET_PASSPHRASE) throw Error("Wrong Stellar network passphrase");
   if (!isStellarGAddress(command.owner)) throw Error("Invalid Stellar G address");
   if (!Number.isSafeInteger(command.nonce) || command.nonce <= 0) throw Error("Invalid nonce");
-  return Buffer.from(PREFIX + JSON.stringify(Object.fromEntries(fields.map(key => [key, command[key]]))), "utf8");
+  const domain = ["advanced_place","advanced_cancel","sandbox_tick"].includes(command.type)
+    ? "HOXO-SS-M17-SANDBOX-INTENT-V1\n" : PREFIX;
+  return Buffer.from(domain + JSON.stringify(Object.fromEntries(fields.map(key => [key, command[key]]))), "utf8");
 }
 export function verifySignedCommand(command, signature) {
   const payload = canonicalPayload(command);

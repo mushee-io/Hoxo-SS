@@ -21,6 +21,10 @@ const funding=await read("contracts/perp-clearinghouse/src/m13.rs");
 const liquidation=await read("contracts/perp-clearinghouse/src/m14.rs");
 const unified=await read("contracts/unified-margin/src/lib.rs");
 const sandbox=snapshot(emptyBook(),"xlm-usdc-spot");
+const advanced=await read("matching/advanced.mjs");
+const matchingCore=await read("matching/core.mjs");
+const advancedAuth=await read("matching/auth.mjs");
+const matchingJournal=await read("matching/journal.mjs");
 const invariants={
   noVerifiedExchangeContracts:registry.deployedVerified===0 && registry.candidateContracts===0,
   noApprovedRiskOracle:markets.oracleStatus.startsWith("HALTED") && markets.configured===0,
@@ -107,6 +111,17 @@ const invariants={
   m16FailClosedStress:analytics.includes('RiskError::StalePrice')||
     (analytics.includes('evaluate(portfolio,policy,now)?')&&
     analytics.includes('MAX_STRESS_BPS')),
+  m17OrderIntentsSigned:advancedAuth.includes('HOXO-SS-M17-SANDBOX-INTENT-V1')&&
+    advancedAuth.includes('advanced_place')&&advancedAuth.includes('sandbox_tick'),
+  m17PriceOperatorRequired:advanced.includes('separately configured sandbox price operator')&&
+    matchingJournal.includes('tickSigner:this.tickSigner'),
+  m17NoRealPositions:matchingCore.includes('M8_M17_SIMULATED_MATCHES_NOT_ONCHAIN')&&
+    matchingCore.includes('executionPermitted: false'),
+  m17ConditionalOrdersDoNotSignFunds:advanced.includes('not represent a deployed M5 oracle')&&
+    matchingCore.includes('SIGNED_SANDBOX_OPERATOR_NOT_M5_ORACLE')&&
+    !matchingCore.includes('broadcastTransaction('),
+  m17ReadinessStillBlocked:registry.deployedVerified===0&&
+    app.includes('id="tradeButton" class="trade-disabled" disabled'),
 
 
 };
@@ -129,6 +144,7 @@ console.log(JSON.stringify({
   M14:"isolated keeper liquidation, prefunded insurance and potential bad-debt preview; no verified deployment, historical funding recovery or public trading",
   M15:"canonical single-asset shared reservation ledger for spot, perp and lending; not deployed or linked to M9/M11/M12 and blocked by M7 risk gate",
   M16:"M7 read-only multi-product fixed-point risk analytics, stress, exposure caps and liquidation thresholds; snapshots untrusted and authorization disabled",
+  M17:"signed sandbox limit/IOC/TP-SL, reduce-only simulated exposure and hash-chained transitions; no deployed oracle, canonical position or real execution",
  },
  invariants
 },null,2));

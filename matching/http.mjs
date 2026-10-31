@@ -82,6 +82,27 @@ export function createSandboxServer(journal, { now = Date.now, rateLimit = 60 } 
         respond(res,200,{order:journal.getOrder(orderId),onchain:false});
         return;
       }
+      if (req.method==="GET" && url.pathname==="/v1/advanced/order") {
+        const id=url.searchParams.get("orderId");
+        if(!id||id.length>130)throw Error("Invalid advanced order identifier");
+        respond(res,200,{order:journal.getAdvancedOrder(id),
+          onchain:false,settlement:"NOT_SETTLED"});
+        return;
+      }
+      if (req.method==="GET" && url.pathname==="/v1/advanced/history") {
+        const id=url.searchParams.get("orderId");
+        if(!id||id.length>130)throw Error("Invalid transition history identifier");
+        respond(res,200,{orderId:id,transitions:journal.getOrderTransitions(id),
+          onchain:false,settlement:"NOT_SETTLED"});
+        return;
+      }
+      if (req.method==="GET" && url.pathname==="/v1/advanced/position") {
+        const marketId=url.searchParams.get("marketId");
+        const owner=url.searchParams.get("owner");
+        if(!owner||!/^G[A-Z2-7]{55}$/.test(owner))throw Error("Invalid sandbox account");
+        respond(res,200,journal.getSimulatedPosition(owner,marketId));
+        return;
+      }
       if (req.method === "POST" && url.pathname === "/v1/commands") {
         // No CORS support for state-changing commands. Integration proxy needs a
         // separate audited backend with authentication/rate controls.
