@@ -221,7 +221,7 @@ test("M4 Testnet network panel verifies Horizon/RPC and never claims deployed ex
     assert.equal(await page.locator("#infraRpcStatus").innerText(),"VERIFIED");
     assert.equal(await page.locator("#infraRegistryStatus").innerText(),"REGISTRY VALID");
     assert.equal(await page.locator("#infraVerifiedContracts").innerText(),"0");
-    assert.equal(await page.locator(".infra-contract-row").count(),6);
+    assert.equal(await page.locator(".infra-contract-row").count(),7);
     assert.ok(calls.includes("getNetwork")&&calls.includes("getHealth")&&calls.includes("getLatestLedger"));
     assert.match(await page.locator("#infraOverall").innerText(),/CONTRACTS NOT DEPLOYED/);
     await page.locator("#backToTrade").click();
