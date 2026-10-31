@@ -36,7 +36,7 @@ test("testnet-only deployment manifest covers exact canonical 7 roles with safe 
     assert.equal(p.financialBetaApproved,false);
     assert.equal(p.contractId,null);
     assert.equal(p.sourceAlias,"hoxo_testnet_operator");
-    assert.ok(p.args.includes(p.wasm));
+    assert.ok(p.args.some(arg=>arg.endsWith("/"+p.wasm)));
   }
   assert.deepEqual(prepareTestnetDeployment(config,"risk-engine").args.slice(-2),["--network","testnet"]);
   const oracle=prepareTestnetDeployment(config,"oracle-adapter");
