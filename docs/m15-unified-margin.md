@@ -26,3 +26,17 @@
 Use `cargo test -p hoxo-unified-margin --lib` and `stellar contract build --package hoxo-unified-margin` with the official Stellar CLI. GitHub CI adds native Soroban tests covering cross-product oversubscription, replay, auth failures, risk denial, wrong network, role governance, paused withdrawals, double-entry settlement, token solvency and TTL renewals. These mock-controller tests do not establish operational adapter readiness.
 
 **M15 acceptance is staged:** a canonical, tested single-token account/reservation foundation is implemented; true spot/perp/lending risk-netted execution and deployment remain incomplete until linked product adapters, canonical oracle risk, signed receipts and external audit are verified.
+
+## Verified CI build — 31 October 2026
+
+[GitHub Actions run #41201917116](https://github.com/mushee-io/Hoxo-SS/actions/runs/41201917116) passed **all 7 jobs** on source commit `f940d4c9ef78fd2a424d7fbeaab041345ad7f5aa`:
+
+- **M15 Soroban unified-margin tests: 17/17 passing**, including three-role reservation reuse without double counting, adapter-specific release/settlement, invalid/duplicate reservation identifiers, missing owner/adapter signatures, source/funded-token solvency, fail-closed risk activation, pausing and withdrawals.
+- **Existing native Rust/Soroban suites: 104/104 passing**, for **121/121 total native tests**.
+- **JavaScript 91/91; Chromium 8/8**, including the 7-role undeployed Testnet registry and disabled real trade/custody buttons.
+- Live **read-only** Stellar Testnet RPC and Horizon checks passed; they do **not** verify any Hoxo contract deployment or on-chain ledger usage.
+- Official Stellar CLI v28.1.0 `stellar contract build --package hoxo-unified-margin` produced an optimized **15,960-byte WASM**.
+- WASM SHA-256: `62e672656db60daf97570e31100d2d042433fdc6bc0795d025456cbb96fe1855`
+- [Review-only M15 compiled WASM artifact](https://github.com/mushee-io/Hoxo-SS/actions/runs/41201917116/artifacts/13042892690), subject to GitHub artifact retention.
+
+**Result:** canonical reservation/settlement source and contract build verified. **Not achieved:** deployed canonical margin, approved real risk authority, protocol-specific M9/M11/M12 custody integration, cross-asset pricing and haircuts, on-chain debt/position risk netting, independently signed Testnet reservation/settlement receipts, or external security/economic audit. Do not call this a live unified-margin exchange.
