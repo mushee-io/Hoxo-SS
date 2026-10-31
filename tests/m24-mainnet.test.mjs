@@ -209,3 +209,12 @@ test("M24 incident CLI provides a tabletop drill only, never a real guardian act
   assert.equal(drill.remoteControlInvoked,false);
   assert.equal(drill.fundsMoved,false);
 });
+
+test("M24 public launch-readiness page never enables signing, trading or mainnet execution",async()=>{
+  const html=await readFile(new URL("../launch/index.html",import.meta.url),"utf8");
+  assert.match(html,/Mainnet launch is not approved/i);
+  assert.match(html,/NO-GO/);
+  assert.match(html,/12.*Independent release-control criteria/s);
+  assert.match(html,/never deposit mainnet funds/i);
+  assert.doesNotMatch(html,/signAndSend\s*\(|sendTransaction\s*\(|type=["']submit["']/);
+});
