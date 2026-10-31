@@ -67,6 +67,26 @@ pub struct PoolView {
     pub rates:Rates,
 }
 
+/// Read-only portfolio inputs projected to THIS ledger's timestamp.
+/// The lending receivable is NOMINAL book debt, NOT risk-free token cash.
+#[contracttype]
+#[derive(Clone,Debug,PartialEq,Eq)]
+pub struct ProjectedPortfolio {
+    pub asset:Address,
+    pub actual_cash_e7:i128,
+    pub accounted_cash_e7:i128,
+    pub total_shares_e7:i128,
+    pub owner_shares_e7:i128,
+    pub owner_supply_claim_e7:i128,
+    pub owner_debt_e7:i128,
+    pub total_borrowed_e7:i128,
+    pub protocol_reserves_e7:i128,
+    pub nominal_supplier_claims_e7:i128,
+    pub borrow_index_e7:i128,
+    pub as_of_sec:u64,
+    pub cash_backed:bool,
+    pub real_credit_risk_approved:bool,
+}
 #[contractevent(topics = ["hoxo_supply", "deposit"], data_format = "vec")]
 #[derive(Clone, Debug)]
 pub struct SupplyDeposited {
@@ -232,6 +252,46 @@ impl MoneyMarket {
     /// M15 custody handoffs reject ANY outstanding debt rather than
     /// pretending borrow claims can be collateralised by a second vault.
     pub fn outstanding_debt_e7(e:Env)->i128{pool(&e).borrowed_e7}
+    /// Unlike the stored principal getter, this computes ALL interest up to
+    /// this ledger, failing CLOSED if >30 days of keeper catch-up is due.
+    /// Never interpret stored zero or old principal as risk authorisation.
+    pub fn current_outstanding_debt_e7(e:Env)->Result<i128,PoolError>{
+        require_testnet(&e)?;
+        let (p,_)=compute(&e,false)?;
+        Ok(p.borrowed_e7)
+    }
+    /// One atomic, current-ledger view for independently held M11 shares
+    /// and projected debt. No share units are ever credited as M15 cash.
+    pub fn projected_portfolio(e:Env,owner:Address)->Result<ProjectedPortfolio,PoolError>{
+        require_testnet(&e)?;
+        let (p,_)=compute(&e,false)?;
+        let claim=total_assets(&p)?;
+        let held=share(&e,&owner);
+        if held<0||held>p.total_shares_e7||claim<0||p.borrowed_e7<0||
+           p.protocol_reserves_e7<0||p.cash_e7<0{
+            return Err(PoolError::AccountingMismatch);
+        }
+        if p.total_shares_e7==0&&(held!=0||claim!=0){
+            return Err(PoolError::AccountingMismatch);
+        }
+        let supplied=if p.total_shares_e7==0{0}else{
+            checked_mul(held,claim)?/p.total_shares_e7
+        };
+        let debt=owed(owner_shares(&e,&owner),p.borrow_index_e7)?;
+        let real_cash=token::TokenClient::new(&e,&asset(&e))
+            .balance(&e.current_contract_address());
+        Ok(ProjectedPortfolio{
+            asset:asset(&e),actual_cash_e7:real_cash,
+            accounted_cash_e7:p.cash_e7,total_shares_e7:p.total_shares_e7,
+            owner_shares_e7:held,owner_supply_claim_e7:supplied,
+            owner_debt_e7:debt,total_borrowed_e7:p.borrowed_e7,
+            protocol_reserves_e7:p.protocol_reserves_e7,
+            nominal_supplier_claims_e7:claim,borrow_index_e7:p.borrow_index_e7,
+            as_of_sec:e.ledger().timestamp(),
+            cash_backed:real_cash>=p.cash_e7,
+            real_credit_risk_approved:false
+        })
+    }
     pub fn admin(e:Env)->Address{admin(&e)}
     pub fn deposits_paused(e:Env)->bool{
         e.storage().instance().get(&Key::Pause).unwrap_or(true)

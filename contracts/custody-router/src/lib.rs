@@ -38,7 +38,7 @@ pub trait Margin{
 #[contractclient(name="LendingClient")]
 pub trait Lending{
     fn asset(env:Env)->Address;
-    fn outstanding_debt_e7(env:Env)->i128;
+    fn current_outstanding_debt_e7(env:Env)->i128;
     fn solvent(env:Env)->bool;
     fn supply(env:Env,owner:Address,amount_e7:i128)->i128;
     fn redeem(env:Env,owner:Address,shares_e7:i128)->i128;
@@ -152,7 +152,9 @@ fn margin_check(e:&Env,vault:&Address,asset:&Address)->Result<(),HandoffError>{
 fn ensure_lending(e:&Env,lending:&Address,asset:&Address)->Result<(),HandoffError>{
     let l=LendingClient::new(e,lending);
     if l.asset()!=*asset{return Err(HandoffError::AssetMismatch);}
-    if l.outstanding_debt_e7()!=0{return Err(HandoffError::ActiveDebt);}
+    // Interest MUST be projected to the current ledger; stale/long-unaccrued
+    // loans return an error and automatically deny the entire handoff.
+    if l.current_outstanding_debt_e7()!=0{return Err(HandoffError::ActiveDebt);}
     if !l.solvent(){return Err(HandoffError::Insolvent);}
     Ok(())
 }
