@@ -4,6 +4,7 @@
  * Never turns a ready asset checklist into trading authorization.
  */
 import {Asset,Networks,rpc} from "@stellar/stellar-sdk";
+import {createHash} from "node:crypto";
 import {isStellarGAddress} from "../app/wallet-core.mjs";
 import {isStellarContractId} from "../infra/registry.mjs";
 import {TESTNET_CONFIG,TESTNET_PASSPHRASE} from "../config/testnet.mjs";
@@ -51,36 +52,10 @@ function plainInfo(account,owner,candidate){
     usdcTrustlineAuthorized:authorized,
   });
 }
-function codeHashFromInstance(instance){
-  if(!instance)
-    throw Error("M41 deployed WASM contract instance unavailable from Stellar RPC");
-  let wasm;
-  const executable=typeof instance.executable==="function"
-    ? instance.executable():instance.executable;
-  if(executable&&typeof executable.wasmHash==="function"){
-    try{wasm=executable.wasmHash();}catch{}
-  }else if(executable&&typeof executable==="object"){
-    wasm=executable.wasmHash??executable.wasm_hash??executable.hash;
-  }
-  if(typeof wasm==="string"){
-    if(/^[a-f0-9]{64}$/i.test(wasm))return wasm.toLowerCase();
-    if(/^[A-Za-z0-9+/]{43}=$/.test(wasm)){
-      const decoded=Buffer.from(wasm,"base64");
-      if(decoded.length===32&&decoded.toString("base64")===wasm)
-        return decoded.toString("hex");
-    }
-  }
-  if(wasm&&wasm.length===32)return Buffer.from(wasm).toString("hex");
-  if(wasm&&wasm.type==="Buffer"&&Array.isArray(wasm.data)&&wasm.data.length===32)
-    return Buffer.from(wasm.data).toString("hex");
-  const shape=JSON.stringify({
-    keys:Object.keys(instance||{}),executableType:typeof instance?.executable,
-    executableKeys:executable&&typeof executable==="object"?Object.keys(executable):[],
-    wasmType:typeof wasm,wasmLength:wasm?.length,
-    wasmConstructor:wasm?.constructor?.name,
-    wasmPreview:typeof wasm==="string"?wasm.slice(0,80):null,
-  });
-  throw Error("M41 deployed contract executable could not be verified from Stellar RPC: "+shape);
+function verifiedWasmHash(bytes){
+  expect(bytes instanceof Uint8Array&&bytes.length>8&&bytes.length<10_000_000,
+    "deployed Stellar RPC WASM bytes unavailable or malformed");
+  return createHash("sha256").update(bytes).digest("hex");
 }
 async function horizonAccount(fetchImpl,address){
   const result=await fetchImpl(TESTNET_CONFIG.horizon+"/accounts/"+encodeURIComponent(address),{
@@ -102,6 +77,7 @@ export async function checkM41SpotAssetReadiness({
 }={}){
   expect(server&&typeof server.getNetwork==="function"&&
     typeof server.getContractInstance==="function"&&
+    typeof server.getContractWasmByContractId==="function"&&
     typeof server.queryContract==="function",
     "genuine Stellar RPC read-only transport required");
   expect(typeof fetchImpl==="function","Horizon transport required");
@@ -123,8 +99,12 @@ export async function checkM41SpotAssetReadiness({
   expect(network?.passphrase===Networks.TESTNET,
     "Stellar RPC endpoint returned wrong network passphrase");
   const deployed=await server.getContractInstance(candidate.spotContractId);
-  expect(codeHashFromInstance(deployed)===candidate.spotWasmSha256,
-    "deployed M9 WASM code hash does not match reviewed binary");
+  expect(Boolean(deployed),"deployed M9 instance missing on Stellar RPC");
+  // Independently hash the actual code bytes returned by RPC, not the
+  // SDK's version-dependent wrapper for the executable hash.
+  const deployedBytes=await server.getContractWasmByContractId(candidate.spotContractId);
+  expect(verifiedWasmHash(deployedBytes)===candidate.spotWasmSha256,
+    "deployed M9 WASM bytes SHA256 do not match reviewed binary");
   const [admin,paused,baseDecimals,quoteDecimals,baseAllowed,quoteAllowed]=await Promise.all([
     server.queryContract(candidate.spotContractId,"admin").then(r=>requireRead(r,"admin")),
     server.queryContract(candidate.spotContractId,"paused").then(r=>requireRead(r,"paused")),
