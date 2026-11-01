@@ -29,3 +29,33 @@ test("rejects wallet network switch and refused signature",async()=>{
  adapter.getNetwork=async()=>({networkPassphrase:TESTNET_PASSPHRASE});
  await assert.rejects(flow.approve("maker"),/denied/);assert.equal(flow.status.approvalCount,0);
 });
+
+test("blocks concurrent approvals while a Freighter prompt is outstanding",async()=>{
+ let release;
+ const wait=new Promise(resolve=>{release=resolve});
+ let calls=0;
+ const adapter={async getNetwork(){return {networkPassphrase:TESTNET_PASSPHRASE}},async getAddress(){return {address:maker}},async signAuthEntry(xdr){calls++;await wait;return {signedAuthEntry:xdr+"signed"}}};
+ const flow=createDualWalletHandoff(input,adapter);
+ const first=flow.approve("maker");
+ await assert.rejects(flow.approve("maker"),/in progress/);
+ release();
+ await first;
+ assert.equal(calls,1);
+ assert.equal(flow.status.approvalCount,1);
+});
+test("rejects wallet and network changes during signature approval without advancing",async()=>{
+ let address=maker,passphrase=TESTNET_PASSPHRASE;
+ const adapter={async getNetwork(){return {networkPassphrase:passphrase}},async getAddress(){return {address}},async signAuthEntry(){address=taker;return {signedAuthEntry:"signed"}}};
+ const flow=createDualWalletHandoff(input,adapter);
+ await assert.rejects(flow.approve("maker"),/changed during approval/);
+ assert.equal(flow.status.approvalCount,0);
+ assert.equal(flow.nextRole,"maker");
+ address=maker;
+ adapter.signAuthEntry=async()=>{passphrase="Public Global Stellar Network ; September 2015";return {signedAuthEntry:"signed"}};
+ await assert.rejects(flow.approve("maker"),/changed during approval/);
+ assert.equal(flow.status.approvalCount,0);
+ passphrase=TESTNET_PASSPHRASE;
+ adapter.signAuthEntry=async()=>({signedAuthEntry:"signed"});
+ await flow.approve("maker");
+ assert.equal(flow.status.approvalCount,1);
+});
