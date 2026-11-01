@@ -21,3 +21,7 @@ This is defense in depth, **not cryptographic authorization verification**. A ma
 ## Freighter response hardening
 
 The adapter response must be a plain own-data object containing only `signedAuthEntry` and optional `error`. Accessor-backed or symbol properties, unexpected secret fields, unbounded/malformed base64 and unchanged unsigned entries are rejected before the approval counter advances. This is a syntactic defense only: valid-looking base64 is **not** proof of a valid signature. Signed Soroban XDR, address credentials, exact invocation tree, expiry and transaction submission remain unimplemented and disabled.
+
+## M43 cross-wallet authorization replay guard
+
+The browser handoff rejects identical maker/taker *unsigned* authorization entry XDR before prompting Freighter. After a successful maker approval, it also rejects a taker adapter response whose signed XDR is byte-for-byte identical to the maker response; the taker role stays pending for an explicit retry. Tests cover duplicate input, rejected replay, and a subsequent distinct response. This is a defense against accidental cross-wallet response reuse, **not** verification of account credentials, invocation trees, signatures, expiry or match binding. Do not enable broadcast on this basis.
