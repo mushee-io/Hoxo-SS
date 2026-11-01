@@ -45,17 +45,18 @@ export function validateTestnetCodeManifest(manifest){
     err("Supply between one and "+ROLES.size+" contract proofs");
   const roles=new Set(),contracts=new Set(),txs=new Set();
   const entries=manifest.contracts.map((entry,i)=>{
-    strictObject(entry,["role","contractId","deploymentTxHash"],"contract "+i);
+    strictObject(entry,["role","contractId","deploymentTxHash","reviewedWasmSha256"],"contract "+i);
     if(!ROLES.has(entry.role)||roles.has(entry.role))
       err("Unknown or duplicate Hoxo role: "+entry.role);
     if(!isStellarContractId(entry.contractId)||contracts.has(entry.contractId))
       err("Invalid or repeated Stellar C-address for "+entry.role);
     const transactionHash=hex(entry.deploymentTxHash,"deploymentTxHash");
+    const reviewedWasmSha256=hex(entry.reviewedWasmSha256,"reviewedWasmSha256");
     if(txs.has(transactionHash))err("Duplicate deployment transaction hash");
     roles.add(entry.role);contracts.add(entry.contractId);txs.add(transactionHash);
     return Object.freeze({
       role:entry.role,contractId:entry.contractId,
-      deploymentTxHash:transactionHash,
+      deploymentTxHash:transactionHash,reviewedWasmSha256,
       wasm:ROLES.get(entry.role).wasm,
     });
   });
@@ -122,6 +123,8 @@ export async function verifyTestnetCode({
   for(const item of plan.contracts){
     const local=correctWasm(await readWasm(item.role),item.role+" local");
     const localHash=createHash("sha256").update(local).digest("hex");
+    if(localHash!==item.reviewedWasmSha256)
+      err("Local WASM differs from independently approved digest for "+item.role);
     // Client retrieves the deployed contract INSTANCE and corresponding
     // installed Wasm bytes, following the code-hash reference on-chain.
     const onchain=correctWasm(
@@ -141,6 +144,7 @@ export async function verifyTestnetCode({
       role:item.role,contractId:item.contractId,
       deploymentTxHash:item.deploymentTxHash,
       receiptLedger:tx.ledger,
+      reviewedWasmSha256:item.reviewedWasmSha256,
       localWasmSha256:localHash,onChainWasmSha256:onchainHash,
       sourceAndOnchainCodeMatch:true,
       providerReportsTransactionSuccess:true,
