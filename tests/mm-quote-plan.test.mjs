@@ -86,13 +86,14 @@ test("inventory cap protects simultaneous bid and ask without netting opposing q
 });
 test("spot price calculations use deterministic 7-decimal round-up and no crossed book",()=>{
   const q=plan({
-    referencePrice:"0.0000001",
+    referencePrice:"0.000001",
     spreadBps:11,
     sizeBase:"1",
     maxQuoteNotional:"1"
   });
-  assert.equal(q.quotes[0].price,"0.0000001");
-  assert.equal(q.quotes[1].price,"0.0000002");
+  assert.equal(q.quotes[0].price,"0.0000009");
+  assert.equal(q.quotes[1].price,"0.0000011");
+  assert.throws(()=>plan({referencePrice:"0.0000001"}),/M39 maker:/);
 });
 test("rejects malicious accessor, extra payload, symbol and missing field before use",()=>{
   const bad={...cfg};
