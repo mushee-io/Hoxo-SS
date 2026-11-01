@@ -24,13 +24,14 @@ Build the nine Hoxo WASM packages from a reviewed source revision. Create an ext
     {
       "role": "spot-settlement",
       "contractId": "C_ACTUAL_VERIFIED_STELLAR_TESTNET_CONTRACT",
-      "deploymentTxHash": "ACTUAL_64_HEX_DEPLOYMENT_TRANSACTION_HASH"
+      "deploymentTxHash": "ACTUAL_64_HEX_DEPLOYMENT_TRANSACTION_HASH",
+      "reviewedWasmSha256": "INDEPENDENTLY_APPROVED_64_HEX_WASM_SHA256"
     }
   ]
 }
 ```
 
-The placeholders above are deliberately invalid and will be rejected. You can submit one to nine roles. Duplicate contract addresses, roles or hashes are rejected. The code looks up the exact corresponding locally compiled WASM filename for each role.
+The placeholders above are deliberately invalid and will be rejected. The `reviewedWasmSha256` field is mandatory, not a digest generated or inferred by the verifier. Pin it from an independently reviewed reproducible release artifact before collecting deployment evidence. You can submit one to nine roles. Duplicate contract addresses, roles or hashes are rejected. The code looks up the exact corresponding locally compiled WASM filename for each role.
 
 ```sh
 npm ci
