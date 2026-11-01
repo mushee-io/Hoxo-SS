@@ -156,9 +156,10 @@ impl CollateralVault {
 #[cfg(test)]
 mod tests{
     use super::*;
-    use soroban_sdk::testutils::Address as _;
+    use soroban_sdk::testutils::{Address as _,Ledger as _};
     fn setup()->(Env,Address,Address,Address,Address){
         let e=Env::default();
+        e.ledger().set_network_id(TESTNET_NETWORK_ID);
         e.mock_all_auths();
         let administrator=Address::generate(&e);
         let alice=Address::generate(&e);
@@ -173,8 +174,17 @@ mod tests{
         (e,vault,asset,alice,bob)
     }
     #[test]
+    fn wrong_network_is_denied_before_deployment(){
+        let e=Env::default();
+        // A zero-network mock must never be mistaken for Stellar Testnet.
+        assert_eq!(verify_testnet(&e),Err(VaultError::WrongNetwork));
+        e.ledger().set_network_id(TESTNET_NETWORK_ID);
+        assert_eq!(verify_testnet(&e),Ok(()));
+    }
+    #[test]
     fn constructor_starts_paused_and_cannot_accept_deposits_until_admin_unpauses(){
         let e=Env::default();
+        e.ledger().set_network_id(TESTNET_NETWORK_ID);
         e.mock_all_auths();
         let administrator=Address::generate(&e);
         let alice=Address::generate(&e);
