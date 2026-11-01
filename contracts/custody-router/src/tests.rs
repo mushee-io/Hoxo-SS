@@ -392,3 +392,147 @@ fn m12_genuine_local_open_position_blocks_custody_routing_and_locked_exits(){
     assert_eq!(r.perp_to_margin(&f.buyer,&(10*UNIT)).tokens_e7,10*UNIT);
     assert!(m.solvent()&&p.solvent());
 }
+
+
+fn seed_existing_debt(f:&Fixtures,amount:i128,supply:i128){
+    f.open();
+    // ONLY native test fixture: deliberately permissive loan authority.
+    // The production M7 risk authority remains hard-disabled for credit.
+    let risk=f.e.register(TestOnlyBorrowAllowRisk,());
+    let l=f.l();
+    l.set_risk_authority(&risk);
+    l.set_borrow_policy(&(100*UNIT),&9000u32,&1000u32,&true);
+    let supplied=f.r().supply_from_margin(&f.buyer,&supply);
+    assert_eq!(supplied.tokens_e7,supply);
+    assert!(l.borrow(&f.buyer,&amount)>=amount);
+}
+
+#[test]
+fn m38_owner_signed_free_margin_pays_existing_m11_debt_with_actual_atomic_token_transfers(){
+    let f=Fixtures::new();
+    seed_existing_debt(&f,5*UNIT,100*UNIT);
+    let m=f.m();let l=f.l();let r=f.r();let t=f.quote();
+    // Repayment remains legal after credit origination has been paused.
+    l.set_borrow_policy(&(100*UNIT),&9000u32,&1000u32,&false);
+    let initial_wallet=t.balance(&f.buyer);
+    let old_claims=m.totals().user_claims_e7;
+    let old_vault=t.balance(&f.vault);
+    let old_lending=t.balance(&f.lending);
+    let old_market=l.current_outstanding_debt_e7();
+    let receipt=r.repay_debt_from_margin(&f.buyer,&(5*UNIT));
+    assert_eq!(receipt.owner,f.buyer);
+    assert_eq!(receipt.asset,f.asset);
+    assert_eq!(receipt.source,f.vault);
+    assert_eq!(receipt.destination,f.lending);
+    assert_eq!(receipt.paid_e7,5*UNIT);
+    assert_eq!(receipt.owner_debt_before_e7,5*UNIT);
+    assert_eq!(receipt.owner_debt_after_e7,0);
+    assert_eq!(receipt.market_debt_after_e7,0);
+    assert!(receipt.owner_authorized);
+    assert!(!receipt.liquidation_executed);
+    assert_eq!(t.balance(&f.buyer),initial_wallet);
+    assert_eq!(m.totals().user_claims_e7,old_claims-5*UNIT);
+    assert_eq!(m.account(&f.buyer).available_e7,95*UNIT);
+    assert_eq!(t.balance(&f.vault),old_vault-5*UNIT);
+    assert_eq!(t.balance(&f.lending),old_lending+5*UNIT);
+    assert_eq!(l.current_outstanding_debt_e7(),old_market-5*UNIT);
+    assert_eq!(l.debt_of(&f.buyer),0);
+    assert!(l.solvent()&&m.solvent());
+    assert!(r.try_repay_debt_from_margin(&f.buyer,&UNIT).is_err());
+}
+
+#[test]
+fn m38_owner_debt_repayment_supports_exact_partial_then_full_and_rejects_overpayment(){
+    let f=Fixtures::new();
+    seed_existing_debt(&f,7*UNIT,100*UNIT);
+    let r=f.r();let l=f.l();let m=f.m();let t=f.quote();
+    let wallet=t.balance(&f.buyer);
+    let a=r.repay_debt_from_margin(&f.buyer,&(3*UNIT));
+    assert_eq!(a.paid_e7,3*UNIT);
+    assert_eq!(a.owner_debt_after_e7,4*UNIT);
+    assert_eq!(l.debt_of(&f.buyer),4*UNIT);
+    assert_eq!(m.account(&f.buyer).available_e7,97*UNIT);
+    assert!(r.try_repay_debt_from_margin(&f.buyer,&(5*UNIT)).is_err());
+    assert_eq!(m.account(&f.buyer).available_e7,97*UNIT);
+    assert_eq!(l.debt_of(&f.buyer),4*UNIT);
+    let b=r.repay_debt_from_margin(&f.buyer,&(4*UNIT));
+    assert_eq!(b.paid_e7,4*UNIT);
+    assert_eq!(b.owner_debt_after_e7,0);
+    assert_eq!(t.balance(&f.buyer),wallet);
+    assert!(m.solvent()&&l.solvent());
+}
+
+#[test]
+fn m38_no_debt_no_margin_and_no_signer_do_not_move_tokens_or_reduce_claims(){
+    let f=Fixtures::new();
+    seed_existing_debt(&f,5*UNIT,100*UNIT);
+    let r=f.r();let l=f.l();let m=f.m();let t=f.quote();
+    let old_claims=m.totals().user_claims_e7;
+    let old_vault=t.balance(&f.vault);
+    let old_lending=t.balance(&f.lending);
+    let old_debt=l.debt_of(&f.buyer);
+    assert!(r.try_repay_debt_from_margin(&f.seller,&UNIT).is_err());
+    assert!(r.try_repay_debt_from_margin(&f.buyer,&0).is_err());
+    assert!(r.try_repay_debt_from_margin(&f.buyer,&(-1)).is_err());
+    assert!(r.try_repay_debt_from_margin(&f.buyer,&(6*UNIT)).is_err());
+    f.e.set_auths(&[]);
+    assert!(r.try_repay_debt_from_margin(&f.buyer,&UNIT).is_err());
+    assert_eq!(m.totals().user_claims_e7,old_claims);
+    assert_eq!(t.balance(&f.vault),old_vault);
+    assert_eq!(t.balance(&f.lending),old_lending);
+    assert_eq!(l.debt_of(&f.buyer),old_debt);
+}
+
+#[test]
+fn m38_insufficient_free_margin_fails_atomically_without_trapping_direct_repayment(){
+    let f=Fixtures::new();
+    seed_existing_debt(&f,5*UNIT,200*UNIT);
+    let r=f.r();let l=f.l();let m=f.m();let t=f.quote();
+    assert_eq!(m.account(&f.buyer).available_e7,0);
+    let old_claims=m.totals().user_claims_e7;
+    let old_pool=l.pool().cash_e7;
+    let old_wallet=t.balance(&f.buyer);
+    assert!(r.try_repay_debt_from_margin(&f.buyer,&(5*UNIT)).is_err());
+    assert_eq!(m.totals().user_claims_e7,old_claims);
+    assert_eq!(l.pool().cash_e7,old_pool);
+    assert_eq!(t.balance(&f.buyer),old_wallet);
+    assert_eq!(l.debt_of(&f.buyer),5*UNIT);
+    // Owner can still repay directly from their wallet even with no M15 free.
+    assert_eq!(l.repay(&f.buyer,&f.buyer,&(5*UNIT)),5*UNIT);
+    assert_eq!(l.debt_of(&f.buyer),0);
+}
+
+#[test]
+fn m38_repayment_is_denied_when_router_paused_but_owner_can_still_exit_and_repay(){
+    let f=Fixtures::new();
+    seed_existing_debt(&f,5*UNIT,100*UNIT);
+    let r=f.r();let l=f.l();let m=f.m();let t=f.quote();
+    r.pause(&true);
+    assert!(r.try_repay_debt_from_margin(&f.buyer,&(5*UNIT)).is_err());
+    let old_debt=l.debt_of(&f.buyer);
+    let old_wallet=t.balance(&f.buyer);
+    m.withdraw(&f.buyer,&(5*UNIT)); // free M15 exits even if router paused
+    assert_eq!(l.repay(&f.buyer,&f.buyer,&(5*UNIT)),5*UNIT);
+    assert_eq!(l.debt_of(&f.buyer),0);
+    assert_eq!(old_debt,5*UNIT);
+    assert_eq!(t.balance(&f.buyer),old_wallet);
+}
+
+#[test]
+fn m38_repayment_accrues_real_m11_interest_and_moves_exact_amount(){
+    let f=Fixtures::new();
+    seed_existing_debt(&f,5*UNIT,100*UNIT);
+    f.e.ledger().with_mut(|l|l.timestamp+=7*86_400);
+    let l=f.l();let m=f.m();let r=f.r();let t=f.quote();
+    let due=l.debt_of(&f.buyer);
+    assert!(due>5*UNIT);
+    let wallet=t.balance(&f.buyer);
+    let pre_claims=m.totals().user_claims_e7;
+    let paid=r.repay_debt_from_margin(&f.buyer,&due);
+    assert_eq!(paid.paid_e7,due);
+    assert_eq!(paid.owner_debt_after_e7,0);
+    assert_eq!(m.totals().user_claims_e7,pre_claims-due);
+    assert_eq!(t.balance(&f.buyer),wallet);
+    assert_eq!(l.debt_of(&f.buyer),0);
+    assert!(m.solvent()&&l.solvent());
+}
