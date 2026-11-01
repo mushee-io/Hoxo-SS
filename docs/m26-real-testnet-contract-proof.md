@@ -49,3 +49,7 @@ Files must be regular, bounded non-symlink WASM artifacts with correct headers. 
 5. Independent smart-contract/economic security audit and explicitly approved risk, user beta and mainnet release gates. Shared M15 borrowing against M11 debt or M12 perpetual positions is still not authorised by canonical on-chain risk.
 
 **Current launch determination: public financial Testnet beta CLOSED, mainnet NO-GO.**
+
+## M27 reviewed WASM digest pin
+
+The operator-provided M26 verification manifest now **requires** `reviewedWasmSha256` (64 hexadecimal characters) on every contract entry, alongside `role`, `contractId`, and `deploymentTxHash`. Obtain this hash independently from the reviewed, reproducible release artifact **before** running the verifier. The verifier rejects local WASM that differs from this pinned digest, even when the installed on-chain bytes match a substituted local file. A locally computed digest alone is not independent audit approval. It still does not prove transaction-to-contract creation linkage, constructor parameters, or trading readiness.
