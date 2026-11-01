@@ -1,11 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import {createHash} from "node:crypto";
 import {Asset,Networks} from "@stellar/stellar-sdk";
 import {
   M41_SPOT_CANDIDATE,checkM41SpotAssetReadiness
 } from "../activation/m41-spot-asset-readiness.mjs";
 
-const p=M41_SPOT_CANDIDATE;
+const MOCK_WASM=Buffer.from([0,97,115,109,1,0,0,0,3,2,1,0,0,0,1,2]);
+const p={...M41_SPOT_CANDIDATE,
+  spotWasmSha256:createHash("sha256").update(MOCK_WASM).digest("hex")};
 function account(id,{xlm="10.0000000",quote="0.0000000",trust=false,authorized=true}={}){
   return {account_id:id,balances:[
     {asset_type:"native",balance:xlm},
@@ -19,7 +22,7 @@ function lab({
     [p.spotOwner]:account(p.spotOwner),
     [p.otherTrader]:account(p.otherTrader),
   },
-  wasm=p.spotWasmSha256,passphrase=Networks.TESTNET
+  wasm=MOCK_WASM,passphrase=Networks.TESTNET
 }={}){
   const query=async(contract,method,args)=>{
     if(contract===p.spotContractId&&method==="admin")return owner;
@@ -34,15 +37,15 @@ function lab({
   };
   const server={
     getNetwork:async()=>({passphrase}),
-    getContractInstance:async()=>
-      ({executable:()=>({wasmHash:()=>Buffer.from(wasm,"hex")})}),
+    getContractInstance:async()=>({executable:{type:"wasm"}}),
+    getContractWasmByContractId:async()=>wasm,
     queryContract:async(...args)=>({isReadCall:true,result:await query(...args)})
   };
   const fetchImpl=async(url)=>{
     const addr=url.split("/").at(-1);
     return {ok:Object.hasOwn(accounts,addr),json:async()=>accounts[addr]};
   };
-  return {server,fetchImpl};
+  return {server,fetchImpl,candidate:p};
 }
 test("M41 derives both native XLM and issued USDC SACs from canonical SDK Testnet",()=>{
   assert.equal(Asset.native().contractId(Networks.TESTNET),p.baseSac);
@@ -83,7 +86,7 @@ test("even with trustlines, real USDC funding, signed approvals and unpause, M41
 });
 test("fail closed on mismatched owner, wrong network, altered WASM, wrong decimals, unsafe RPC responses",async()=>{
   const wrong=[{owner:p.otherTrader},{passphrase:"Public Global Stellar Network ; September 2015"},
-    {wasm:"0".repeat(64)},{baseDecimals:6},{quoteDecimals:18}];
+    {wasm:Buffer.from("fakewasm")},{baseDecimals:6},{quoteDecimals:18}];
   for(const opts of wrong){
     await assert.rejects(()=>checkM41SpotAssetReadiness(lab(opts)),/M41/);
   }
