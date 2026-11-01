@@ -2,7 +2,14 @@
 //! M6: isolated Testnet collateral vault. Not linked to risk or settlement.
 //! Owner approves transfers. Admin can only allow assets or pause deposits.
 //! Stored balances carry a TTL; keepalive operations are required.
-use soroban_sdk::{contract, contracterror, contractimpl, contracttype, token, Address, Env};
+use soroban_sdk::{contract, contracterror, contractimpl, contracttype, token, Address, BytesN, Env};
+// SHA256("Test SDF Network ; September 2015"). Reject all other networks at deployment.
+const TESTNET_NETWORK_ID:[u8;32]=[
+    0xce,0xe0,0x30,0x2d,0x59,0x84,0x4d,0x32,
+    0xbd,0xca,0x91,0x5c,0x82,0x03,0xdd,0x44,
+    0xb3,0x3f,0xbb,0x7e,0xdc,0x19,0x05,0x1e,
+    0xa3,0x7a,0xbe,0xdf,0x28,0xec,0xd4,0x72,
+];
 const THRESHOLD:u32=100_000;
 const TARGET:u32=400_000;
 #[contracttype]
@@ -13,7 +20,12 @@ pub enum Key { Admin, Pause, Allowed(Address), Balance(Address,Address), Total(A
 #[repr(u32)]
 pub enum VaultError {
     InvalidAmount=1, Paused=2, UnapprovedAsset=3,
-    Insufficient=4, Overflow=5, Insolvent=6,
+    Insufficient=4, Overflow=5, Insolvent=6, WrongNetwork=7,
+}
+fn verify_testnet(e:&Env)->Result<(),VaultError>{
+    if e.ledger().network_id()!=BytesN::<32>::from_array(e,&TESTNET_NETWORK_ID){
+        Err(VaultError::WrongNetwork)
+    }else{Ok(())}
 }
 fn renew(e:&Env){e.storage().instance().extend_ttl(THRESHOLD,TARGET);}
 fn admin(e:&Env)->Address {e.storage().instance().get(&Key::Admin).expect("constructor required")}
@@ -42,9 +54,13 @@ pub struct CollateralVault;
 impl CollateralVault {
     // Constructor executes atomically at deployment, preventing init race.
     pub fn __constructor(e:Env,owner:Address){
+        if verify_testnet(&e).is_err(){
+            panic!("HOXO M6 collateral vault requires Stellar Testnet");
+        }
         owner.require_auth();
         e.storage().instance().set(&Key::Admin,&owner);
-        e.storage().instance().set(&Key::Pause,&false);
+        // All deposit paths remain disabled until an authorised admin review.
+        e.storage().instance().set(&Key::Pause,&true);
         renew(&e);
     }
     pub fn admin(e:Env)->Address{admin(&e)}
@@ -148,11 +164,35 @@ mod tests{
         let alice=Address::generate(&e);
         let bob=Address::generate(&e);
         let vault=e.register(CollateralVault,(&administrator,));
+        // Older balance/withdrawal tests explicitly opt into deposits.
+        CollateralVaultClient::new(&e,&vault).pause(&false);
         let asset=e.register_stellar_asset_contract_v2(administrator.clone()).address();
         let mint=token::StellarAssetClient::new(&e,&asset);
         mint.mint(&alice,&1000);
         mint.mint(&bob,&200);
         (e,vault,asset,alice,bob)
+    }
+    #[test]
+    fn constructor_starts_paused_and_cannot_accept_deposits_until_admin_unpauses(){
+        let e=Env::default();
+        e.mock_all_auths();
+        let administrator=Address::generate(&e);
+        let alice=Address::generate(&e);
+        let id=e.register(CollateralVault,(&administrator,));
+        let asset=e.register_stellar_asset_contract_v2(administrator).address();
+        let token=token::TokenClient::new(&e,&asset);
+        token::StellarAssetClient::new(&e,&asset).mint(&alice,&100);
+        let vault=CollateralVaultClient::new(&e,&id);
+        assert!(vault.deposits_paused());
+        vault.set_asset(&asset,&true);
+        assert!(vault.try_deposit(&alice,&asset,&25).is_err());
+        assert_eq!(token.balance(&id),0);
+        vault.pause(&false);
+        assert_eq!(vault.deposit(&alice,&asset,&25),25);
+        vault.pause(&true);
+        assert!(vault.try_deposit(&alice,&asset,&1).is_err());
+        assert_eq!(vault.withdraw(&alice,&asset,&25),0);
+        assert_eq!(token.balance(&id),0);
     }
     #[test]
     fn deposits_two_users_and_withdraws_without_cross_account_leak(){
