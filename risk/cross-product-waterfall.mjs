@@ -4,9 +4,12 @@
  * non-negative integer units of the SAME canonical token (e7).
  * Never accepts unrealised PnL, nominal loan receivables, or other assets.
  */
+// Soroban token amounts and contract arithmetic use signed i128. Reject
+// out-of-range reference inputs before any downstream on-chain translation.
+export const MAX_I128 = (1n << 127n) - 1n;
 function units(value, name) {
-  if (typeof value !== "bigint" || value < 0n) {
-    throw new TypeError(name + " must be a non-negative bigint in e7 units");
+  if (typeof value !== "bigint" || value < 0n || value > MAX_I128) {
+    throw new TypeError(name + " must be a non-negative bigint within Soroban i128 range in e7 units");
   }
   return value;
 }
