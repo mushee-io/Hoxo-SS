@@ -62,11 +62,23 @@ function codeHashFromInstance(instance){
   }else if(executable&&typeof executable==="object"){
     wasm=executable.wasmHash??executable.wasm_hash??executable.hash;
   }
-  if(typeof wasm==="string"&&/^[a-f0-9]{64}$/i.test(wasm))return wasm.toLowerCase();
+  if(typeof wasm==="string"){
+    if(/^[a-f0-9]{64}$/i.test(wasm))return wasm.toLowerCase();
+    if(/^[A-Za-z0-9+/]{43}=$/.test(wasm)){
+      const decoded=Buffer.from(wasm,"base64");
+      if(decoded.length===32&&decoded.toString("base64")===wasm)
+        return decoded.toString("hex");
+    }
+  }
   if(wasm&&wasm.length===32)return Buffer.from(wasm).toString("hex");
+  if(wasm&&wasm.type==="Buffer"&&Array.isArray(wasm.data)&&wasm.data.length===32)
+    return Buffer.from(wasm.data).toString("hex");
   const shape=JSON.stringify({
     keys:Object.keys(instance||{}),executableType:typeof instance?.executable,
     executableKeys:executable&&typeof executable==="object"?Object.keys(executable):[],
+    wasmType:typeof wasm,wasmLength:wasm?.length,
+    wasmConstructor:wasm?.constructor?.name,
+    wasmPreview:typeof wasm==="string"?wasm.slice(0,80):null,
   });
   throw Error("M41 deployed contract executable could not be verified from Stellar RPC: "+shape);
 }
