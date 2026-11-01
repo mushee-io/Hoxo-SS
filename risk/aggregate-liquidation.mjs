@@ -49,7 +49,12 @@ export function previewAggregateLiquidations(positions, insuranceAvailableE7) {
       ["insuranceUsedE7", r.insuranceUsedE7],
       ["lenderShortfallE7", r.lenderShortfallE7],
       ["borrowerSurplusE7", r.borrowerSurplusE7]
-    ]) totals[field] += value;
+    ]) {
+      const next = totals[field] + value;
+      if (next > MAX_I128)
+        throw new RangeError(`aggregate ${field} exceeds Soroban signed i128 maximum`);
+      totals[field] = next;
+    }
     results.push(Object.freeze({ id, ...r }));
   }
   if (totals.insuranceUsedE7 + remaining !== insuranceAvailableE7 ||
