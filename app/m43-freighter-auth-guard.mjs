@@ -35,11 +35,15 @@ export function createDualWalletHandoff(input,freighter){
   const terms=validateDualWalletHandoff(input);
   if(!freighter||typeof freighter.getAddress!=="function"||typeof freighter.getNetwork!=="function"||typeof freighter.signAuthEntry!=="function")fail("reviewed Freighter adapter required");
   let next="maker";
+  let pending=false;
   const signatures=Object.create(null);
   return Object.freeze({
     get nextRole(){return next;},
     async approve(role){
       if(role!==next||!(role==="maker"||role==="taker"))fail("approval out of order or already completed");
+      if(pending)fail("approval already in progress");
+      pending=true;
+      try {
       const expected=terms[role];
       const network=await freighter.getNetwork();
       if(!network||network.networkPassphrase!==TESTNET_PASSPHRASE)fail("wallet must be on Testnet");
@@ -49,9 +53,14 @@ export function createDualWalletHandoff(input,freighter){
       if(!result||typeof result.signedAuthEntry!=="string"||!result.signedAuthEntry.length||result.error)fail("Freighter authorization not returned");
       // Never assume signedAuthEntry proves the signature: caller must independently
       // verify its decoded Soroban credentials, invocation tree and expiry.
+      // Reject account/network changes while the user was reviewing the prompt.
+      const finalNetwork=await freighter.getNetwork();
+      const finalAccount=await freighter.getAddress();
+      if(!finalNetwork||finalNetwork.networkPassphrase!==TESTNET_PASSPHRASE||!finalAccount||finalAccount.address!==expected)fail("wallet or network changed during approval");
       signatures[role]=result.signedAuthEntry;
       next=role==="maker"?"taker":null;
       return Object.freeze({role,publicAddress:expected,signedAuthEntry:result.signedAuthEntry,verified:false,broadcast:false});
+      } finally { pending=false; }
     },
     get status(){return Object.freeze({nextRole:next,approvalCount:Object.keys(signatures).length,verified:false,broadcast:false});}
   });
