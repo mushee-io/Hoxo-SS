@@ -23,6 +23,7 @@ export function validateDualWalletHandoff(input){
     const xdr=input[role+"AuthXdr"];
     if(typeof xdr!=="string"||xdr.length<12||xdr.length>16384||!/^[A-Za-z0-9+/]+={0,2}$/.test(xdr))fail("invalid auth entry XDR");
   }
+  if(input.makerAuthXdr===input.takerAuthXdr)fail("distinct wallet authorization entries required");
   return Object.freeze({networkPassphrase:input.networkPassphrase,contractId:input.contractId,maker:input.maker,taker:input.taker,makerAuthXdr:input.makerAuthXdr,takerAuthXdr:input.takerAuthXdr,matchId:input.matchId});
 }
 /**
@@ -56,6 +57,7 @@ export function createDualWalletHandoff(input,freighter){
       for(const k of keys){const d=Object.getOwnPropertyDescriptor(result,k);if(!d||!("value" in d))fail("Freighter result accessors prohibited");}
       const signed=result.signedAuthEntry;
       if(result.error!==undefined||typeof signed!=="string"||signed.length<12||signed.length>16384||!/^[A-Za-z0-9+/]+={0,2}$/.test(signed)||signed===terms[role+"AuthXdr"])fail("valid signed authorization entry not returned");
+      if(role==="taker"&&signed===signatures.maker)fail("duplicate maker/taker signed authorization entry");
       // Never assume signedAuthEntry proves the signature: caller must independently
       // verify its decoded Soroban credentials, invocation tree and expiry.
       // Reject account/network changes while the user was reviewing the prompt.
