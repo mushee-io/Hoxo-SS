@@ -19,7 +19,7 @@ export function previewAggregateLiquidations(positions, insuranceAvailableE7) {
     liquidationCostsUnfundedE7: 0n, debtPaidFromCollateralE7: 0n,
     insuranceUsedE7: 0n, lenderShortfallE7: 0n, borrowerSurplusE7: 0n
   };
-  const results = [];
+  const validated = [];
   for (const position of positions) {
     if (position === null || typeof position !== "object" ||
         Array.isArray(position) || Object.getPrototypeOf(position) !== Object.prototype)
@@ -35,6 +35,13 @@ export function previewAggregateLiquidations(positions, insuranceAvailableE7) {
     if (typeof id !== "string" || !/^[a-zA-Z0-9_-]{1,64}$/.test(id) || seen.has(id))
       throw new TypeError("position id must be unique and ASCII-safe");
     seen.add(id);
+    validated.push({ id, accruedDebtE7, realisedSeizedCollateralE7, liquidationCostE7 });
+  }
+  // Canonical bytewise ASCII order prevents caller-controlled batch permutations
+  // from changing which debt receives the limited insurance allocation.
+  validated.sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+  const results = [];
+  for (const { id, accruedDebtE7, realisedSeizedCollateralE7, liquidationCostE7 } of validated) {
     const r = previewDebtWaterfall({
       accruedDebtE7, realisedSeizedCollateralE7, liquidationCostE7,
       insuranceAvailableE7: remaining
@@ -66,7 +73,7 @@ export function previewAggregateLiquidations(positions, insuranceAvailableE7) {
     totals: Object.freeze(totals),
     insuranceRemainingE7: remaining,
     insuranceInitiallyAvailableE7: insuranceAvailableE7,
-    ordering: "input-order; not a keeper priority or fairness policy",
+    ordering: "canonical ASCII position-id ascending; not an approved keeper eligibility or fairness policy",
     executable: false, riskApproved: false, tradingEnabled: false
   });
 }

@@ -49,3 +49,19 @@ test("rejects aggregate i128 overflow even when every individual position is val
  assert.equal(within.totals.debtE7,max);
  assert.equal(within.executable,false);
 });
+
+test("insurance allocation is invariant to caller-supplied batch order", () => {
+ const positions=[p("z",100n,0n),p("A",100n,0n),p("a",100n,0n)];
+ const forward=preview(positions,125n);
+ const reverse=preview([...positions].reverse(),125n);
+ assert.deepEqual(forward,reverse);
+ assert.deepEqual(forward.positions.map(x=>[x.id,x.insuranceUsedE7]),[
+  ["A",100n],["a",25n],["z",0n]
+ ]);
+ assert.match(forward.ordering,/canonical ASCII/);
+});
+test("rejects invalid late records before any allocation output",()=>{
+ const positions=[p("z",10n,0n),p("a",10n,0n)];
+ Object.defineProperty(positions[1],"liquidationCostE7",{get(){throw Error("must not execute")}});
+ assert.throws(()=>preview(positions,10n),/data properties/);
+});
