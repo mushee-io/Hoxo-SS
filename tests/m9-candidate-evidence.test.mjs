@@ -41,3 +41,15 @@ test("candidate rejects mainnet, forged fields, inconsistent ledgers and hash",(
   for(const change of changes)assert.throws(()=>inspectM9Candidate({...candidate,...change}));
   assert.throws(()=>inspectM9Candidate({...candidate,privateKey:"S_DO_NOT_ACCEPT"}));
 });
+
+test("candidate rejects getters without executing them, symbols and inherited fields",()=>{
+  let calls=0;
+  const hostile={...candidate};
+  Object.defineProperty(hostile,"owner",{enumerable:true,get(){calls++;throw Error("executed getter");}});
+  assert.throws(()=>inspectM9Candidate(hostile),/exact public evidence schema/);
+  assert.equal(calls,0);
+  const symbolInput={...candidate,[Symbol("hidden")]:true};
+  assert.throws(()=>inspectM9Candidate(symbolInput),/exact public evidence schema/);
+  const inherited=Object.create({...candidate});
+  assert.throws(()=>inspectM9Candidate(inherited),/exact public evidence schema/);
+});
