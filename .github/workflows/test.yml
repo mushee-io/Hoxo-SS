@@ -13,6 +13,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Install pinned official Stellar SDK for M41 SAC derivation tests
+        run: npm install --no-audit --no-fund
       - run: npm test
       - name: Verify M1-M8 safety gates
         run: npm run check:readiness
