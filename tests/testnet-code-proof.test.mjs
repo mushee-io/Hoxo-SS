@@ -62,6 +62,8 @@ test("read-only proof validates real Hoxo source inventory and refuses unknown o
     manifest([{role:"spot-settlement",contractId:"CCNOTREAL",deploymentTxHash:A}]),
     manifest([{role:"spot-settlement",contractId:address(10),deploymentTxHash:"g".repeat(64)}]),
     {...manifest(),operatorPrivateSeed:"NOT_ALLOWED"},
+    {...manifest(),contracts:[{role:"spot-settlement",contractId:address(10),deploymentTxHash:A}]},
+    {...manifest(),contracts:[{...manifest().contracts[0],reviewedWasmSha256:null}]},
     manifest([{role:"spot-settlement",contractId:address(10),deploymentTxHash:A,reviewedWasmSha256:"not-a-hash"}])
   ])assert.throws(()=>validateTestnetCodeManifest(bad));
 });
