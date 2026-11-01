@@ -12,7 +12,7 @@ test("fail closed on mainnet, same-wallet, injected accessors and secret fields"
 });
 test("requires sequential, explicit distinct-wallet Freighter approvals and never broadcasts",async()=>{
  let current=maker,calls=0;
- const adapter={async getNetwork(){return {networkPassphrase:TESTNET_PASSPHRASE}},async getAddress(){return {address:current}},async signAuthEntry(xdr){calls++;return {signedAuthEntry:xdr+"QUJDREVGR0hJSktM"}}};
+ const adapter={async getNetwork(){return {networkPassphrase:TESTNET_PASSPHRASE}},async getAddress(){return {address:current}},async signAuthEntry(xdr){calls++;return {signedAuthEntry:"RkZGRkZGRkZGRkZG"}}};
  const flow=createDualWalletHandoff(input,adapter);
  await assert.rejects(flow.approve("taker"),/out of order/);
  const first=await flow.approve("maker");assert.equal(first.broadcast,false);assert.equal(first.verified,false);
@@ -34,7 +34,7 @@ test("blocks concurrent approvals while a Freighter prompt is outstanding",async
  let release;
  const wait=new Promise(resolve=>{release=resolve});
  let calls=0;
- const adapter={async getNetwork(){return {networkPassphrase:TESTNET_PASSPHRASE}},async getAddress(){return {address:maker}},async signAuthEntry(xdr){calls++;await wait;return {signedAuthEntry:xdr+"QUJDREVGR0hJSktM"}}};
+ const adapter={async getNetwork(){return {networkPassphrase:TESTNET_PASSPHRASE}},async getAddress(){return {address:maker}},async signAuthEntry(xdr){calls++;await wait;return {signedAuthEntry:"RkZGRkZGRkZGRkZG"}}};
  const flow=createDualWalletHandoff(input,adapter);
  const first=flow.approve("maker");
  await assert.rejects(flow.approve("maker"),/in progress/);
@@ -45,31 +45,31 @@ test("blocks concurrent approvals while a Freighter prompt is outstanding",async
 });
 test("rejects wallet and network changes during signature approval without advancing",async()=>{
  let address=maker,passphrase=TESTNET_PASSPHRASE;
- const adapter={async getNetwork(){return {networkPassphrase:passphrase}},async getAddress(){return {address}},async signAuthEntry(){address=taker;return {signedAuthEntry:"QUJDREVGR0hJSktM"}}};
+ const adapter={async getNetwork(){return {networkPassphrase:passphrase}},async getAddress(){return {address}},async signAuthEntry(){address=taker;return {signedAuthEntry:"RkZGRkZGRkZGRkZG"}}};
  const flow=createDualWalletHandoff(input,adapter);
  await assert.rejects(flow.approve("maker"),/changed during approval/);
  assert.equal(flow.status.approvalCount,0);
  assert.equal(flow.nextRole,"maker");
  address=maker;
- adapter.signAuthEntry=async()=>{passphrase="Public Global Stellar Network ; September 2015";return {signedAuthEntry:"QUJDREVGR0hJSktM"}};
+ adapter.signAuthEntry=async()=>{passphrase="Public Global Stellar Network ; September 2015";return {signedAuthEntry:"RkZGRkZGRkZGRkZG"}};
  await assert.rejects(flow.approve("maker"),/changed during approval/);
  assert.equal(flow.status.approvalCount,0);
  passphrase=TESTNET_PASSPHRASE;
- adapter.signAuthEntry=async()=>({signedAuthEntry:"QUJDREVGR0hJSktM"});
+ adapter.signAuthEntry=async()=>({signedAuthEntry:"RkZGRkZGRkZGRkZG"});
  await flow.approve("maker");
  assert.equal(flow.status.approvalCount,1);
 });
 
 test("rejects hostile Freighter responses without executing accessors or advancing",async()=>{
- let response={signedAuthEntry:"QUJDREVGR0hJSktM"};
+ let response={signedAuthEntry:"RkZGRkZGRkZGRkZG"};
  const adapter={async getNetwork(){return {networkPassphrase:TESTNET_PASSPHRASE}},async getAddress(){return {address:maker}},async signAuthEntry(){return response}};
  const flow=createDualWalletHandoff(input,adapter);
  let accessed=false;response={};Object.defineProperty(response,"signedAuthEntry",{enumerable:true,get(){accessed=true;throw Error("getter executed")}});
  await assert.rejects(flow.approve("maker"),/accessors prohibited/);assert.equal(accessed,false);assert.equal(flow.status.approvalCount,0);
  response={signedAuthEntry:input.makerAuthXdr};
  await assert.rejects(flow.approve("maker"),/valid signed/);
- response={signedAuthEntry:"QUJDREVGR0hJSktM",secret:"SSECRET"};
+ response={signedAuthEntry:"RkZGRkZGRkZGRkZG",secret:"SSECRET"};
  await assert.rejects(flow.approve("maker"),/unexpected Freighter/);
- response={signedAuthEntry:"QUJDREVGR0hJSktM"};
+ response={signedAuthEntry:"RkZGRkZGRkZGRkZG"};
  const accepted=await flow.approve("maker");assert.equal(accepted.verified,false);assert.equal(accepted.broadcast,false);
 });
