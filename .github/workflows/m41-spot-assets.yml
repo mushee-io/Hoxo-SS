@@ -28,8 +28,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: "npm"
-      - run: npm ci
+      - run: npm install --no-audit --no-fund
       - name: M41 adversarial network and trustline tests
         run: npm run test:m41
       - name: Live Stellar Testnet (READ ONLY — no keys, no signing, no deployment)
