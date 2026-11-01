@@ -39,6 +39,8 @@ pub trait Margin{
 pub trait Lending{
     fn asset(env:Env)->Address;
     fn current_outstanding_debt_e7(env:Env)->i128;
+    fn debt_of(env:Env,borrower:Address)->i128;
+    fn repay(env:Env,payer:Address,borrower:Address,max_amount_e7:i128)->i128;
     fn solvent(env:Env)->bool;
     fn supply(env:Env,owner:Address,amount_e7:i128)->i128;
     fn redeem(env:Env,owner:Address,shares_e7:i128)->i128;
@@ -104,6 +106,24 @@ pub struct Handoff{
     pub ledger:u32,
     pub isolated_not_shared:bool,
 }
+/// User-initiated repayment of an EXISTING M11 debt from UNRESERVED M15
+/// collateral. No liquidation, debt forgiveness, lending origination, or
+/// cross-product borrowing authority is granted.
+#[contracttype]
+#[derive(Clone,Debug,PartialEq,Eq)]
+pub struct DebtRepayment{
+    pub owner:Address,
+    pub source:Address,
+    pub destination:Address,
+    pub asset:Address,
+    pub paid_e7:i128,
+    pub owner_debt_before_e7:i128,
+    pub owner_debt_after_e7:i128,
+    pub market_debt_after_e7:i128,
+    pub ledger:u32,
+    pub owner_authorized:bool,
+    pub liquidation_executed:bool,
+}
 #[contracttype]
 #[derive(Clone,Debug,PartialEq,Eq)]
 pub struct RouterStatus{
@@ -119,7 +139,7 @@ pub struct RouterStatus{
 pub enum HandoffError{
     WrongNetwork=1,InvalidInput=2,Paused=3,AssetMismatch=4,
     ActiveDebt=5,ActivePositions=6,Insolvent=7,
-    AccountingMismatch=8,Unapproved=9,Overflow=10,
+    AccountingMismatch=8,Unapproved=9,Overflow=10,NoDebt=11,
 }
 fn testnet(e:&Env)->Result<(),HandoffError>{
     if e.ledger().network_id()!=BytesN::from_array(e,&TESTNET_ID){
@@ -307,6 +327,76 @@ impl CustodyRouter{
         Ok(Handoff{owner,source:vault,destination:perp,asset,
             tokens_e7:amount_e7,share_units_e7:0,
             ledger:e.ledger().sequence(),isolated_not_shared:true})
+    }
+    /// M38 — OWNER-SIGNED SINGLE-ASSET DEBT REPAYMENT FROM FREE M15.
+    ///
+    /// The user's existing M15 FREE claim pays down their existing M11 debt
+    /// in the SAME root Soroban invocation. M15 withdraw and M11 repay each
+    /// independently require this owner's authorization, and all token moves,
+    /// debt share burns and claim reductions roll back if any check fails.
+    ///
+    /// This is deliberately NOT permissionless liquidation and cannot spend
+    /// reserved margin, another owner's collateral, M12 locked escrow or
+    /// any shared insurance. Both custodians must remain solvent.
+    /// The caller must specify the EXACT amount that M11 will accept after
+    /// integer debt-share rounding; otherwise this invocation fails closed.
+    /// Repayment is available even if NEW M11 borrowing has been disabled,
+    /// but the convenience router itself must be explicitly unpaused.
+    pub fn repay_debt_from_margin(
+        e:Env,owner:Address,amount_e7:i128
+    )->Result<DebtRepayment,HandoffError>{
+        check(&e,amount_e7)?;
+        owner.require_auth();
+        let vault=addr(&e,Key::Vault);
+        let lending=addr(&e,Key::Lending);
+        let asset=addr(&e,Key::Asset);
+        margin_check(&e,&vault,&asset)?;
+        let m=MarginClient::new(&e,&vault);
+        let l=LendingClient::new(&e,&lending);
+        let t=token::TokenClient::new(&e,&asset);
+        if l.asset()!=asset{return Err(HandoffError::AssetMismatch);}
+        if !l.solvent(){return Err(HandoffError::Insolvent);}
+        let debt_before=l.debt_of(&owner);
+        if debt_before<=0{return Err(HandoffError::NoDebt);}
+        if amount_e7>debt_before{return Err(HandoffError::InvalidInput);}
+        if m.account(&owner).available_e7<amount_e7{
+            return Err(HandoffError::InvalidInput);
+        }
+        let market_before=l.current_outstanding_debt_e7();
+        if market_before<debt_before{
+            return Err(HandoffError::AccountingMismatch);
+        }
+        let old_claims=m.totals().user_claims_e7;
+        let old_free=m.account(&owner).available_e7;
+        let vault_before=t.balance(&vault);
+        let lending_before=t.balance(&lending);
+        let wallet_before=t.balance(&owner);
+        // Crucial: both contract calls run under ONE Soroban transaction,
+        // not two independently committed client operations.
+        m.withdraw(&owner,&amount_e7);
+        let paid=l.repay(&owner,&owner,&amount_e7);
+        if paid!=amount_e7{return Err(HandoffError::AccountingMismatch);}
+        let debt_after=l.debt_of(&owner);
+        let market_after=l.current_outstanding_debt_e7();
+        if debt_after>=debt_before||debt_after<0||market_after<0{
+            return Err(HandoffError::AccountingMismatch);
+        }
+        exact_delta(old_free,m.account(&owner).available_e7,paid,false)?;
+        exact_delta(old_claims,m.totals().user_claims_e7,paid,false)?;
+        exact_delta(vault_before,t.balance(&vault),paid,false)?;
+        exact_delta(lending_before,t.balance(&lending),paid,true)?;
+        exact_delta(market_before,market_after,paid,false)?;
+        if t.balance(&owner)!=wallet_before||!m.solvent()||!l.solvent(){
+            return Err(HandoffError::AccountingMismatch);
+        }
+        keep(&e);
+        Ok(DebtRepayment{
+            owner,source:vault,destination:lending,asset,
+            paid_e7:paid,owner_debt_before_e7:debt_before,
+            owner_debt_after_e7:debt_after,market_debt_after_e7:market_after,
+            ledger:e.ledger().sequence(),
+            owner_authorized:true,liquidation_executed:false,
+        })
     }
     /// M12 FREE margin -> M15 FREE margin. Locked collateral cannot escape.
     /// Standalone M12 owner withdrawals remain available while paused.
