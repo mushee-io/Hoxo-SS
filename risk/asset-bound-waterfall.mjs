@@ -24,9 +24,15 @@ export function previewAssetBoundWaterfall(input) {
   if (prototype !== Object.prototype && prototype !== null) {
     throw new TypeError("waterfall input must be a plain record");
   }
+  // Inspect descriptors without reading attacker-controlled accessors. An accessor
+  // could mutate the preview inputs between validation and arithmetic.
+  const descriptors = Object.getOwnPropertyDescriptors(input);
   for (const key of Reflect.ownKeys(input)) {
     if (typeof key !== "string" || !ALLOWED_FIELDS.has(key)) {
       throw new TypeError("unexpected waterfall input field: " + String(key));
+    }
+    if (!Object.hasOwn(descriptors[key], "value")) {
+      throw new TypeError("accessor waterfall input field: " + key);
     }
   }
   for (const key of [...TOKEN_FIELDS, ...AMOUNT_FIELDS.slice(0, 3)]) {
@@ -34,7 +40,7 @@ export function previewAssetBoundWaterfall(input) {
       throw new TypeError("missing waterfall input field: " + key);
     }
   }
-  const ids = Object.fromEntries(TOKEN_FIELDS.map(key => [key, input[key]]));
+  const ids = Object.fromEntries(TOKEN_FIELDS.map(key => [key, descriptors[key].value]));
   for (const [name, value] of Object.entries(ids)) {
     if (typeof value !== "string" || !/^C[A-Z2-7]{55}$/.test(value)) {
       throw new TypeError(name + " must be an explicit Stellar contract identifier");
@@ -46,7 +52,7 @@ export function previewAssetBoundWaterfall(input) {
     }
   }
   const amounts = Object.fromEntries(
-    AMOUNT_FIELDS.filter(key => Object.hasOwn(input, key)).map(key => [key, input[key]])
+    AMOUNT_FIELDS.filter(key => Object.hasOwn(descriptors, key)).map(key => [key, descriptors[key].value])
   );
   const result = previewDebtWaterfall(amounts);
   return Object.freeze({
