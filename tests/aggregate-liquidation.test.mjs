@@ -39,3 +39,13 @@ test("empty and maximum i128 positions remain non-executable",()=>{
  assert.equal(r.totals.insuranceUsedE7,max);
  assert.equal(r.tradingEnabled,false);
 });
+
+test("rejects aggregate i128 overflow even when every individual position is valid",()=>{
+ const max=(1n<<127n)-1n;
+ assert.throws(()=>preview([p("a",max,0n),p("b",1n,0n)],0n),/aggregate debtE7 exceeds Soroban signed i128 maximum/);
+ assert.throws(()=>preview([p("a",0n,max),p("b",0n,1n)],0n),/aggregate realisedCollateralE7 exceeds Soroban signed i128 maximum/);
+ assert.throws(()=>preview([p("a",0n,0n,max),p("b",0n,0n,1n)],0n),/aggregate liquidationCostsUnfundedE7 exceeds Soroban signed i128 maximum/);
+ const within=preview([p("a",max-1n,0n),p("b",1n,0n)],0n);
+ assert.equal(within.totals.debtE7,max);
+ assert.equal(within.executable,false);
+});
