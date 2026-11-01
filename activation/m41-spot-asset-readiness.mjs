@@ -52,13 +52,23 @@ function plainInfo(account,owner,candidate){
   });
 }
 function codeHashFromInstance(instance){
-  if(!instance||typeof instance.executable!=="function")
+  if(!instance)
     throw Error("M41 deployed WASM contract instance unavailable from Stellar RPC");
   let wasm;
-  try{wasm=instance.executable().wasmHash();}
-  catch{throw Error("M41 deployed contract is not WASM or has an unreadable executable");}
-  expect(wasm&&wasm.length===32,"unexpected executable WASM hash byte length");
-  return Buffer.from(wasm).toString("hex");
+  const executable=typeof instance.executable==="function"
+    ? instance.executable():instance.executable;
+  if(executable&&typeof executable.wasmHash==="function"){
+    try{wasm=executable.wasmHash();}catch{}
+  }else if(executable&&typeof executable==="object"){
+    wasm=executable.wasmHash??executable.wasm_hash??executable.hash;
+  }
+  if(typeof wasm==="string"&&/^[a-f0-9]{64}$/i.test(wasm))return wasm.toLowerCase();
+  if(wasm&&wasm.length===32)return Buffer.from(wasm).toString("hex");
+  const shape=JSON.stringify({
+    keys:Object.keys(instance||{}),executableType:typeof instance?.executable,
+    executableKeys:executable&&typeof executable==="object"?Object.keys(executable):[],
+  });
+  throw Error("M41 deployed contract executable could not be verified from Stellar RPC: "+shape);
 }
 async function horizonAccount(fetchImpl,address){
   const result=await fetchImpl(TESTNET_CONFIG.horizon+"/accounts/"+encodeURIComponent(address),{
