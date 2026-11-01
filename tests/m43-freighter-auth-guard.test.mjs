@@ -12,7 +12,7 @@ test("fail closed on mainnet, same-wallet, injected accessors and secret fields"
 });
 test("requires sequential, explicit distinct-wallet Freighter approvals and never broadcasts",async()=>{
  let current=maker,calls=0;
- const adapter={async getNetwork(){return {networkPassphrase:TESTNET_PASSPHRASE}},async getAddress(){return {address:current}},async signAuthEntry(xdr){calls++;return {signedAuthEntry:"RkZGRkZGRkZGRkZG"}}};
+ const adapter={async getNetwork(){return {networkPassphrase:TESTNET_PASSPHRASE}},async getAddress(){return {address:current}},async signAuthEntry(xdr){calls++;return {signedAuthEntry:calls===1?"RkZGRkZGRkZGRkZG":"SEhISEhISEhISEhI"}}};
  const flow=createDualWalletHandoff(input,adapter);
  await assert.rejects(flow.approve("taker"),/out of order/);
  const first=await flow.approve("maker");assert.equal(first.broadcast,false);assert.equal(first.verified,false);
@@ -72,4 +72,18 @@ test("rejects hostile Freighter responses without executing accessors or advanci
  await assert.rejects(flow.approve("maker"),/unexpected Freighter/);
  response={signedAuthEntry:"RkZGRkZGRkZGRkZG"};
  const accepted=await flow.approve("maker");assert.equal(accepted.verified,false);assert.equal(accepted.broadcast,false);
+});
+
+test("rejects duplicate unsigned or signed maker/taker authorization entries",async()=>{
+ assert.throws(()=>validateDualWalletHandoff({...input,takerAuthXdr:input.makerAuthXdr}),/distinct wallet authorization/);
+ let current=maker;
+ const adapter={async getNetwork(){return {networkPassphrase:TESTNET_PASSPHRASE}},async getAddress(){return {address:current}},async signAuthEntry(){return {signedAuthEntry:"RkZGRkZGRkZGRkZG"}}};
+ const flow=createDualWalletHandoff(input,adapter);
+ await flow.approve("maker");current=taker;
+ await assert.rejects(flow.approve("taker"),/duplicate maker\/taker/);
+ assert.equal(flow.status.approvalCount,1);
+ assert.equal(flow.nextRole,"taker");
+ adapter.signAuthEntry=async()=>({signedAuthEntry:"SEhISEhISEhISEhI"});
+ const approved=await flow.approve("taker");
+ assert.equal(approved.verified,false);assert.equal(flow.status.approvalCount,2);
 });
