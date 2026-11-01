@@ -48,3 +48,18 @@ test("zero-cost default remains supported", () => {
   delete input.liquidationCostE7;
   assert.equal(previewAssetBoundWaterfall(input).liquidationCostPaidE7, 0n);
 });
+
+test("accessor-backed amounts and tokens are rejected without invoking getters", () => {
+  for (const key of ["accruedDebtE7", "canonicalTokenContractId", "liquidationCostE7"]) {
+    const input = valid();
+    let called = 0;
+    Object.defineProperty(input, key, { enumerable: true, configurable: true, get() { called++; throw new Error("getter executed"); } });
+    assert.throws(() => previewAssetBoundWaterfall(input), /accessor waterfall input field/);
+    assert.equal(called, 0);
+  }
+});
+test("non-enumerable own monetary data is still validated", () => {
+  const input = valid();
+  Object.defineProperty(input, "accruedDebtE7", { value: -1n, enumerable: false, configurable: true });
+  assert.throws(() => previewAssetBoundWaterfall(input));
+});
