@@ -50,16 +50,21 @@ export function createDualWalletHandoff(input,freighter){
       const account=await freighter.getAddress();
       if(!account||account.address!==expected)fail("switch Freighter to the exact "+role+" public wallet");
       const result=await freighter.signAuthEntry(terms[role+"AuthXdr"],{address:expected,networkPassphrase:TESTNET_PASSPHRASE});
-      if(!result||typeof result.signedAuthEntry!=="string"||!result.signedAuthEntry.length||result.error)fail("Freighter authorization not returned");
+      if(!result||Object.getPrototypeOf(result)!==Object.prototype)fail("plain Freighter result required");
+      const keys=Reflect.ownKeys(result);
+      if(keys.some(k=>typeof k!=="string"||!["signedAuthEntry","error"].includes(k)))fail("unexpected Freighter result field");
+      for(const k of keys){const d=Object.getOwnPropertyDescriptor(result,k);if(!d||!("value" in d))fail("Freighter result accessors prohibited");}
+      const signed=result.signedAuthEntry;
+      if(result.error!==undefined||typeof signed!=="string"||signed.length<12||signed.length>16384||!/^[A-Za-z0-9+/]+={0,2}$/.test(signed)||signed===terms[role+"AuthXdr"])fail("valid signed authorization entry not returned");
       // Never assume signedAuthEntry proves the signature: caller must independently
       // verify its decoded Soroban credentials, invocation tree and expiry.
       // Reject account/network changes while the user was reviewing the prompt.
       const finalNetwork=await freighter.getNetwork();
       const finalAccount=await freighter.getAddress();
       if(!finalNetwork||finalNetwork.networkPassphrase!==TESTNET_PASSPHRASE||!finalAccount||finalAccount.address!==expected)fail("wallet or network changed during approval");
-      signatures[role]=result.signedAuthEntry;
+      signatures[role]=signed;
       next=role==="maker"?"taker":null;
-      return Object.freeze({role,publicAddress:expected,signedAuthEntry:result.signedAuthEntry,verified:false,broadcast:false});
+      return Object.freeze({role,publicAddress:expected,signedAuthEntry:signed,verified:false,broadcast:false});
       } finally { pending=false; }
     },
     get status(){return Object.freeze({nextRole:next,approvalCount:Object.keys(signatures).length,verified:false,broadcast:false});}
