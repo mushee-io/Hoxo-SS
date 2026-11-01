@@ -1,0 +1,36 @@
+name: M41 Stellar Testnet spot asset read-only readiness
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "activation/m41-spot-asset-readiness.mjs"
+      - "scripts/check-m41-spot-assets.mjs"
+      - "tests/m41-spot-asset-readiness.test.mjs"
+      - ".github/workflows/m41-spot-assets.yml"
+      - "package.json"
+  push:
+    branches: [main]
+    paths:
+      - "activation/m41-spot-asset-readiness.mjs"
+      - "scripts/check-m41-spot-assets.mjs"
+      - "tests/m41-spot-asset-readiness.test.mjs"
+      - ".github/workflows/m41-spot-assets.yml"
+      - "package.json"
+permissions:
+  contents: read
+jobs:
+  inspect:
+    name: Verify Testnet contract, XLM USDC SACs and wallet trustlines without signing
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+      - run: npm ci
+      - name: M41 adversarial network and trustline tests
+        run: npm run test:m41
+      - name: Live Stellar Testnet (READ ONLY — no keys, no signing, no deployment)
+        run: npm run check:spot-assets
