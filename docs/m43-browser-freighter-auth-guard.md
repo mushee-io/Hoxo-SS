@@ -17,3 +17,7 @@ Run `node --test tests/m43-freighter-auth-guard.test.mjs`. This feature does not
 The handoff now allows at most one in-flight Freighter approval, preventing double-click or concurrent UI actions from creating two prompts for the same maker/taker role. It reads the selected wallet and Testnet passphrase again **after** the wallet returns a signed entry; a mid-prompt wallet or network switch rejects the result and leaves the role unapproved. Rejected prompts clear the in-flight lock for an explicit retry. Regression tests cover concurrency, account/network switching and safe retry.
 
 This is defense in depth, **not cryptographic authorization verification**. A malicious adapter can lie about the selected wallet; the eventual integration must independently decode and verify signed Soroban auth entries, expected invocation tree, nonce and expiration, exact contract/assets/amounts and ledger freshness before any broadcast. Never unpause or count volume on the strength of this guard.
+
+## Freighter response hardening
+
+The adapter response must be a plain own-data object containing only `signedAuthEntry` and optional `error`. Accessor-backed or symbol properties, unexpected secret fields, unbounded/malformed base64 and unchanged unsigned entries are rejected before the approval counter advances. This is a syntactic defense only: valid-looking base64 is **not** proof of a valid signature. Signed Soroban XDR, address credentials, exact invocation tree, expiry and transaction submission remain unimplemented and disabled.
