@@ -3,11 +3,18 @@ import {isStellarContractId} from "../infra/registry.mjs";
 import {TESTNET_PASSPHRASE} from "../config/testnet.mjs";
 const HEX=/^[0-9a-f]{64}$/;
 const G=/^G[A-Z2-7]{55}$/;
-const exact=(o,keys)=>o&&Object.getPrototypeOf(o)===Object.prototype&&
-  JSON.stringify(Object.keys(o).sort())===JSON.stringify([...keys].sort());
+const exact=(o,keys)=>{
+  if(!o||typeof o!=="object"||Array.isArray(o)||Object.getPrototypeOf(o)!==Object.prototype)return false;
+  const descriptors=Object.getOwnPropertyDescriptors(o);
+  const names=Reflect.ownKeys(descriptors);
+  return names.length===keys.length&&names.every(k=>typeof k==="string"&&keys.includes(k)&&"value" in descriptors[k]);
+};
 export function inspectM9Candidate(candidate){
   const keys=["networkPassphrase","role","contractId","owner","wasmUploadTxHash","deploymentTxHash","wasmUploadLedger","deploymentLedger","reportedWasmFileSha256","constructorOwner","adminVerified","pausedVerified","onchainCodeHashVerified","deploymentXdrLinked"];
   if(!exact(candidate,keys))throw Error("Candidate must use exact public evidence schema");
+  // Snapshot data properties only. Never invoke a caller-controlled accessor during validation.
+  const values=Object.getOwnPropertyDescriptors(candidate);
+  candidate=Object.fromEntries(keys.map(k=>[k,values[k].value]));
   if(candidate.networkPassphrase!==TESTNET_PASSPHRASE||candidate.role!=="spot-settlement"||
      !isStellarContractId(candidate.contractId)||!G.test(candidate.owner)||
      candidate.constructorOwner!==candidate.owner||
