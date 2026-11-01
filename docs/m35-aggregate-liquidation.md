@@ -20,3 +20,7 @@ This module is intentionally disconnected from execution paths. It does not esta
 ## M36 — Aggregate i128 boundary gate
 
 Each individual position can be within signed i128 while the sum across positions exceeds the Soroban representable range. The aggregate reference now rejects any running monetary total exceeding `2^127 - 1` instead of returning a value that cannot be safely represented in a Soroban `i128`. Tests cover debt, realised collateral, unfunded costs, and the exact maximum boundary. This is only a read-only preview validation and does not implement an on-chain liquidation, authorize trading, or verify deployment.
+
+## M37 — Canonical preview insurance ordering
+
+The read-only batch now validates all position records first and allocates scarce insurance in deterministic ASCII-ascending position ID order. This makes the result invariant to caller-supplied array permutations and prevents an untrusted caller from moving a position earlier in the input array to obtain more insurance. Position IDs remain **caller supplied**, so this does not establish a fair liquidation policy, authenticated position identity, or eligibility. A production Soroban executor must derive IDs and debt from contract storage, specify a reviewed ordering/priority policy, and enforce atomic insurance debits. Financial beta stays CLOSED.
