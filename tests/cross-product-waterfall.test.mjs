@@ -52,3 +52,22 @@ test("bounded exhaustive conservation across debt, collateral, insurance and cos
       assert.equal(r.executable,false);
     }
 });
+
+test("rejects values outside signed Soroban i128 for every monetary input",()=>{
+  const tooLarge=1n<<127n;
+  for (const field of ["accruedDebtE7","realisedSeizedCollateralE7","insuranceAvailableE7","liquidationCostE7"]) {
+    const args={accruedDebtE7:0n,realisedSeizedCollateralE7:0n,insuranceAvailableE7:0n,liquidationCostE7:0n};
+    args[field]=tooLarge;
+    assert.throws(()=>preview(args),/i128 range/);
+  }
+});
+test("i128 maximum values conserve collateral and insurance exactly",()=>{
+  const max=(1n<<127n)-1n;
+  const r=run(max,max,max,max);
+  assert.equal(r.liquidationCostPaidE7,max);
+  assert.equal(r.insuranceUsedE7,max);
+  assert.equal(r.lenderShortfallE7,0n);
+  assert.equal(r.borrowerSurplusE7,0n);
+  assert.equal(r.insuranceRemainingE7,0n);
+  assert.equal(r.executable,false);
+});
