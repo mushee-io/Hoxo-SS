@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Stellar spot, perps and money markets unified-margin development foundation",
   "scripts": {
-    "test": "node --test packages/risk-engine/test/*.test.mjs tests/landing.test.mjs tests/terminal.test.mjs tests/wallet.test.mjs tests/infrastructure.test.mjs tests/matching.test.mjs tests/marketdata.test.mjs tests/settlement-preview.test.mjs tests/m9-wallet-settlement.test.mjs tests/advanced-orders.test.mjs tests/portfolio-history.test.mjs tests/indexer.test.mjs tests/security-controls.test.mjs tests/m21-evidence.test.mjs tests/m22-risk-stress.test.mjs tests/m22-chaos.test.mjs tests/m23-beta.test.mjs tests/m24-mainnet.test.mjs tests/testnet-operator.test.mjs tests/testnet-activation.test.mjs tests/testnet-code-proof.test.mjs tests/cross-product-waterfall.test.mjs tests/asset-bound-waterfall.test.mjs tests/waterfall-strict-schema.test.mjs tests/settlement-readiness.test.mjs tests/aggregate-liquidation.test.mjs tests/mm-quote-plan.test.mjs tests/nine-contract-coverage.test.mjs tests/m41-spot-asset-readiness.test.mjs",
+    "test": "node --test packages/risk-engine/test/*.test.mjs tests/landing.test.mjs tests/terminal.test.mjs tests/wallet.test.mjs tests/infrastructure.test.mjs tests/matching.test.mjs tests/marketdata.test.mjs tests/settlement-preview.test.mjs tests/m9-wallet-settlement.test.mjs tests/advanced-orders.test.mjs tests/portfolio-history.test.mjs tests/indexer.test.mjs tests/security-controls.test.mjs tests/m21-evidence.test.mjs tests/m22-risk-stress.test.mjs tests/m22-chaos.test.mjs tests/m23-beta.test.mjs tests/m24-mainnet.test.mjs tests/testnet-operator.test.mjs tests/testnet-activation.test.mjs tests/testnet-code-proof.test.mjs tests/cross-product-waterfall.test.mjs tests/asset-bound-waterfall.test.mjs tests/waterfall-strict-schema.test.mjs tests/settlement-readiness.test.mjs tests/aggregate-liquidation.test.mjs tests/mm-quote-plan.test.mjs tests/nine-contract-coverage.test.mjs tests/m41-spot-asset-readiness.test.mjs tests/m43-freighter-auth-guard.test.mjs",
     "check": "npm test",
     "test:landing": "node --test tests/landing.test.mjs",
     "check:testnet": "node scripts/check-testnet.mjs",
@@ -53,7 +53,8 @@
     "test:mm": "node --test tests/mm-quote-plan.test.mjs",
     "test:m41": "node --test tests/m41-spot-asset-readiness.test.mjs",
     "check:spot-assets": "node scripts/check-m41-spot-assets.mjs",
-    "test:m39": "node --test tests/nine-contract-coverage.test.mjs"
+    "test:m39": "node --test tests/nine-contract-coverage.test.mjs",
+    "test:m43": "node --test tests/m43-freighter-auth-guard.test.mjs"
   },
   "engines": {
     "node": ">=20"
