@@ -30,8 +30,9 @@ const TIME=1800000000000;
 const CLOSE=String(Math.floor((TIME-10_000)/1000));
 const A="a".repeat(64),B="b".repeat(64);
 const bytes=Buffer.from([0,97,115,109,1,0,0,0,1,2,3,4,5,6]);
-function manifest(entries=[{role:"spot-settlement",contractId:address(10),deploymentTxHash:A}]){
-  return {schemaVersion:1,networkPassphrase:TESTNET_PASSPHRASE,contracts:entries};
+const REVIEWED_DIGEST=createHash("sha256").update(bytes).digest("hex");
+function manifest(entries=[{role:"spot-settlement",contractId:address(10),deploymentTxHash:A,reviewedWasmSha256:REVIEWED_DIGEST}]){
+  return {schemaVersion:1,networkPassphrase:TESTNET_PASSPHRASE,contracts:entries.map(e=>({...e,reviewedWasmSha256:e.reviewedWasmSha256??REVIEWED_DIGEST}))};
 }
 function rpc(overrides={}){
   const calls=[];
@@ -60,7 +61,8 @@ test("read-only proof validates real Hoxo source inventory and refuses unknown o
     manifest([{role:"unsafe-financial-mainnet",contractId:address(10),deploymentTxHash:A}]),
     manifest([{role:"spot-settlement",contractId:"CCNOTREAL",deploymentTxHash:A}]),
     manifest([{role:"spot-settlement",contractId:address(10),deploymentTxHash:"g".repeat(64)}]),
-    {...manifest(),operatorPrivateSeed:"NOT_ALLOWED"}
+    {...manifest(),operatorPrivateSeed:"NOT_ALLOWED"},
+    manifest([{role:"spot-settlement",contractId:address(10),deploymentTxHash:A,reviewedWasmSha256:"not-a-hash"}])
   ])assert.throws(()=>validateTestnetCodeManifest(bad));
 });
 test("read-only verifier independently hashes current on-chain WASM, but never grants beta or invents receipt linkage",async()=>{
@@ -68,6 +70,7 @@ test("read-only verifier independently hashes current on-chain WASM, but never g
   const v=await verifier({server:c.server});
   assert.equal(v.verifiedWasmMatches,1);
   assert.equal(v.contracts[0].role,"spot-settlement");
+  assert.equal(v.contracts[0].reviewedWasmSha256,REVIEWED_DIGEST);
   assert.equal(v.contracts[0].localWasmSha256,createHash("sha256").update(bytes).digest("hex"));
   assert.equal(v.contracts[0].sourceAndOnchainCodeMatch,true);
   assert.equal(v.contracts[0].providerReportsTransactionSuccess,true);
@@ -104,6 +107,10 @@ test("wrong network, stale clock and unhealthy RPC reject before reading contrac
     await assert.rejects(verifier({server:c.server}));
     assert.ok(!c.calls.includes("getContractWasmByContractId"));
   }
+});
+test("independent reviewed digest rejects a substituted local WASM even if chain bytes match",async()=>{
+  const substitute=Buffer.from(bytes);substitute[9]=42;
+  await assert.rejects(verifier({readWasm:async()=>substitute,server:rpc({getContractWasmByContractId:async()=>substitute}).server}),/independently approved digest/);
 });
 test("different installed bytecode, incorrect transaction hash and failed tx all refuse evidence",async()=>{
   const corrupted=Buffer.from(bytes);corrupted[9]=99;
