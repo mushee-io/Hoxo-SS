@@ -3,6 +3,7 @@
 The `hoxo-collateral-vault` package contains an account-isolated Soroban Rust contract pinned to `soroban-sdk =29.0.1` (the Stellar Testnet protocol at the time of implementation is 29). It is **not yet deployed to Testnet**.
 
 Contract invariants:
+- **M32 deployment hardening:** the constructor rejects every network other than canonical Stellar Testnet and now starts with **deposits PAUSED** even after a token is allowlisted. Only an authorised administrator may deliberately unpause after verifying the valueless test asset, deployment receipt, source/WASM digest, and on-chain permissions. Existing owner withdrawals remain possible when paused. Native regression tests cover the initial pause, denied deposits, explicit unpause and pause-safe withdrawal. These are code/test protections, NOT a real deployment or financial beta approval.
 - The admin is assigned by a **deployment constructor**, not an unprotected later init call. Admin must authorise allowlist updates, pausing new deposits, and dual-auth admin transfer.
 - Only approved Stellar token contract addresses accept **positive token deposits**. Every deposit calls `owner.require_auth()` and the Stellar token interface, checks actual received balance, then atomically records the owner-specific token claim and tracked aggregate balance.
 - Only the owner can withdraw their own recorded quantity. Admin cannot seize balances or block withdrawals by pausing deposits or removing an asset from the allowlist.
