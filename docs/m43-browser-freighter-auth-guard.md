@@ -29,3 +29,7 @@ The browser handoff rejects identical maker/taker *unsigned* authorization entry
 ## Required own-field protection
 
 Every authorization term must be an own data property on the supplied plain object. Inherited values (including values injected through `Object.prototype` pollution) are rejected before any Freighter prompt. This is input integrity hardening only; it does not validate the cryptographic Soroban authorization tree, enable transaction submission, or establish trading readiness.
+
+## Contract substitution protection
+
+The browser handoff now pins `contractId` to the independently checked M9 Testnet candidate `CCPT6NJCGNHFTTV54IHGSNKTKD74HFCTDKWA3XIP466YT7JHUILJZCYF`. Any other contract is rejected before Freighter is called, including a different syntactically valid C-address. This is an anti-phishing boundary, **not** a live check of current deployed code, owner, pause status or invocation-tree binding. Before operator approval, rerun M41's public-only on-chain checks and compare the full transaction simulation; no broadcast or unpause is enabled by this change.
