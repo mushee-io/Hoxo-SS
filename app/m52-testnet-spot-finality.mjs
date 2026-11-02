@@ -47,6 +47,15 @@ function sameI128Amount(observed,expected){
     return observed===expected;
   return false;
 }
+/** Require the RPC-confirmed transaction ledger to agree with the M9 receipt ledger. */
+export function verifyM52FinalityLedger(final,settledLedger){
+  const ledger=final?.ledger;
+  if(!Number.isSafeInteger(ledger)||ledger<=0||
+     !Number.isSafeInteger(settledLedger)||settledLedger<=0||
+     ledger!==settledLedger)
+    fail("confirmed RPC ledger does not match M9 settlement receipt ledger");
+  return ledger;
+}
 export function verifyM52Receipt(receipt,terms){
   if(!receipt||!sameReceiptId(receipt.match_id,terms.match_id)||
      !sameReceiptId(receipt.maker_order_id,terms.maker_order_id)||
@@ -194,6 +203,7 @@ export async function m52ReviewedSpotSettlement({
   const matchId=Uint8Array.from(expectedTerms.match_id.match(/../g),x=>parseInt(x,16));
   const receipt=await read(server,M9_TESTNET_CONTRACT_ID,"receipt",{match_id:matchId});
   const confirmedLedger=verifyM52Receipt(receipt,expectedTerms);
+  verifyM52FinalityLedger(final,confirmedLedger);
   if(await read(server,M9_TESTNET_CONTRACT_ID,"is_settled",{match_id:matchId})!==true)
     fail("transaction submitted, but M9 replay marker is not confirmed");
   const after=await tokenState(server,expectedTerms);
