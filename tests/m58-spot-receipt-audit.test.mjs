@@ -65,3 +65,13 @@ test("M58 rejects substituted event transaction identity and ledger",async()=>{
   await assert.rejects(run(adapter),/matching M9 settlement event/);
  }
 });
+
+test("M64 rejects ambiguous duplicate settlement events within one finalized transaction",async()=>{
+ const adapter=rpc();
+ const original=adapter.getTransaction;
+ adapter.getTransaction=async h=>{
+  const tx=await original(h);
+  return {...tx,contractEvents:[...tx.contractEvents,{...tx.contractEvents[0]}]};
+ };
+ await assert.rejects(run(adapter),/exactly one matching M9 settlement event/);
+});
