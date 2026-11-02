@@ -8,7 +8,7 @@ import {normalizeM48KrakenDepth,normalizeM48HorizonBook,
 const $=id=>document.getElementById(id);
 const feed=$("m48BookFeed"),selector=$("m48BookSource"),list=$("m48BookLevels");
 const state=$("m48BookStatus");
-let chosenMarket="xlm-usdc-spot",bookView="book",sequence=0,loading=false,lastUpdated=0;
+let chosenMarket="xlm-usdc-spot",bookView="book",sequence=0,requestId=0;
 const eligible=new Set(["xlm-usdc-spot","xlm-usdc-perp"]);
 function safe(){return eligible.has(chosenMarket)&&bookView==="book";}
 function label(s,error=false){
@@ -81,7 +81,6 @@ function paint(book){
   list.classList.remove("hidden");
   $("m48Spread").textContent=book.spread===null?"—":
     formatted(book.spread,7)+" "+book.currency;
-  lastUpdated=Date.now();
   label(book.source+" · "+(bids.length+asks.length)+
     " verified external offer levels · AUTO REFRESH · NOT HOXO FILLS");
 }
@@ -107,21 +106,20 @@ async function sourceFetch(source){
   }
 }
 async function refresh(){
-  if(!safe()||loading||document.hidden)return;
-  loading=true;
-  const marker=sequence,source=selector.value;
+  if(!safe()||document.hidden)return;
+  const marker=sequence,source=selector.value,request=++requestId;
   try{
     const result=await sourceFetch(source);
-    if(marker===sequence&&source===selector.value&&safe())paint(result);
+    if(marker===sequence&&request===requestId&&source===selector.value&&safe())paint(result);
   }catch{
-    if(marker===sequence&&safe()){
+    if(marker===sequence&&request===requestId&&safe()){
       clearRows();
       $("bookEmptyTitle").textContent="ORDER BOOK SOURCE UNAVAILABLE";
       $("bookEmptyDescription").textContent=
         "Genuine market levels could not be verified. Check the network and try again.";
       label("No real-time verified price levels · no simulated liquidity",true);
     }
-  }finally{loading=false;}
+  }
 }
 function selection(data){
   chosenMarket=data.market??chosenMarket;
