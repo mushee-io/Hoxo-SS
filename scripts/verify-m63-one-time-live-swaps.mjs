@@ -44,9 +44,15 @@ async function doTx(operation,label){
   tx.sign(wallet);
   const submitted=await testnet.submitTransaction(tx);
   const hash=submitted?.hash;
+  const localHash=tx.hash().toString("hex");
   if(!/^[0-9a-f]{64}$/i.test(hash??"")||submitted.successful===false||
-     tx.hash().toString("hex")!==hash.toLowerCase())
-    throw Error(label+" signed transaction hash mismatch or unconfirmed submission");
+     localHash!==hash.toLowerCase())
+    throw Error(label+" signed transaction receipt check failed: "+
+      JSON.stringify({hasHash:/^[a-f0-9]{64}$/i.test(hash??""),
+        sameHash:typeof hash==="string"&&localHash===hash.toLowerCase(),
+        successful:submitted.successful??null,
+        status:submitted.status??null,
+        responseKeys:Object.keys(submitted||{}).sort()}));
   const confirmed=await fetchJson(HORIZON_TESTNET+"/transactions/"+hash);
   if(confirmed.successful!==true||confirmed.hash?.toLowerCase()!==hash.toLowerCase()||
      !Number.isSafeInteger(confirmed.ledger)||confirmed.ledger<1)
