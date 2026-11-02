@@ -21,3 +21,14 @@ if(result.errors.length)throw Error("M45 bundling failed");
 const output=Object.entries(result.metafile.outputs).find(([name])=>name.endsWith("m45-spot.bundle.js"));
 if(!output||output[1].bytes<1000)throw Error("M45 browser bundle missing/empty");
 console.log("M45 local bundle ready, bytes:",output[1].bytes);
+
+const dex=await build({
+  entryPoints:["app/m63-spot-ui.mjs"],bundle:true,format:"iife",
+  platform:"browser",target:["es2022"],outfile:"app/m63-spot.bundle.js",
+  minify:true,sourcemap:false,legalComments:"none",logLevel:"info",metafile:true
+});
+const dexOutput=Object.entries(dex.metafile.outputs)
+  .find(([name])=>name.endsWith("m63-spot.bundle.js"));
+if(dex.errors.length||!dexOutput||dexOutput[1].bytes<1000)
+  throw Error("M63 real Testnet Classic DEX browser bundle missing");
+console.log("M63 direct Testnet DEX bundle ready, bytes:",dexOutput[1].bytes);

@@ -122,9 +122,10 @@ test("M46 Windows screen has two explicit read-only controls without sign/submit
   const terminal=await readFile(new URL("../app/terminal-ui.mjs",import.meta.url),"utf8");
   for(const id of ["m46WindowsLab","m46WindowsAck","m46VerifyWallet1",
     "m46VerifyWallet2","m46Combined","m46Status","m46Reset"]){
-    assert.match(html,new RegExp('id="'+id+'"'));
+    assert.doesNotMatch(html,new RegExp('id="'+id+'"'),
+      "internal Windows acceptance controls must not appear in public trading UI");
   }
-  assert.match(terminal,/m46WindowsLab/);
+  assert.doesNotMatch(terminal,/m46WindowsLab/);
   assert.match(ui,/createM46WindowsAcceptance/);
   assert.doesNotMatch(ui+acceptance,/\.(?:signAuthEntry|signTransaction|sendTransaction|signAndSend|requestAccess)\s*\(/);
   assert.doesNotMatch(ui+acceptance,/set_pause\(false\)|submit:\s*true/);

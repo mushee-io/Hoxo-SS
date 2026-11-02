@@ -78,7 +78,7 @@ test("M1: landing, mobile menu, and terminal navigation use real local resources
   assert.match(html, /href="\.\/docs\/milestones\.md"/);
   assert.match(css, /@media\(max-width:760px\)/);
   assert.match(css, /prefers-reduced-motion/);
-  assert.match(terminal, /REVIEW SMALL TESTNET BUY/);
+  assert.match(terminal, /REVIEW TESTNET BUY/);
   for (const path of ["assets/landing.mjs", "assets/testnet-status.mjs", "assets/icon.svg", "app/index.html", "app/terminal.js", "docs/milestones.md"]) {
     await access(resolve(root, path));
   }
