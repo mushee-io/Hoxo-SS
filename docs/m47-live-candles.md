@@ -13,6 +13,7 @@
 ## Technical design
 
 - app/m47-live-candles.mjs: canonical parsing of Kraken REST/WS OHLC messages, data validation, chronological merge and stale replay protection.
+  - REST market identity is fail-closed: only Kraken `XXLMZUSD` or `XLMUSD` result keys are accepted, and a response containing both is rejected as ambiguous. Unrelated market arrays are never treated as XLM/USD candles.
 - api/market-candles.js: public Vercel serverless OHLC proxy restricted to XLMUSD and supported intervals, cache up to 15 seconds. Does not store keys or wallet data.
 - app/m47-live-chart-ui.mjs: responsive HTML Canvas candlesticks + true Kraken market volume and source text. Uses a real browser WebSocket and falls back to direct Kraken REST when the serverless API is unavailable. It does not sign, submit, settle or place offers.
 - app/index.html, terminal-ui.mjs and terminal.css: show feed, update on chart-tab or timeframe changes, and keep the existing normal Buy/Sell action disabled.
