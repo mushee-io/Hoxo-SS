@@ -3,7 +3,7 @@
  * bilateral wallet signing lab. Never calls a transaction method or signs.
  * Reports pause as an explicit BLOCKER, never as a reason to unpause.
  */
-import {Asset,Networks,rpc} from "@stellar/stellar-sdk";
+import {Asset,Networks,rpc,StrKey} from "@stellar/stellar-sdk";
 import {M44_XLM_SAC,M44_USDC_SAC} from "./m44-stellar-xdr-verifier.mjs";
 import {TESTNET_PASSPHRASE,M9_TESTNET_CONTRACT_ID} from "./m43-freighter-auth-guard.mjs";
 
@@ -16,6 +16,13 @@ export const M45_CANDIDATE=Object.freeze({
   rpc:"https://soroban-testnet.stellar.org",
   horizon:"https://horizon-testnet.stellar.org"
 });
+/** Bound only the immutable network, contract, WASM and issuer, never participant identities. */
+export function createM45ParticipantCandidate({maker,taker}={}){
+  if(!StrKey.isValidEd25519PublicKey(maker??"")||
+     !StrKey.isValidEd25519PublicKey(taker??"")||maker===taker)
+    throw Error("M45 preflight: two distinct valid Stellar Testnet G-addresses required");
+  return Object.freeze({...M45_CANDIDATE,maker,taker});
+}
 const MAX_LEDGER_DELTA=24;
 const MAX_AGE_MS=120_000;
 function assert(value,message){if(!value)throw Error("M45 preflight: "+message);}
@@ -64,9 +71,13 @@ export async function checkM45TestnetPreflight({
     "native XLM SAC derivation differs");
   assert(new Asset("USDC",candidate.quoteIssuer).contractId(TESTNET_PASSPHRASE)===M44_USDC_SAC,
     "USDC SAC derivation differs");
-  assert(candidate.contract===M9_TESTNET_CONTRACT_ID&&candidate.maker===M45_CANDIDATE.maker&&
-    candidate.taker===M45_CANDIDATE.taker&&candidate.wasmSha256===M45_CANDIDATE.wasmSha256,
-    "unauthorized contract, wallet or WASM substitution");
+  assert(candidate.contract===M9_TESTNET_CONTRACT_ID&&
+    candidate.wasmSha256===M45_CANDIDATE.wasmSha256&&
+    candidate.quoteIssuer===M45_CANDIDATE.quoteIssuer&&
+    candidate.rpc===M45_CANDIDATE.rpc&&candidate.horizon===M45_CANDIDATE.horizon&&
+    StrKey.isValidEd25519PublicKey(candidate.maker??"")&&
+    StrKey.isValidEd25519PublicKey(candidate.taker??"")&&candidate.maker!==candidate.taker,
+    "unauthorized network, assets, WASM or invalid participant identities");
   const [network,ledger,horizonRoot,wasm,instance]=await Promise.all([
     server.getNetwork(),server.getLatestLedger(),
     readJson(fetchImpl,candidate.horizon+"/"),
@@ -95,7 +106,7 @@ export async function checkM45TestnetPreflight({
     readJson(fetchImpl,candidate.horizon+"/accounts/"+candidate.maker),
     readJson(fetchImpl,candidate.horizon+"/accounts/"+candidate.taker)
   ]);
-  assert(admin===candidate.maker,"M9 admin does not match Wallet 1");
+  assert(admin===M45_CANDIDATE.maker,"M9 admin does not match the pinned deployed contract owner");
   assert(typeof paused==="boolean"&&typeof baseAllowed==="boolean"&&typeof quoteAllowed==="boolean",
     "M9 contract booleans are not verified");
   assert((baseDecimals===7||baseDecimals===7n)&&(quoteDecimals===7||quoteDecimals===7n),
@@ -108,7 +119,8 @@ export async function checkM45TestnetPreflight({
   if(!maker.trustlineAuthorized||!taker.trustlineAuthorized)blockers.push("USDC trustline not authorized");
   if(BigInt(maker.xlmE7)<=10000000n||BigInt(taker.xlmE7)<=10000000n)
     blockers.push("Insufficient native XLM reserve");
-  if(BigInt(taker.usdcE7)===0n)blockers.push("Wallet 2 has no test USDC");
+  // The payment side is not known until the user reviews BUY versus SELL.
+  // verifyM51TradeCapacity checks the exact paying account and amounts.
   if(paused)blockers.push("M9 settlement remains paused (expected safety gate)");
   return Object.freeze({
     state:paused?"PAUSED_REVIEW_ONLY":blockers.length?"BLOCKED":"ASSETS_VERIFIED_ONLY",
@@ -120,7 +132,9 @@ export async function checkM45TestnetPreflight({
   });
 }
 /** Browser callable, every attempt re-reads current public state. */
-export async function probeM45TestnetPreflight({server,fetchImpl=fetch,nowMs=Date.now()}={}){
+export async function probeM45TestnetPreflight({
+  server,fetchImpl=fetch,nowMs=Date.now(),candidate=M45_CANDIDATE
+}={}){
   return checkM45TestnetPreflight({server:server??new rpc.Server(M45_CANDIDATE.rpc),
-    fetchImpl,nowMs});
+    fetchImpl,nowMs,candidate});
 }
