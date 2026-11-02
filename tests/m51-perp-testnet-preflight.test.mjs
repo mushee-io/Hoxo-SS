@@ -2,8 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {createHash} from "node:crypto";
 import {readFile} from "node:fs/promises";
-import {StrKey} from "@stellar/stellar-sdk";
-import {prepareM51PerpTerms,preflightM51XlmPerp,TESTNET_USDC_SAC,
+import {StrKey,Account,TransactionBuilder,Address,scValToNative} from "@stellar/stellar-sdk";
+import {prepareM51PerpTerms,preflightM51XlmPerp,buildM51PerpUnsignedOpen,TESTNET_USDC_SAC,
   TESTNET_PASSPHRASE} from "../matching/m51-perp-testnet-preflight.mjs";
 
 const MAKER="GCT7YPNK7JAC2FREF5WLROOWQAWRQQV7US2ZB5YK355QV37SAWNERHDB";
@@ -146,5 +146,45 @@ test("M51 rejects wrong network, WASM substitution, paused oracle and underfunde
       limitPriceUsd:"0.2500000",positionId:POSITION
     }),expected);
     assert.ok(!server.calls.includes("open"),"never call mutating contract open");
+  }
+});
+
+
+test("M51 builds exact unsigned, non-broadcasting Soroban M12 open args for both LONG and SHORT",async()=>{
+  for(const [action,limit] of [["long","0.2500000"],["short","0.1500000"]]){
+    const reviewed=await preflightM51XlmPerp({
+      server:mockRpc(),registry:fixtureRegistry(),maker:MAKER,taker:TAKER,
+      action,quantityXlm:"5.0000000",limitPriceUsd:limit,positionId:POSITION
+    });
+    const source=new Account(MAKER,"12345");
+    const built=buildM51PerpUnsignedOpen({preflight:reviewed,sourceAccount:source});
+    assert.equal(built.source,MAKER);
+    assert.equal(built.signatureCount,0);
+    assert.equal(built.broadcast,false);
+    assert.equal(built.executionPermitted,false);
+    const tx=TransactionBuilder.fromXdr(built.transactionXdr,TESTNET_PASSPHRASE);
+    assert.equal(tx.source,MAKER);
+    assert.equal(tx.signatures.length,0);
+    assert.equal(tx.operations.length,1);
+    const op=tx.operations[0];
+    assert.equal(op.type,"invokeHostFunction");
+    const invocation=op.func.invokeContract;
+    assert.equal(Address.fromScAddress(invocation.contractAddress).toString(),reviewed.contractId);
+    assert.equal(String(invocation.functionName),"open");
+    assert.equal(invocation.args.length,7);
+    const decoded=invocation.args.map(v=>scValToNative(v));
+    assert.equal(decoded[1],reviewed.long);
+    assert.equal(decoded[2],reviewed.short);
+    assert.equal(BigInt(decoded[3]),BigInt(reviewed.quantityE7));
+    assert.equal(BigInt(decoded[4]),BigInt(reviewed.longMaxE7));
+    assert.equal(BigInt(decoded[5]),BigInt(reviewed.shortMinE7));
+    assert.equal(Number(decoded[6]),reviewed.expiresAtLedger);
+    assert.throws(()=>buildM51PerpUnsignedOpen({preflight:reviewed,
+      sourceAccount:new Account(TAKER,"12345")}),/sole transaction source/);
+    assert.throws(()=>buildM51PerpUnsignedOpen({preflight:reviewed,
+      sourceAccount:source,feeStroops:"1000001"}),/fee exceeds/);
+    assert.throws(()=>buildM51PerpUnsignedOpen({preflight:{
+      ...reviewed,riskAndOracleSourcesVerified:false
+    },sourceAccount:source}),/verified current-ledger/);
   }
 });
