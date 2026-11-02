@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
-import {M52_SEND_ACK,verifyM52Receipt,verifyM52SubmissionHash,reconcileM52Balances,
+import {M52_SEND_ACK,verifyM52Receipt,verifyM52FinalityLedger,verifyM52SubmissionHash,reconcileM52Balances,
   m52ReviewedSpotSettlement} from "../app/m52-testnet-spot-finality.mjs";
 import {M45_CANDIDATE} from "../app/m45-spot-preflight.mjs";
 import {M44_XLM_SAC,M44_USDC_SAC}
@@ -135,4 +135,14 @@ test("M56 balance reconciliation rejects malformed snapshots, negative balances,
   assert.throws(()=>reconcileM52Balances(before,{
     ...after,[M44_USDC_SAC]:[1n]
   },terms,1000000n),/invalid before\/after wallet balances/);
+});
+
+
+test("M57 receipt ledger must equal exact RPC-confirmed transaction ledger",()=>{
+  assert.equal(verifyM52FinalityLedger({ledger:5500050},5500050),5500050);
+  for(const final of [{ledger:5500051},{ledger:5500049},{ledger:"5500050"},
+    {ledger:5500050.5},{ledger:0},{ledger:Number.MAX_SAFE_INTEGER+1},null,{}])
+    assert.throws(()=>verifyM52FinalityLedger(final,5500050),/confirmed RPC ledger/);
+  for(const bad of [0,-1,"5500050",null,Number.MAX_SAFE_INTEGER+1])
+    assert.throws(()=>verifyM52FinalityLedger({ledger:5500050},bad),/confirmed RPC ledger/);
 });
