@@ -56,7 +56,7 @@ test("M52 reconciles on-chain XLM and USDC transfer deltas for both BUY and SELL
     ...sell.after,[M44_USDC_SAC]:[1200001n,800000n]
   },terms,1000000n),/USDC account/);
   assert.throws(()=>reconcileM52Balances(sell.before,{
-    ...sell.after,[M44_XLM_SAC]:[99899000n,100100000n]
+    ...sell.after,[M44_XLM_SAC]:[98899000n,100100000n]
   },terms,1000000n),/XLM balance\/fee/);
   const excessive=balances({makerSells:true,fee:1000001n});
   assert.throws(()=>reconcileM52Balances(excessive.before,excessive.after,
