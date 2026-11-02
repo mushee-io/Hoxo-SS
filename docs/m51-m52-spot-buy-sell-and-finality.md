@@ -43,3 +43,7 @@ Real bilateral XLM-PERP long/short terms and exact unsigned M12 `open` XDR are n
 Test commands: `npm run test:m52`, `npm test` on Draft PR #34, plus M51 perp checks from PR #39.
 
 **NO VERCEL, NO PRODUCTION PROMOTION, NO MAINNET, NO AUTOMATIC M9 UNPAUSE.**
+
+## M52 receipt type integrity
+
+Receipt verification now requires the M9 `maker_side` to be the exact numeric side (0 or 1) and `settled_ledger` to be a positive safe integer, rather than accepting strings or fractional/coerced values. Regression cases cover string side, null side, string ledger, fractional ledger and unsafe ledger values. These are validation safeguards only; no settlement receipt has been observed or submitted by this change.
