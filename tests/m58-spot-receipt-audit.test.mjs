@@ -75,3 +75,15 @@ test("M64 rejects ambiguous duplicate settlement events within one finalized tra
  };
  await assert.rejects(run(adapter),/exactly one matching M9 settlement event/);
 });
+
+test("M65 rejects a conflicting same-match event even if one event looks valid",async()=>{
+ const adapter=rpc();
+ const original=adapter.getTransaction;
+ adapter.getTransaction=async h=>{
+  const tx=await original(h);
+  return {...tx,contractEvents:[...tx.contractEvents,{
+   ...tx.contractEvents[0],makerSide:tx.contractEvents[0].makerSide===1?0:1
+  }]};
+ };
+ await assert.rejects(run(adapter),/ambiguous M9 settlement events/);
+});
