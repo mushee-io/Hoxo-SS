@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
 import {TESTNET_PASSPHRASE,M9_TESTNET_CONTRACT_ID} from "../app/m43-freighter-auth-guard.mjs";
 import {M45_CANDIDATE,checkM45TestnetPreflight} from "../app/m45-spot-preflight.mjs";
-import {draftM45BilateralTerms,simulateM45BilateralSpot} from "../app/m45-spot-simulation.mjs";
+import {draftM45BilateralTerms,simulateM45BilateralSpot,verifyM51TradeCapacity}
+  from "../app/m45-spot-simulation.mjs";
 import {createM45SigningLab} from "../app/m45-signing-lab.mjs";
 
 const nowMs=Date.parse("2026-11-02T02:00:00.000Z");
@@ -181,4 +182,55 @@ test("M45 browser code never enables normal Buy/Sell or broadcasts",async()=>{
   assert.doesNotMatch(ui+signing,/\.sendTransaction\(|\.signAndSend\(|set_pause\(false\)/);
   assert.match(ui,/approveTaker/);
   assert.match(ui,/approveMaker/);
+});
+
+
+test("M51 wallet-1 BUY and SELL XLM draft distinct on-chain M9 maker_side with exact bilateral pricing",()=>{
+  let id=0;
+  const rand=()=>Uint8Array.from({length:32},()=>++id);
+  const basic={xlmAmount:"0.0100000",usdcAmount:"0.0200000",ledger:1000,randomBytes:rand};
+  const sell=draftM45BilateralTerms({...basic,side:"sell"});
+  const buy=draftM45BilateralTerms({...basic,side:"buy"});
+  assert.equal(sell.maker_side,0);
+  assert.equal(buy.maker_side,1);
+  assert.equal(sell.base_amount,buy.base_amount);
+  assert.equal(sell.quote_amount,buy.quote_amount);
+  assert.equal(buy.maker,M45_CANDIDATE.maker);
+  assert.equal(buy.taker,M45_CANDIDATE.taker);
+  assert.notEqual(buy.match_id,sell.match_id);
+  assert.throws(()=>draftM45BilateralTerms({...basic,side:"perp"}),/side must be buy or sell/);
+});
+
+test("M51 BUY/SELL spot preflight checks correct paying wallet, XLM fee reserve and exact USDC issuer",()=>{
+  const makeWallet=(address,xlmE7,usdcE7)=>({address,xlmE7,usdcE7,trustlineAuthorized:true});
+  const maker=makeWallet(M45_CANDIDATE.maker,"90000000000","10000000");
+  const taker=makeWallet(M45_CANDIDATE.taker,"20000000","10000000");
+  const p={wallets:[maker,taker]};
+  const base={maker:maker.address,taker:taker.address,base_amount:"100000",
+    quote_amount:"200000"};
+  const sell=verifyM51TradeCapacity(p,{...base,maker_side:0});
+  assert.equal(sell.side,"SELL_XLM");
+  assert.equal(sell.xlmSeller,maker.address);
+  assert.equal(sell.usdcPayer,taker.address);
+  const buy=verifyM51TradeCapacity(p,{...base,maker_side:1});
+  assert.equal(buy.side,"BUY_XLM");
+  assert.equal(buy.xlmSeller,taker.address);
+  assert.equal(buy.usdcPayer,maker.address);
+  assert.equal(buy.executionPermitted,false);
+  assert.throws(()=>verifyM51TradeCapacity({
+    wallets:[maker,{...taker,usdcE7:"1"}]
+  },{...base,maker_side:0}),/USDC paying wallet/);
+  assert.throws(()=>verifyM51TradeCapacity({
+    wallets:[{...maker,usdcE7:"1"},taker]
+  },{...base,maker_side:1}),/USDC paying wallet/);
+  assert.throws(()=>verifyM51TradeCapacity({
+    wallets:[maker,{...taker,xlmE7:"100000"}]
+  },{...base,maker_side:1}),/XLM selling wallet/);
+  assert.throws(()=>verifyM51TradeCapacity({
+    wallets:[maker,{...taker,trustlineAuthorized:false}]
+  },{...base,maker_side:1}),/authorized issuer/);
+  assert.throws(()=>verifyM51TradeCapacity({
+    wallets:[taker,maker]
+  },{...base,maker_side:1}),/exact participant/);
+  assert.throws(()=>verifyM51TradeCapacity(p,{...base,maker_side:2}),/invalid reviewed/);
 });
