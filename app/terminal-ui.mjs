@@ -1,4 +1,4 @@
-import {getMarket,filterMarkets,orderDraft} from "./terminal-state.mjs";
+import {getMarket,filterMarkets,orderDraft,parseAmount7} from "./terminal-state.mjs";
 
 /** M2 — interface-only exchange workspace, explicitly no trading operations. */
 const $=id=>document.getElementById(id);
