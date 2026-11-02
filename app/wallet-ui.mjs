@@ -33,6 +33,11 @@ async function fetchClassicAccount(owner){
   }
   renderBalances(controller.snapshot());
 }
+function appendClassicNote(target,message){
+  const element=document.createElement("p");
+  element.textContent=message;
+  target.append(element);
+}
 function showClassicAccount(state){
   const group=document.createElement("div");
   group.className="wallet-transfer-history";
@@ -47,14 +52,14 @@ function showClassicAccount(state){
     "Public Horizon account trades. They are not Hoxo settlement receipts, PnL, interest or perpetual executions.";
   group.append(title,note);
   if(!["connected","unfunded"].includes(state.status)){
-    group.append(document.createElement("p")).textContent="Connect and verify Freighter on Stellar Testnet.";
+    appendClassicNote(group,"Connect and verify Freighter on Stellar Testnet.");
     body.append(group);return;
   }
   if(classicState.loading){
-    group.append(document.createElement("p")).textContent="Verifying Testnet account, offers and trades...";
+    appendClassicNote(group,"Verifying Testnet account, offers and trades...");
   }else if(classicState.error){
-    group.append(document.createElement("p")).textContent=
-      "PUBLIC HORIZON ACTIVITY UNAVAILABLE · "+classicState.error;
+    appendClassicNote(group,
+      "PUBLIC HORIZON ACTIVITY UNAVAILABLE · "+classicState.error);
   }else if(classicState.result?.owner===state.address){
     const records=isOffers?classicState.result.offers:classicState.result.trades;
     if(records.length){
@@ -74,12 +79,12 @@ function showClassicAccount(state){
         }
       }
       group.append(grid);
-    }else group.append(document.createElement("p")).textContent=
-      "No verified classic DEX "+(isOffers?"offers":"trades")+" in the latest 20 records.";
-    group.append(document.createElement("p")).textContent=
-      "HORIZON TESTNET · LEDGER "+classicState.result.ledger+" · LATEST PAGE ONLY";
-  }else group.append(document.createElement("p")).textContent=
-    "Connect your wallet or refresh public account activity.";
+    }else appendClassicNote(group,
+      "No verified classic DEX "+(isOffers?"offers":"trades")+" in the latest 20 records.");
+    appendClassicNote(group,
+      "HORIZON TESTNET · LEDGER "+classicState.result.ledger+" · LATEST PAGE ONLY");
+  }else appendClassicNote(group,
+    "Connect your wallet or refresh public account activity.");
   body.append(group);
 }
 
