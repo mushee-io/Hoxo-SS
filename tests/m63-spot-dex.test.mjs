@@ -77,6 +77,9 @@ test("M63 browser code only signs on explicit wallet approval, never bypasses in
   assert.match(bundle,/app\/m63-spot\.bundle\.js/);
   assert.match(ui,/pathPaymentStrictReceive/);
   assert.match(ui,/pathPaymentStrictSend/);
+  assert.match(ui,/Operation\.changeTrust\(\{asset:usdc\}\)/);
+  assert.match(ui,/m63AddTrustline/);
+  assert.match(html,/https:\/\/faucet\.circle\.com/);
   assert.match(ui,/api\.signTransaction\(tx\.toXDR\(\)/);
   assert.match(ui,/submit:false/);
   assert.match(ui,/signed\.hash\(\)\.toString\("hex"\)!==tx\.hash\(\)/);
