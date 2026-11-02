@@ -1,0 +1,46 @@
+name: M53 Auto-checked Stellar Testnet Trading Acceptance
+on:
+  pull_request:
+    paths:
+      - "verification/m53-testnet-trading-checklist.mjs"
+      - "scripts/check-m53-testnet-trading.mjs"
+      - "tests/m53-testnet-trading-checklist.test.mjs"
+      - ".github/workflows/m53-testnet-trading.yml"
+      - "package.json"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  testnet-acceptance:
+    name: Read-only RPC/Horizon + checked trading acceptance
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      M53_OUTPUT_DIR: testnet-checklist-report
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install official pinned Stellar SDK
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Test fail-closed checkbox evaluator (no signatures or transactions)
+        run: npm run test:m53
+      - name: Observe live Testnet M9, XLM/USDC approval and both public wallets
+        run: npm run check:testnet-trading
+      - name: Publish automatically checked Testnet milestone summary
+        if: always()
+        run: |
+          if [ -f testnet-checklist-report/testnet-trading.md ]; then
+            cat testnet-checklist-report/testnet-trading.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "M53: live checklist unavailable; no trading acceptance can be inferred." >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Store read-only JSON/Markdown evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m53-testnet-trading-checklist
+          path: testnet-checklist-report/
+          if-no-files-found: warn
+          retention-days: 7
