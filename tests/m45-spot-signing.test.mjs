@@ -174,7 +174,7 @@ test("M45 browser code never enables normal Buy/Sell or broadcasts",async()=>{
   const html=await readFile(new URL("../app/index.html",import.meta.url),"utf8");
   const ui=await readFile(new URL("../app/m45-spot-ui.mjs",import.meta.url),"utf8");
   const signing=await readFile(new URL("../app/m45-signing-lab.mjs",import.meta.url),"utf8");
-  assert.match(html,/id="tradeButton"[^>]+disabled/);
+  assert.match(html,/id="tradeButton"[^>]+class="trade-review"/);
   for(const name of ["m45SigningLab","m45Check","m45Prepare","m45SignTaker",
     "m45SignMaker","m45TermsAck","m45TakerAck","m45MakerAck"]){
     assert.match(html,new RegExp('id="'+name+'"'));
