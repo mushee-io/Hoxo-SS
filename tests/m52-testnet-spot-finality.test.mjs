@@ -83,7 +83,8 @@ test("M52 has explicit no-send defaults, strong signed-XDR reconstruction and se
   assert.match(body,/acknowledgement!==M52_SEND_ACK/);
   assert.match(body,/queryContract/);
   assert.match(body,/sendTransaction\(tx\)/);
-  assert.match(body,/pollTransaction\(hash\)/);
+  assert.match(body,/pollTransaction\(canonicalHash\)/);
+  assert.doesNotMatch(body,/\\\\n  const final/);
   assert.doesNotMatch(body,/set_pause\s*\(|signAndSend\s*\(/);
   let sends=0;
   await assert.rejects(m52ReviewedSpotSettlement({server:{
