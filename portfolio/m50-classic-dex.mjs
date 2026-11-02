@@ -51,7 +51,7 @@ export function normalizeM50Trade(row,owner,nowMs){
   if(!["orderbook","liquidity_pools"].includes(row.trade_type))
     fail("unknown trade mechanism");
   const createdAt=Date.parse(row.ledger_close_time);
-  if(!Number.isFinite(createdAt)||createdAt>nowMs+15000)
+  if(!Number.isFinite(createdAt)||createdAt<Date.parse("2015-09-30T00:00:00Z")||createdAt>nowMs+15000)
     fail("unverified trade timestamp");
   const base=asset({
     asset_type:row.base_asset_type,
