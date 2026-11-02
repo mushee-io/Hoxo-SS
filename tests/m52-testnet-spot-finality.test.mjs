@@ -115,3 +115,24 @@ test("M52 rejects an RPC transaction hash that differs from the exact signed env
   assert.throws(()=>verifyM52SubmissionHash(new Uint8Array(31),canonical),/transaction hash/);
   assert.throws(()=>verifyM52SubmissionHash(Array(32).fill(0),canonical),/transaction hash/);
 });
+
+
+test("M56 balance reconciliation rejects malformed snapshots, negative balances, invalid side and fee bounds",()=>{
+  const {before,after}=balances();
+  for(const side of [-1,2,"0",null,undefined])
+    assert.throws(()=>reconcileM52Balances(before,after,{...terms,maker_side:side},1000000n),/invalid maker side/);
+  for(const fee of [-1n,1000001n,1000000,undefined])
+    assert.throws(()=>reconcileM52Balances(before,after,terms,fee),/invalid network fee ceiling/);
+  const badSnapshots=[
+    {...before,[M44_XLM_SAC]:[1n]},
+    {...before,[M44_XLM_SAC]:[1n,2n,3n]},
+    {...before,[M44_USDC_SAC]:[1n,"2"]},
+    {...before,[M44_USDC_SAC]:[-1n,2n]},
+    {...before,[M44_XLM_SAC]:null}
+  ];
+  for(const bad of badSnapshots)
+    assert.throws(()=>reconcileM52Balances(bad,after,terms,1000000n),/invalid before\/after wallet balances/);
+  assert.throws(()=>reconcileM52Balances(before,{
+    ...after,[M44_USDC_SAC]:[1n]
+  },terms,1000000n),/invalid before\/after wallet balances/);
+});
