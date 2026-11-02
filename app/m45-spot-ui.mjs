@@ -64,10 +64,21 @@ async function run(label,fn){
 }
 async function preflight(){
   clearSession();
-  proof=await probeM45TestnetPreflight({server,nowMs:Date.now()});
-  const blockers=proof.blockers?.length?proof.blockers.join(" · "):"No asset blockers in read-only check.";
-  note("LEDGER "+proof.ledger+" · "+blockers+
-    " · Even a clean result never authorizes trading.");
+  const checked=await probeM45TestnetPreflight({server,nowMs:Date.now()});
+  // The read-only Connect button accepts any account; the pilot settlement
+  // is restricted to exactly two configured counterparties. Surface the gap.
+  let selectedAddress=null;
+  try{
+    const wallet=await window.freighterApi?.getAddress?.();
+    if(typeof wallet?.address==="string")selectedAddress=wallet.address;
+  }catch{ /* No usable Freighter selection: fail closed without signing. */ }
+  const walletReady=[M45_CANDIDATE.maker,M45_CANDIDATE.taker].includes(selectedAddress);
+  const blockers=[...checked.blockers];
+  if(!walletReady)blockers.push("Connected Freighter account is not one of the two configured pilot wallets. An ordinary connected wallet cannot trade in this bilateral flow.");
+  proof={...checked,readyForSimulation:checked.readyForSimulation&&walletReady,blockers};
+  note("LEDGER "+proof.ledger+" · "+(blockers.length?blockers.join(" · "):
+    "Assets are ready; review both wallet signatures and explicit final send.")+
+    " · No transaction sent.",blockers.length>0);
 }
 function requireLab(){
   if(!window.freighterApi)throw Error("Freighter API unavailable. Install/enable Freighter for this browser.");
