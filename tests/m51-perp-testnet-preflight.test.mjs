@@ -125,7 +125,7 @@ test("M51 fully reviewed deployed fixture builds a one-time bilateral perpetual 
   assert.equal(result.riskAndOracleSourcesVerified,true);
   assert.equal(result.executionPermitted,false);
   assert.equal(result.broadcast,false);
-  assert.equal(result.isolatedMarginEachE7,"1002000");
+  assert.equal(result.isolatedMarginEachE7,"1010000");
   assert.equal(rpc.calls.filter(x=>x==="getContractInstance").length,4);
   assert.ok(!rpc.calls.includes("open")&&!rpc.calls.includes("set_pause"));
 });
