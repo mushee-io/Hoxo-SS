@@ -79,9 +79,13 @@ test("M59 fail closed on wrong network, failed transaction, bad ledger and spoof
   await assert.rejects(readM59VerifiedSpotActivity({server:server({wrongLedger:true})}),/finality/);
   for(const wrong of [
     event({base:M44_USDC_SAC}),event({takerAddress:maker}),event({amount:0n}),
-    event({ledger:999999}),event({quote:0n})
+    event({quote:0n})
   ])await assert.rejects(readM59VerifiedSpotActivity({server:server({events:[wrong]})}),
     /ledger|wallet|asset|amount|finality/);
+});
+test("M59 ignores events outside the observed ledger range",async()=>{
+  const out=await readM59VerifiedSpotActivity({server:server({events:[event({ledger:999999})]})});
+  assert.equal(out.verifiedCount,0);
 });
 test("M59 forbids repeated match IDs and never multiplies settled volume",async()=>{
   const repeated=[event(),event({txHash:hash(11),ledger:6501})];
