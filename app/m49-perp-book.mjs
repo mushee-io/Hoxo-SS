@@ -54,7 +54,7 @@ export function normalizeM49PerpBook(snapshot,{nowMs=Date.now(),limit=15}={}){
   return Object.freeze({
     source:"Hyperliquid",sourceKind:"hyperliquid-perp",
     market:"XLM perpetual",marketType:"perpetual",
-    quoteCurrency:"USDC",currency:"USDC",externalMainnet:true,
+    quoteCurrency:"USD",currency:"USD",marginCurrency:"USDC",externalMainnet:true,
     observedAtMs:snapshot.time,
     bids,asks,spread:bids.length&&asks.length?asks[0].price-bids[0].price:null,
     executable:false,hoxoFills:false,tradeExecutable:false,hoxoSettlementEnabled:false,
