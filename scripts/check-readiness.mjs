@@ -147,7 +147,7 @@ const invariants={
     !matchingCore.includes('broadcastTransaction('),
   m17ReadinessStillBlocked:registry.deployedVerified===0&&
     terminalUi.includes('PERP TRADING NOT DEPLOYED')&&
-    app.includes("General public matching and automated liquidity remain under development."),
+    app.includes("The optional M9 bilateral settlement remains available under Advanced."),
   m18HorizonNotSettlement:walletHistory.includes('HORIZON_REPORTED_SUCCESS')&&
     walletHistory.includes('hoxoTrade:false,hoxoDeposit:false')&&
     walletHistory.includes('validateHorizonRoot('),
