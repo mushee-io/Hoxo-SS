@@ -25,3 +25,7 @@ The adapter response must be a plain own-data object containing only `signedAuth
 ## M43 cross-wallet authorization replay guard
 
 The browser handoff rejects identical maker/taker *unsigned* authorization entry XDR before prompting Freighter. After a successful maker approval, it also rejects a taker adapter response whose signed XDR is byte-for-byte identical to the maker response; the taker role stays pending for an explicit retry. Tests cover duplicate input, rejected replay, and a subsequent distinct response. This is a defense against accidental cross-wallet response reuse, **not** verification of account credentials, invocation trees, signatures, expiry or match binding. Do not enable broadcast on this basis.
+
+## Required own-field protection
+
+Every authorization term must be an own data property on the supplied plain object. Inherited values (including values injected through `Object.prototype` pollution) are rejected before any Freighter prompt. This is input integrity hardening only; it does not validate the cryptographic Soroban authorization tree, enable transaction submission, or establish trading readiness.
