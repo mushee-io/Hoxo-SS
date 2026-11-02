@@ -26,7 +26,7 @@ The updated preflight checks the **correct asset owner** for each side: the XLM 
 - Before send, query M9's replay marker and paused state again. Only send exact confirmed XDR with the official Stellar SDK. Poll genuine network finality, match all signed receipt terms, read `is_settled`, reconcile both wallets' post-settlement USDC/XLM token balances with bounded maker-paid gas, and only then report a confirmed Testnet settlement.
 - Never auto-unpause, infer approval, write private keys, execute mainnet trades, produce artificial volume or mark unsigned previews as fills.
 
-**Not operational yet:** the live M9 Testnet contract is currently **paused**. The M45 signing lab intentionally blocks simulation while paused. The M52 engine is **not yet wired to an enabled Buy/Sell control**; its security integration and manual operator acceptance require further review and tests before it may be deployed. No on-chain trade or receipt is claimed from this branch.
+**Current verified Testnet status (2 November 2026):** M9 is **UNPAUSED** following the operator's Freighter-admin transaction; live M41 code/owner/asset/wallet verification confirms the change. The M55 live RPC workflow has now independently simulated BOTH XLM BUY and SELL on the actual M9 contract. This is not proof of any on-chain settlement; both wallet approvals and final submit remain required. The guarded M52 submission module is now connected through M45/M55 as an **explicit user-clicked final action**, with exact typed consent, tight initial limits and genuine receipt/balance checks. It is only on this GitHub draft branch, NOT deployed to Vercel or publicly activated.
 
 ## Perpetuals in separate Draft PR #39
 
@@ -43,6 +43,29 @@ Real bilateral XLM-PERP long/short terms and exact unsigned M12 `open` XDR are n
 Test commands: `npm run test:m52`, `npm test` on Draft PR #34, plus M51 perp checks from PR #39.
 
 **NO VERCEL, NO PRODUCTION PROMOTION, NO MAINNET, NO AUTOMATIC M9 UNPAUSE.**
+
+## M55 — Small-amount, operator-controlled test in a local Windows browser
+
+Engineering now links the spot ticket to the reviewed M45/M51/M52 bilateral signing lab. The general market order button remains disabled until native matching and live financial beta approval exist. This internal acceptance flow is specifically designed to exercise **one manually agreed two-wallet spot delivery-versus-payment** on Stellar Testnet.
+
+Once the branch passes full CI, an operator may test it locally **without a Vercel deployment**:
+
+1. Check out `m43-browser-dual-wallet-auth-guard`, install Node.js 22+ and Python 3, run `npm install` and `npm run build:m45`.
+2. From the repository root run `python -m http.server 4173 --bind 127.0.0.1` and open `http://localhost:4173/app/?market=xlm-usdc-spot` on the Windows computer with the official Freighter extension.
+3. Click **OPEN SMALL TESTNET SPOT BUY/SELL**. Select Wallet 1 **BUY** or **SELL**. Review the manually agreed Testnet amounts (default 0.0100000 XLM / 0.0017000 Testnet USDC), check the current Testnet network, contract WASM hash, admin, pause, trustlines and funded wallets.
+4. Click **SIMULATE EXACT SOROBAN TERMS** after acknowledging manual terms. Review the exact match ID, side, 7-decimal amounts, expiry and fee. The RPC sim is read-only. Keep wallet approvals inside the short 20-ledger expiry; restart if expired.
+5. Switch Freighter to **Wallet 2**, explicitly approve the non-source Soroban authorization. Switch to **Wallet 1**, explicitly approve the transaction envelope (Freighter `submit:false`).
+6. Only after checking the exact transaction and fee again, tick the **final send consent** checkbox, type exactly `SEND_SMALL_HOXO_STELLAR_TESTNET_SPOT`, and click **SEND SIGNED TRANSACTION · STELLAR TESTNET**. This is the *only* code path in M55 that can call the reviewed M52 `sendTransaction` method.
+7. The UI only shows **SETTLED** and links to Stellar Expert after RPC `SUCCESS`, the matching M9 receipt, the on-chain replay marker and exact two-wallet XLM/USDC balance reconciliation. If RPC finality is uncertain, **do not retry blindly**; inspect the transaction hash and current account balances first.
+
+The exact two-wallet signature handoff cannot be completed unattended: only the owner of each selected Freighter wallet can approve it. No private keys or recovery phrases should ever be provided in chat or stored in a server.
+
+### Independently verified simulation evidence
+
+GitHub run [M55 live Testnet simulation](https://github.com/mushee-io/Hoxo-SS/actions/runs/41463010912) reports genuine contract simulation success for BOTH sides at ledger **5,521,271**, using `0.0100000 XLM / 0.0017000 USDC` with estimated transaction fee **220,712 stroops**, while explicitly reporting `transactionsBroadcast:0` and `verifiedOnChainFills:0`. Test mock signatures/receipts are never presented as genuine trading activity. A later run must check the latest contract pause/ledger again before signing.
+
+**Release control remains GitHub-only: no merge into main and no Vercel promotion without the operator's approval.**
+
 
 ## M52 receipt type integrity
 
