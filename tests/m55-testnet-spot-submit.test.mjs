@@ -143,7 +143,7 @@ test("M55 HTML final submission is independently consented, Testnet only, no nor
   for(const id of ["m55FinalReview","m55SendAck","m55SendPhrase","m55Submit","m55Receipt"])
     assert.match(html,new RegExp('id="'+id+'"'));
   assert.match(html,/id="m55Submit"[^>]+disabled/);
-  assert.match(html,/id="tradeButton"[^>]+disabled/);
+  assert.match(html,/id="tradeButton"[^>]+class="trade-review"/);
   assert.match(ui,/submit\(\{acknowledgement/);
   assert.match(ui,/VIEW VERIFIED TESTNET TRANSACTION/);
   assert.match(signing,/m52ReviewedSpotSettlement/);
