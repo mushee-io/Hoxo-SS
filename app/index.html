@@ -57,8 +57,8 @@
   <div class="draft-label">MANUAL TESTNET REVIEW <span>SIGN ONLY AFTER VERIFYING BOTH WALLETS</span></div><label class="input-label" for="orderSize">ORDER SIZE <span id="sizeAssetLabel">XLM</span></label><div class="sizebox"><input id="orderSize" type="text" inputmode="decimal" placeholder="0.0000000" autocomplete="off" aria-describedby="draftFeedback"><span id="sizeAssetSuffix">XLM</span></div><div id="limitPriceRow" class="limit-field hidden"><label class="input-label" for="limitPrice">LIMIT PRICE <span>USDC</span></label><div class="sizebox"><input id="limitPrice" type="text" inputmode="decimal" autocomplete="off" placeholder="0.0000000" aria-describedby="draftFeedback"><span>USDC</span></div></div><div id="draftFeedback" class="draft-feedback" aria-live="polite">Enter a trade size. A bilateral wallet-approved Testnet spot trade is available below.</div>
   <div class="draft-helper">STELLAR TESTNET · ORDER REVIEW</div>
   <div class="order-toggles"><label><input type="checkbox" disabled> Reduce only</label><label><input type="checkbox" disabled> TP / SL</label></div>
-  <button id="tradeButton" class="trade-disabled" disabled>GENERAL MARKET ORDERS · NOT ACTIVE</button>
-  <button type="button" class="m55-open-lab" id="m55OpenLab" aria-controls="m45SigningLab">OPEN SMALL TESTNET SPOT BUY/SELL ↓</button>
+  <button id="tradeButton" type="button" class="trade-review">REVIEW SMALL TESTNET BUY</button>
+  <button type="button" class="m55-open-lab" id="m55OpenLab" aria-controls="m45SigningLab">VIEW WALLET-APPROVAL STEPS ↓</button>
   <div class="summary"><div><span>Selected instrument</span><b id="ticketMarket">XLM/USDC</b></div><div><span>Order size (draft)</span><b id="ticketSize">—</b></div><div><span>Input-only notional</span><b id="ticketNotional">—</b></div><div><span>Available margin</span><b>—</b></div></div>
   <div class="order-warning" role="note"><strong>WALLET-APPROVED SETTLEMENT</strong><p>Use the small Testnet spot trade button above. General market matching and perpetual positions require separate deployment and approvals.</p></div>
 </section>
