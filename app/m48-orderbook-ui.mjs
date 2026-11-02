@@ -24,8 +24,8 @@ function sourceHeading(){
   $("bookPriceHeading").textContent=selector.value==="kraken"?"PRICE (USD)":"PRICE (USDC)";
   $("bookSizeHeading").textContent="SIZE (XLM)";
   $("m48BookSourceWarning").textContent=selector.value==="kraken"?
-    "KRAKEN XLM/USD · EXTERNAL SPOT ORDERS · NOT HOXO / NOT USDC":
-    "STELLAR TESTNET XLM/USDC · CLASSIC DEX OFFERS · NOT HOXO M9";
+    "KRAKEN · XLM/USD · USD REFERENCE":
+    "STELLAR TESTNET DEX · XLM/USDC · USDC";
 }
 function formatted(n,decimals=6){
   return Number(n).toLocaleString("en-US",{
@@ -82,7 +82,7 @@ function paint(book){
   $("m48Spread").textContent=book.spread===null?"—":
     formatted(book.spread,7)+" "+book.currency;
   label(book.source+" · "+(bids.length+asks.length)+
-    " verified external offer levels · AUTO REFRESH · NOT HOXO FILLS");
+    " LIVE PRICE LEVELS · AUTO REFRESH");
 }
 async function sourceFetch(source){
   try{
