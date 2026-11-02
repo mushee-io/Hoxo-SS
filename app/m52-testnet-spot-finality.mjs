@@ -10,6 +10,7 @@ import {TransactionBuilder} from "@stellar/stellar-sdk";
 import {M45_CANDIDATE,checkM45TestnetPreflight} from "./m45-spot-preflight.mjs";
 import {M9_TESTNET_CONTRACT_ID,TESTNET_PASSPHRASE} from "./m43-freighter-auth-guard.mjs";
 import {reviewM44SourceEnvelope,verifyM44TakerAuth,verifyM44MakerEnvelope,
+  createM44EnvelopePreparer,
   M44_XLM_SAC,M44_USDC_SAC} from "./m44-stellar-xdr-verifier.mjs";
 
 export const M52_SEND_ACK="SEND_SMALL_HOXO_STELLAR_TESTNET_SPOT";
@@ -27,7 +28,7 @@ function sameReceiptId(id,expected){
     return Array.from(id,b=>b.toString(16).padStart(2,"0")).join("")===expected;
   return false;
 }
-function receiptMatches(receipt,terms){
+export function verifyM52Receipt(receipt,terms){
   if(!receipt||!sameReceiptId(receipt.match_id,terms.match_id)||
      !sameReceiptId(receipt.maker_order_id,terms.maker_order_id)||
      !sameReceiptId(receipt.taker_order_id,terms.taker_order_id)||
@@ -57,7 +58,7 @@ async function tokenState(server,terms){
   }
   return result;
 }
-function reconcile(before,after,terms,feeCeiling){
+export function reconcileM52Balances(before,after,terms,feeCeiling){
   const base=numberText(terms.base_amount,"XLM size");
   const quote=numberText(terms.quote_amount,"USDC size");
   const makerSells=terms.maker_side===0;
@@ -114,6 +115,17 @@ export async function m52ReviewedSpotSettlement({
     sourceTxXdr,takerAuthXdr,signedTakerAuthEntry,
     expectedTerms,currentLedger:proof.ledger,maxFeeStroops:MAX_FEE_STROOPS
   });
+  const expectedPreparation=createM44EnvelopePreparer({
+    expectedTerms,currentLedger:proof.ledger,maxFeeStroops:MAX_FEE_STROOPS,
+    takerAuthXdr
+  });
+  const reassembled=await expectedPreparation({
+    sourceTxXdr,signedTakerAuthEntry,networkPassphrase:TESTNET_PASSPHRASE,
+    contractId:M9_TESTNET_CONTRACT_ID,maker:expectedTerms.maker,
+    taker:expectedTerms.taker,matchId:expectedTerms.match_id
+  });
+  if(reassembled.preparedTxXdr!==preparedTxXdr)
+    fail("signed source envelope does not match independently reassembled taker authorization");
   const maker=verifyM44MakerEnvelope({
     preparedTxXdr,signedTxXdr,maker:expectedTerms.maker
   });
@@ -156,11 +168,11 @@ export async function m52ReviewedSpotSettlement({
     fail("transaction broadcast but confirmed success is missing; inspect hash "+hash);
   const matchId=Uint8Array.from(expectedTerms.match_id.match(/../g),x=>parseInt(x,16));
   const receipt=await read(server,M9_TESTNET_CONTRACT_ID,"receipt",{match_id:matchId});
-  const confirmedLedger=receiptMatches(receipt,expectedTerms);
+  const confirmedLedger=verifyM52Receipt(receipt,expectedTerms);
   if(await read(server,M9_TESTNET_CONTRACT_ID,"is_settled",{match_id:matchId})!==true)
     fail("transaction submitted, but M9 replay marker is not confirmed");
   const after=await tokenState(server,expectedTerms);
-  reconcile(before,after,expectedTerms,MAX_FEE_STROOPS);
+  reconcileM52Balances(before,after,expectedTerms,MAX_FEE_STROOPS);
   return Object.freeze({
     phase:"ONCHAIN_SETTLED_AND_RECONCILED",
     transactionHash:hash.toLowerCase(),settledLedger:confirmedLedger,
