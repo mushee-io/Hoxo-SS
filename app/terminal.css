@@ -118,3 +118,22 @@
 .m48-ask .m48-price{color:#ff8496}
 .m48-bid .m48-price{color:#61dfaa}
 .m48-mid{padding:9px 10px;background:#202a26;text-align:center;color:var(--lime);border-top:1px solid #3c4d43;border-bottom:1px solid #3c4d43;font:10px var(--mono)}
+
+
+/* M49: concise status strip; retain honest operational disclosures on demand. */
+.announcement{position:relative;z-index:7;gap:12px;background:#19271f;color:#b8dcc0;border-bottom-color:#365b46;padding:7px 18px}
+.announcement .announcement-brand{font-weight:700;color:#c3fdab;white-space:nowrap}
+.announcement-message{flex:1;text-align:center;letter-spacing:.025em;color:#a5d7b4;line-height:1.55}
+.announcement-details{position:relative;margin-left:auto;flex:none;color:#c5e4c9}
+.announcement-details>summary{cursor:pointer;list-style:none;border:1px solid #3e6b53;color:#baf4c4;padding:5px 9px;border-radius:3px;font:10px/1.45 var(--mono);white-space:nowrap}
+.announcement-details>summary::-webkit-details-marker{display:none}
+.announcement-details>summary:focus-visible{outline:2px solid var(--lime);outline-offset:2px}
+.announcement-details[open]>summary{background:#293f32}
+.announcement-panel{position:absolute;z-index:99;right:0;top:calc(100% + 12px);width:min(380px,90vw);box-sizing:border-box;padding:16px;background:#16251f;border:1px solid #57795d;box-shadow:0 15px 44px #0009;color:#cde3d3;font:11px/1.6 var(--mono);white-space:normal}
+.announcement-panel>strong{display:block;font-size:12px;color:#d7f5d8;margin-bottom:8px}
+.announcement-panel p{margin:0 0 10px;font:10px/1.7 var(--mono);color:#b2cdb9}
+.announcement-panel a{color:var(--lime);font-size:10px}
+@media(max-width:950px){
+  .announcement{padding:7px 12px}
+  .announcement-message{display:none}
+}

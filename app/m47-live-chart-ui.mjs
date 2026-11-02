@@ -27,18 +27,17 @@ function statusText(){
   const latest=candles.at(-1);
   if(!latest)return "EXTERNAL XLM/USD · UNAVAILABLE";
   const stale=Date.now()/1000-latest.time>M47_INTERVALS[current.timeframe]*60*2+90;
-  return "KRAKEN XLM/USD (USD, NOT USDC) · "+current.timeframe.toUpperCase()+
-    (stale?" · STALE":Date.now()-lastStreamAt<65000?" · STREAMING":" · REFERENCE")+
-    " · NOT HOXO FILLS";
+  return "KRAKEN XLM/USD · "+current.timeframe.toUpperCase()+
+    (stale?" · STALE":Date.now()-lastStreamAt<65000?" · LIVE":" · REFERENCE");
 }
 function syncPrice(){
   const latest=candles.at(-1);
   if(!latest||!supported())return;
   livePrice.textContent="$"+price(latest.close);
-  priceSource.textContent="KRAKEN XLM/USD · EXTERNAL · NOT EXECUTABLE";
+  priceSource.textContent="XLM/USD · KRAKEN REFERENCE";
   $("marketPrice").textContent="$"+price(latest.close);
   label(statusText());
-  $("chartMarketStatus").textContent="XLM/USD · KRAKEN EXTERNAL REFERENCE · NOT XLM/USDC TESTNET";
+  $("chartMarketStatus").textContent="XLM/USD · KRAKEN SPOT REFERENCE · USD";
 }
 function clearUI(){
   active=false;
@@ -46,7 +45,7 @@ function clearUI(){
   canvas.setAttribute("aria-hidden","true");
   $("chartEmptyTitle").parentElement.classList.remove("hidden");
   livePrice.textContent="—";
-  priceSource.textContent="NO VERIFIED HOXO MARKET PRICE";
+  priceSource.textContent="PRICE FEED UNAVAILABLE";
   $("marketPrice").textContent="—";
   if(!supported())label("NO EXTERNAL REFERENCE FOR THIS MARKET / VIEW");
 }

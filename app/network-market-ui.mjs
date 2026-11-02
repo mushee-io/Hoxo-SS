@@ -11,7 +11,7 @@ function render(result){
   }
   const records=result.records||[];
   $("observedActivityState").textContent=records.length
-    ?"Observed "+records.length+" independent Stellar Testnet trades (not HOXO fills)."
+    ?"Stellar Testnet classic DEX · "+records.length+" recent market trades."
     :"No recent verified network trades returned.";
   for(const trade of records.slice(0,5)){
     const row=document.createElement("div");row.className="observed-activity-row";

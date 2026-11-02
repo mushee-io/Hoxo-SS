@@ -45,10 +45,10 @@ function updateChart(){
 }
 function updateBook(){
   const book=bookView==="book";
-  $("bookEmptyTitle").textContent=book?"ORDER BOOK OFFLINE":"TRADES NOT DEPLOYED";
+  $("bookEmptyTitle").textContent=book?"CONNECTING LIVE ORDER BOOK":"TRADE HISTORY";
   $("bookEmptyDescription").textContent=book
     ?"No authenticated "+market.label+" orders exist. Matching is not deployed."
-    :"Verified "+market.label+" fills require settlement and indexing.";
+    :"Hoxo "+market.label+" executions will appear here after verified on-chain settlement.";
   $("bookPriceHeading").textContent="PRICE ("+market.quote+")";
   $("bookSizeHeading").textContent="SIZE ("+market.base+")";
   window.dispatchEvent(new CustomEvent("hoxo:book-selection",{
@@ -101,12 +101,19 @@ function renderMenu(){
   });
 }
 function chooseMarket(id){
+  const previousMarket=market.id;
   market=getMarket(id);
+  if(previousMarket!==market.id){
+    // Return to live market depth when switching instruments. The earlier
+    // Trades tab is Hoxo fills only, so it may correctly have no entries.
+    bookView="book";selectGroup("[data-book-view]",bookView,"bookView");
+  }
   $("marketLabel").textContent=market.label;
-  $("marketSubheading").textContent=(market.type==="spot"?"SPOT":"PERPETUAL")+" REFERENCE · NOT LISTED";
-  $("marketPrimaryStat").textContent=market.type==="spot"?"REFERENCE PRICE":"MARK PRICE";
+  $("marketSubheading").textContent=market.type==="spot"?
+    "SPOT · EXTERNAL MARKET DATA":"PERPETUAL · EXTERNAL MARKET DATA";
+  $("marketPrimaryStat").textContent="REFERENCE PRICE"; // M47 is Kraken spot, not a perp mark price
   $("fundingStatLabel").textContent=market.type==="spot"?"FUNDING / N/A":"FUNDING / 1H";
-  $("marginMode").textContent=market.type==="spot"?"SPOT · NO MARGIN":"CROSS MARGIN · OFFLINE";
+  $("marginMode").textContent=market.type==="spot"?"SPOT · TESTNET":"PERP · TESTNET PREVIEW";
   $("sizeAssetLabel").textContent=market.base;
   $("sizeAssetSuffix").textContent=market.base;
   $("ticketMarket").textContent=market.label;
