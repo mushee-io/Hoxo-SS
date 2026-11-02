@@ -102,6 +102,7 @@ function writeReceipt({hash,ledger,quote}){
 }
 function showBusy(isBusy){
   busy=isBusy;$("tradeButton").disabled=isBusy;$("m63Approve").disabled=isBusy||!reviewed;
+  $("m63AddTrustline").disabled=isBusy;
   $("m63Approve").textContent=isBusy?"VERIFYING / WAITING FOR WALLET...":"CONFIRM & SIGN REAL TESTNET "+(reviewed?.side??side()).toUpperCase();
 }
 async function approve(){
@@ -194,6 +195,79 @@ async function approve(){
   reviewed=null;
   $("m63Approve").disabled=true;
 }
+/**
+ * Official Circle Testnet USDC cannot be received until the account opts in.
+ * This button submits an explicit wallet-approved Stellar changeTrust op.
+ */
+async function addUsdcTrustline(){
+  const api=window.freighterApi;
+  if(!api?.requestAccess||!api?.getAddress||!api?.getNetwork||!api?.signTransaction)
+    fail("install and connect official Freighter on Stellar Testnet");
+  const access=await api.requestAccess();
+  if(access?.error)fail("Freighter account access denied");
+  const [net,wallet]=await Promise.all([api.getNetwork(),api.getAddress()]);
+  const owner=wallet?.address;
+  if(net?.networkPassphrase!==Networks.TESTNET||
+    !StrKey.isValidEd25519PublicKey(owner??""))
+    fail("select a valid funded Stellar TESTNET account in Freighter");
+  const account=await server.loadAccount(owner);
+  const found=account.balances.find(x=>x.asset_type==="credit_alphanum4"&&
+    x.asset_code==="USDC"&&x.asset_issuer===USDC_TESTNET_ISSUER);
+  if(found){
+    label("Circle Testnet USDC trustline already exists for "+owner.slice(0,8)+
+      "… — use the Circle Testnet faucet above if you need funds.");
+    return;
+  }
+  const native=account.balances.find(x=>x.asset_type==="native");
+  if(!native||parseE7(native.balance,"XLM balance")<20_000_000n)
+    fail("fund at least 2 Testnet XLM first to cover new trustline reserves and fee");
+  const fee=String(await server.fetchBaseFee());
+  if(!/^[1-9]\d*$/.test(fee)||BigInt(fee)>1_000_000n)
+    fail("unverified Testnet network fee");
+  const tx=new TransactionBuilder(account,{fee,networkPassphrase:Networks.TESTNET})
+    .addOperation(Operation.changeTrust({asset:usdc}))
+    .setTimeout(90).build();
+  label("Approve one USDC trustline transaction in Freighter. It does not spend USDC.");
+  const signedResult=await api.signTransaction(tx.toXDR(),{
+    address:owner,networkPassphrase:Networks.TESTNET,submit:false
+  });
+  if(signedResult?.error||typeof signedResult?.signedTxXdr!=="string"||
+     signedResult.signerAddress&&signedResult.signerAddress!==owner)
+    fail("wallet did not approve the exact USDC trustline operation");
+  const signed=TransactionBuilder.fromXDR(signedResult.signedTxXdr,Networks.TESTNET);
+  if(signed.hash().toString("hex")!==tx.hash().toString("hex")||
+     signed.source!==owner||signed.operations.length!==1||!signed.signatures.length)
+    fail("wallet signature altered or absent; trustline not submitted");
+  const [postNetwork,postAccount]=await Promise.all([api.getNetwork(),api.getAddress()]);
+  if(postNetwork.networkPassphrase!==Networks.TESTNET||postAccount.address!==owner)
+    fail("wallet changed while approving trustline");
+  const result=await server.submitTransaction(signed);
+  const hash=result?.hash;
+  if(!/^[a-f0-9]{64}$/i.test(hash??"")||result.successful===false)
+    fail("Testnet did not confirm trustline submission");
+  const check=await fetch(HORIZON_TESTNET+"/transactions/"+hash,noCache);
+  if(!check.ok)throw Error("Trustline submitted; check Testnet hash "+hash+" before retrying");
+  const txProof=await check.json();
+  if(txProof.hash?.toLowerCase()!==hash.toLowerCase()||txProof.successful!==true)
+    fail("trustline transaction is not independently confirmed; inspect hash "+hash);
+  const receipt=$("m63Receipt");
+  receipt.replaceChildren(document.createTextNode(
+    "USDC trustline added on Stellar Testnet · ledger "+txProof.ledger+" · "));
+  const link=document.createElement("a");
+  link.href="https://stellar.expert/explorer/testnet/tx/"+hash;
+  link.target="_blank";link.rel="noopener noreferrer";
+  link.textContent="VIEW TRUSTLINE TRANSACTION";
+  receipt.append(link);
+  label("USDC Testnet trustline established. Claim free Testnet USDC from Circle's faucet, then return to BUY/SELL.");
+}
+$("m63AddTrustline").addEventListener("click",async()=>{
+  if(busy)return;
+  showBusy(true);
+  try{await addUsdcTrustline();}
+  catch(error){label(String(error?.message||error),true);}
+  finally{showBusy(false);}
+});
+
 $("tradeButton").addEventListener("click",async()=>{
   if(busy||!currentMarket())return;
   showBusy(true);
