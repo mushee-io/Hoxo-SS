@@ -313,3 +313,19 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Independently simulate small BUY and SELL on deployed unpaused Testnet M9
         run: npm run m55:simulate:testnet
+
+  m59-verified-onchain-activity:
+    name: M59 real read-only M9 Testnet transaction hash and volume evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install pinned Stellar SDK
+        run: npm install --no-audit --no-fund
+      - name: Verify only confirmed Stellar Testnet M9 settlement activity
+        run: npm run check:m59:testnet
