@@ -15,5 +15,8 @@
         }
       ]
     }
-  ]
+  ],
+  "framework": null,
+  "buildCommand": "npm run build:m45",
+  "outputDirectory": "."
 }
