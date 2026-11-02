@@ -16,9 +16,9 @@ function setView(next){
   view=["trade","portfolio","earn","network"].includes(next)?next:"trade";
   all("[data-view]").forEach(b=>b.classList.toggle("selected",b.dataset.view===view));
   $("tradeView").classList.toggle("hidden",view!=="trade");
+  $("alternateView").classList.toggle("hidden",view==="trade");
   $("m45SigningLab")?.classList.toggle("hidden",view!=="trade");
   $("m46WindowsLab")?.classList.toggle("hidden",view!=="trade");
-  $("alternateView").classList.toggle("hidden",view==="trade");
   if(view==="portfolio"){
     $("altTitle").textContent="YOUR PORTFOLIO";
     $("altDescription").textContent="Testnet wallet balances appear under Trade → Balances. Exchange collateral, positions and margin are not deployed.";
@@ -43,9 +43,7 @@ function updateChart(){
     :chartView==="depth"?"Depth requires an operational order book and matching engine.":"Funding requires a deployed perpetual clearinghouse.";
   $("chartMarketStatus").textContent=market.label+" / "+timeframe+" / NO TESTNET CANDLE FEED";
   $("currentTimeframe").textContent=timeframe;
-  window.dispatchEvent(new CustomEvent("hoxo:chart-selection",{
-    detail:{market:market.id,view:chartView,timeframe}
-  }));
+  window.dispatchEvent(new CustomEvent("hoxo:chart-selection",{detail:{market:market.id,view:chartView,timeframe}}));
 }
 function updateBook(){
   const book=bookView==="book";
@@ -55,6 +53,9 @@ function updateBook(){
     :"Verified "+market.label+" fills require settlement and indexing.";
   $("bookPriceHeading").textContent="PRICE ("+market.quote+")";
   $("bookSizeHeading").textContent="SIZE ("+market.base+")";
+  window.dispatchEvent(new CustomEvent("hoxo:book-selection",{
+    detail:{market:market.id,view:bookView}
+  }));
 }
 function updateDraft(){
   const data=orderDraft({marketId:market.id,orderType,size:$("orderSize").value.trim(),limitPrice:$("limitPrice").value.trim()});

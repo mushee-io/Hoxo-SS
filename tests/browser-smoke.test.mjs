@@ -260,6 +260,105 @@ test("M18 Transfers tab shows verified Testnet public payment without presenting
   }finally{await context.close();}
 });
 
+test("M47 Chromium terminal draws authentic-shaped Kraken OHLC fixture and changes timeframe without Hoxo execution",async()=>{
+  const context=await browser.newContext({viewport:{width:1440,height:900}});
+  const now=Math.floor(Date.now()/60000)*60;
+  const intervals=[];
+  await context.route("**/*",async route=>{
+    const url=route.request().url();
+    if(url.startsWith(BASE+"/api/market-candles?")){
+      const params=new URL(url).searchParams;
+      const interval=Number(params.get("interval"));
+      intervals.push(interval);
+      const candles=Array.from({length:72},(_,i)=>{
+        const minute=(now-71*interval*60)+i*interval*60;
+        const base=0.31+(i%14)*0.0002;
+        return {time:minute,open:base,high:base+0.001,low:base-0.001,
+          close:base+0.0004,volume:100+i};
+      });
+      return route.fulfill({status:200,contentType:"application/json",
+        body:JSON.stringify({source:"Kraken",pair:"XLM/USD",interval,
+          venue:"External reference, not Hoxo",
+          candles,executableQuote:false,verifiedHoxoFills:0})});
+    }
+    if(url.startsWith(BASE+"/"))return route.continue();
+    return route.abort();
+  });
+  const page=await context.newPage(),errors=[];
+  page.on("pageerror",e=>errors.push(e.message));
+  try{
+    await page.goto(BASE+"/app/?market=xlm-usdc-spot",{waitUntil:"domcontentloaded"});
+    await page.locator("#m47ChartSurface").waitFor({state:"visible",timeout:12000});
+    assert.match(await page.locator("#m47LastPriceSource").innerText(),/KRAKEN XLM\/USD.*NOT EXECUTABLE/);
+    assert.match(await page.locator("#chartMarketStatus").innerText(),/KRAKEN EXTERNAL REFERENCE/);
+    assert.equal(await page.locator("#tradeButton").isDisabled(),true);
+    const bitmap=await page.locator("#m47CandleCanvas").evaluate(c=>({
+      width:c.width,height:c.height,
+      pixel:c.getContext("2d").getImageData(Math.floor(c.width/2),Math.floor(c.height/2),1,1).data.length
+    }));
+    assert.ok(bitmap.width>300&&bitmap.height>150,JSON.stringify(bitmap));
+    await page.locator('[data-timeframe="1m"]').click();
+    await page.waitForFunction(()=>document.querySelector("#m47SourceStatus")?.textContent.includes("1M"));
+    assert.ok(intervals.includes(30)&&intervals.includes(1),JSON.stringify(intervals));
+    await page.locator('[data-chart-view="depth"]').click();
+    assert.equal(await page.locator("#m47ChartSurface").isVisible(),false);
+    await page.locator('[data-chart-view="price"]').click();
+    await page.locator("#m47ChartSurface").waitFor({state:"visible",timeout:12000});
+    assert.deepEqual(errors,[]);
+  }finally{await context.close();}
+});
+
+
+test("M48 Chromium shows real-shaped red/green Kraken orderbook and switch to genuine Testnet offers",async()=>{
+  const context=await browser.newContext({viewport:{width:1440,height:900}});
+  const hits=[];
+  await context.route("**/*",async route=>{
+    const url=route.request().url();
+    if(url.startsWith(BASE+"/api/market-orderbook?")){
+      const source=new URL(url).searchParams.get("source");
+      hits.push(source);
+      if(source==="kraken"){
+        return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({
+          source:"Kraken",sourceKind:"kraken",currency:"USD",
+          executable:false,hoxoFills:false,tradeExecutable:false,hoxoSettlementEnabled:false,
+          bids:[{price:0.168,amount:10,total:1.68}],
+          asks:[{price:0.169,amount:9,total:1.521}],spread:0.001
+        })});
+      }
+      return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({
+        source:"Stellar Horizon Testnet",sourceKind:"stellar-testnet",currency:"USDC",
+        executable:false,hoxoFills:false,tradeExecutable:false,hoxoSettlementEnabled:false,
+        bids:[{price:0.17,amount:7,total:1.19}],
+        asks:[{price:0.18,amount:5,total:0.9}],spread:0.01
+      })});
+    }
+    if(url.startsWith(BASE+"/"))return route.continue();
+    return route.abort();
+  });
+  const page=await context.newPage(),errors=[];
+  page.on("pageerror",e=>errors.push(e.message));
+  try{
+    await page.goto(BASE+"/app/?market=xlm-usdc-spot",{waitUntil:"domcontentloaded"});
+    await page.locator(".m48-bid .m48-price").first().waitFor({state:"visible",timeout:15000});
+    assert.match(await page.locator("#m48BookSourceWarning").innerText(),/KRAKEN XLM\/USD/);
+    assert.equal(await page.locator("#bookPriceHeading").innerText(),"PRICE (USD)");
+    assert.equal(await page.locator(".m48-ask .m48-price").count(),1);
+    assert.equal(await page.locator(".m48-bid .m48-price").count(),1);
+    assert.equal(await page.locator("#tradeButton").isDisabled(),true);
+    await page.locator("#m48BookSource").selectOption("stellar-testnet");
+    await page.waitForFunction(()=>document.querySelector("#bookPriceHeading")?.textContent==="PRICE (USDC)"&&
+      document.querySelector("#m48BookStatus")?.textContent.includes("Stellar Horizon"));
+    assert.match(await page.locator("#m48BookSourceWarning").innerText(),/CLASSIC DEX OFFERS/);
+    assert.equal(await page.locator(".m48-ask .m48-price").count(),1);
+    assert.ok(hits.includes("kraken")&&hits.includes("stellar-testnet"));
+    await page.locator('[data-book-view="trades"]').click();
+    assert.equal(await page.locator("#m48BookFeed").isVisible(),false);
+    await page.locator('[data-book-view="book"]').click();
+    assert.equal(await page.locator("#m48BookFeed").isVisible(),true);
+    assert.equal(await page.locator("#tradeButton").isDisabled(),true);
+    assert.deepEqual(errors,[],"M48 must not throw in the browser");
+  }finally{await context.close();}
+});
 
 test("M45 browser: controlled signing panel loads and remains non-executable while paused",async()=>{
   const {page,context,errors}=await openTerminal("/app/?market=xlm-usdc-spot",{width:1280,height:900});
@@ -315,50 +414,3 @@ test("M46 Windows identity panel stays read-only without Freighter and has expli
 });
 
 
-test("M47 Chromium terminal draws authentic-shaped Kraken OHLC fixture and changes timeframe without Hoxo execution",async()=>{
-  const context=await browser.newContext({viewport:{width:1440,height:900}});
-  const now=Math.floor(Date.now()/60000)*60;
-  const intervals=[];
-  await context.route("**/*",async route=>{
-    const url=route.request().url();
-    if(url.startsWith(BASE+"/api/market-candles?")){
-      const params=new URL(url).searchParams;
-      const interval=Number(params.get("interval"));
-      intervals.push(interval);
-      const candles=Array.from({length:72},(_,i)=>{
-        const minute=(now-71*interval*60)+i*interval*60;
-        const base=0.31+(i%14)*0.0002;
-        return {time:minute,open:base,high:base+0.001,low:base-0.001,
-          close:base+0.0004,volume:100+i};
-      });
-      return route.fulfill({status:200,contentType:"application/json",
-        body:JSON.stringify({source:"Kraken",pair:"XLM/USD",interval,
-          venue:"External reference, not Hoxo",
-          candles,executableQuote:false,verifiedHoxoFills:0})});
-    }
-    if(url.startsWith(BASE+"/"))return route.continue();
-    return route.abort();
-  });
-  const page=await context.newPage(),errors=[];
-  page.on("pageerror",e=>errors.push(e.message));
-  try{
-    await page.goto(BASE+"/app/?market=xlm-usdc-spot",{waitUntil:"domcontentloaded"});
-    await page.locator("#m47ChartSurface").waitFor({state:"visible",timeout:12000});
-    assert.match(await page.locator("#m47LastPriceSource").innerText(),/KRAKEN XLM\/USD.*NOT EXECUTABLE/);
-    assert.match(await page.locator("#chartMarketStatus").innerText(),/KRAKEN EXTERNAL REFERENCE/);
-    assert.equal(await page.locator("#tradeButton").isDisabled(),true);
-    const bitmap=await page.locator("#m47CandleCanvas").evaluate(c=>({
-      width:c.width,height:c.height,
-      pixel:c.getContext("2d").getImageData(Math.floor(c.width/2),Math.floor(c.height/2),1,1).data.length
-    }));
-    assert.ok(bitmap.width>300&&bitmap.height>150,JSON.stringify(bitmap));
-    await page.locator('[data-timeframe="1m"]').click();
-    await page.waitForFunction(()=>document.querySelector("#m47SourceStatus")?.textContent.includes("1M"));
-    assert.ok(intervals.includes(30)&&intervals.includes(1),JSON.stringify(intervals));
-    await page.locator('[data-chart-view="depth"]').click();
-    assert.equal(await page.locator("#m47ChartSurface").isVisible(),false);
-    await page.locator('[data-chart-view="price"]').click();
-    await page.locator("#m47ChartSurface").waitFor({state:"visible",timeout:12000});
-    assert.deepEqual(errors,[]);
-  }finally{await context.close();}
-});

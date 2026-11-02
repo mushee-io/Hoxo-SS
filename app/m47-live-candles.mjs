@@ -19,8 +19,12 @@ export function normalizeKrakenCandles(response,{nowSec=Date.now()/1000}={}){
   if(!response||!Array.isArray(response.error)||response.error.length||
      !response.result||typeof response.result!=="object")
     fail("invalid Kraken public OHLC result");
-  const key=Object.keys(response.result).find(x=>x!=="last"&&Array.isArray(response.result[x]));
-  if(!key)fail("no matching OHLC market data");
+  // Kraken may return legacy XXLMZUSD or normalized XLMUSD. Never accept
+  // an unrelated instrument merely because it is the first array in result.
+  const keys=["XXLMZUSD","XLMUSD"];
+  const matches=keys.filter(key=>Array.isArray(response.result[key]));
+  if(matches.length!==1)fail("ambiguous or missing XLM/USD OHLC market data");
+  const key=matches[0];
   const data=response.result[key];
   const candles=[];
   for(const row of data){

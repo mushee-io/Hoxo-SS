@@ -46,7 +46,7 @@ jobs:
           node-version: '22'
       - name: Install headless browser harness
         run: npm install --no-save --no-package-lock playwright@1.56.1
-      - name: Build pinned M45 browser bundle (no SDK CDN)
+      - name: Build reviewed Testnet signing UI bundle (no Vercel deployment)
         run: npm run build:m45
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
