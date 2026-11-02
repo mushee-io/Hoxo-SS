@@ -125,7 +125,7 @@ test("M45 manual bilateral terms use 7-decimal bigint pricing and unique IDs",()
   assert.equal(terms.expires_at_ledger,1020);
   assert.notEqual(terms.match_id,terms.maker_order_id);
   assert.notEqual(terms.maker_order_id,terms.taker_order_id);
-  assert.throws(()=>draftM45BilateralTerms({xlmAmount:"0.3",usdcAmount:"0.0000001",
+  assert.throws(()=>draftM45BilateralTerms({xlmAmount:"0.03",usdcAmount:"0.0000001",
     ledger:1000,randomBytes}),/exactly representable/);
   assert.throws(()=>draftM45BilateralTerms({xlmAmount:"1e5",usdcAmount:"0.02",
     ledger:1000,randomBytes}),/invalid exact/);
