@@ -130,3 +130,22 @@ test("M46 Windows screen has two explicit read-only controls without sign/submit
   assert.doesNotMatch(ui+acceptance,/set_pause\(false\)|submit:\s*true/);
   assert.match(html,/id="tradeButton"[^>]+disabled/);
 });
+
+test("M46 rejects wallet API errors, secret fields and accessor tricks without executing getters",async()=>{
+  const h=harness();
+  let getterHit=false;
+  const malicious={};
+  Object.defineProperty(malicious,"address",{enumerable:true,get(){getterHit=true;return M45_CANDIDATE.maker;}});
+  h.api.getAddress=async()=>malicious;
+  await assert.rejects(h.accept.verify("wallet1"),/unsafe accessor/);
+  assert.equal(getterHit,false);
+  h.api.getAddress=async()=>({address:M45_CANDIDATE.maker,secret:"SSECRET"});
+  await assert.rejects(h.accept.verify("wallet1"),/unexpected field/);
+  h.api.getAddress=async()=>({address:M45_CANDIDATE.maker,error:{message:"denied"}});
+  await assert.rejects(h.accept.verify("wallet1"),/wallet error/);
+  h.api.getAddress=async()=>({address:M45_CANDIDATE.maker});
+  h.api.getNetwork=async()=>({network:"TESTNET",networkPassphrase:TESTNET_PASSPHRASE,seed:"SSECRET"});
+  await assert.rejects(h.accept.verify("wallet1"),/unexpected field/);
+  assert.equal(h.accept.summary().wallet1Verified,false);
+  assert.equal(h.signCount(),0);
+});
