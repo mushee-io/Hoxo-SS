@@ -122,13 +122,21 @@ export function assertCapacity({side,quote,balance,account}={}){
   if(side==="sell"){
     // Strict network reserve: 0.5 XLM per (2 + subentries + sponsored net),
     // plus a fee cushion. Horizon itself enforces the final account reserve.
-    const sub=BigInt(account?.subentry_count??0);
-    const sponsoring=BigInt(account?.num_sponsoring??0);
-    const sponsored=BigInt(account?.num_sponsored??0);
-    if(sub<0n||sponsoring<0n||sponsored<0n)
-      fail("invalid account reserve proof");
+    // Fail closed on incomplete or malformed Horizon account reserve metadata.
+    // Never treat missing subentries or sponsorships as zero: doing so can
+    // approve an XLM sale that leaves the wallet below its network reserve.
+    const integerField=(name)=>{
+      const value=account?.[name];
+      if(!Number.isSafeInteger(value)||value<0)
+        fail("invalid or missing Horizon account reserve proof: "+name);
+      return BigInt(value);
+    };
+    const sub=integerField("subentry_count");
+    const sponsoring=integerField("num_sponsoring");
+    const sponsored=integerField("num_sponsored");
     const reserves=2n+sub+sponsoring-sponsored;
-    const minReserve=(reserves>0n?reserves:0n)*5_000_000n+100_000n;
+    if(reserves<0n)fail("inconsistent Horizon sponsorship reserve proof");
+    const minReserve=reserves*5_000_000n+100_000n;
     if(balance.xlmE7-units<minReserve)
       fail("insufficient spendable XLM after Stellar account reserve and fee");
   }
