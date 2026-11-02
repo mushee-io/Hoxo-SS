@@ -88,5 +88,5 @@ test("M49 product status is transparent, shorter, and includes a real perp refer
   assert.match(terminal,/bookView="book";selectGroup/);
   assert.match(terminal,/REFERENCE PRICE/);
   assert.doesNotMatch(terminal,/"MARK PRICE"/);
-  assert.match(html,/id="tradeButton"[^>]+disabled/);
+  assert.match(html,/id="tradeButton"[^>]+class="trade-review"/);
 });
