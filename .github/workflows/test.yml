@@ -297,3 +297,19 @@ jobs:
           path: target/wasm32v1-none/release/hoxo_spot_settlement.wasm
           if-no-files-found: error
           retention-days: 7
+
+  m55-testnet-read-only:
+    name: M55 real Testnet M9 BUY and SELL simulation — NO BROADCAST
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install pinned Stellar SDK (no deploy credentials)
+        run: npm install --no-audit --no-fund
+      - name: Independently simulate small BUY and SELL on deployed unpaused Testnet M9
+        run: npm run m55:simulate:testnet
