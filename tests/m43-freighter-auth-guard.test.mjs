@@ -106,3 +106,20 @@ test("rejects arbitrary contract substitution before Freighter prompt",()=>{
  assert.throws(()=>validateDualWalletHandoff({...input,contractId:"C"+"B".repeat(55)}),/invalid contract/);
  assert.equal(validateDualWalletHandoff(input).contractId,M9_TESTNET_CONTRACT_ID);
 });
+
+test("rejects noncanonical base64 input and wallet responses without advancing",async()=>{
+ const bad=["QUJDREVGR0hJSktM=", "QUJDREVGR0hJSktM==", "QUJDREVGR0hJSkt!", "QUJDREVGR0hJSktN==", "QUJDREVGR0hJSktN="];
+ for(const xdr of bad) assert.throws(()=>validateDualWalletHandoff({...input,makerAuthXdr:xdr}),/invalid auth entry/);
+ // Pad-bit mutation: final six-bit value must have low four bits clear for ==.
+ const canonical="QUJDREVGR0hJSg==", noncanonical="QUJDREVGR0hJSj==";
+ assert.doesNotThrow(()=>validateDualWalletHandoff({...input,makerAuthXdr:canonical}));
+ assert.throws(()=>validateDualWalletHandoff({...input,makerAuthXdr:noncanonical}),/invalid auth entry/);
+ let signed=noncanonical;
+ const adapter={async getNetwork(){return {networkPassphrase:TESTNET_PASSPHRASE}},async getAddress(){return {address:maker}},async signAuthEntry(){return {signedAuthEntry:signed}}};
+ const flow=createDualWalletHandoff(input,adapter);
+ await assert.rejects(flow.approve("maker"),/valid signed/);
+ assert.equal(flow.status.approvalCount,0);
+ signed="RkZGRkZGRkZGRkZG";
+ await flow.approve("maker");
+ assert.equal(flow.status.approvalCount,1);
+});
