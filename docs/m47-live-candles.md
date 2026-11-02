@@ -33,3 +33,7 @@ This chart-only PR targets **main** independently of Draft PR #34 (M43–M46 sig
 - npm run test:browser (Chromium installed in GitHub CI)
 
 Test fixtures produce deterministic **mock** candles only in CI, never production.
+
+## Streaming timestamp integrity
+
+The WebSocket parser rejects candle buckets more than five minutes ahead of the local clock, matching the REST parser future-time bound. This is a defensive input-integrity check, not proof of exchange authenticity or clock synchronization. Regression tests use a fixed clock and assert both rejection and valid historical acceptance. Trading remains disabled.
