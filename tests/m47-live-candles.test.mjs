@@ -90,10 +90,11 @@ test("M59 terminal uses contract-verified Hoxo Testnet settlement prices instead
   for(const id of ["m47CandleCanvas","m47ChartSurface","m47SourceStatus","m47LastPrice",
     "m47LastPriceSource","marketPrice","m59Volume","m59TradeRows"])
     assert.match(html,new RegExp('id="'+id+'"'));
-  assert.match(html,/m59-activity-ui\\.mjs/);
-  assert.doesNotMatch(html,/Kraken|KRAKEN|m47-live-chart-ui\\.mjs/);
+  assert.ok(html.includes("m59-activity-ui.mjs"));
+  assert.doesNotMatch(html,/Kraken|KRAKEN/);
+  assert.ok(!html.includes("m47-live-chart-ui.mjs"));
   assert.match(main,/hoxo:chart-selection/);
   assert.match(ui,/hoxo-testnet-activity/);
-  assert.doesNotMatch(ui,/ws\\.kraken|Kraken|\\.sendTransaction\\(|\\.signTransaction\\(|set_pause\\(false\\)/);
+  assert.doesNotMatch(ui,/Kraken|sendTransaction|signTransaction|set_pause/);
   assert.match(html,/id="tradeButton"[^>]+class="trade-review"/);
 });
