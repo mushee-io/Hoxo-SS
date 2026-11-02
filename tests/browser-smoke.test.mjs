@@ -319,6 +319,14 @@ test("M59 Chromium defaults to genuine Stellar Testnet classic DEX depth and ena
         asks:[{price:0.18,amount:5,total:0.9}],spread:0.01
       })});
     }
+    if(url.startsWith("https://horizon-testnet.stellar.org/order_book?"))
+      return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({
+        base:{asset_type:"native"},
+        counter:{asset_type:"credit_alphanum4",asset_code:"USDC",
+          asset_issuer:"GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"},
+        bids:[{price_r:{n:108,d:1000},amount:"1000.0000000"}],
+        asks:[{price_r:{n:248,d:1000},amount:"1000.0000000"}]
+      })});
     if(url.startsWith(BASE+"/api/hoxo-testnet-activity"))
       return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({
         network:"Stellar Testnet",contract:"CCPT6NJCGNHFTTV54IHGSNKTKD74HFCTDKWA3XIP466YT7JHUILJZCYF",
@@ -339,10 +347,17 @@ test("M59 Chromium defaults to genuine Stellar Testnet classic DEX depth and ena
     assert.equal(await page.locator(".m48-bid .m48-price").count(),1);
     assert.equal(await page.locator("#tradeButton").isDisabled(),false);
     assert.ok(hits.includes("stellar-testnet")&&!hits.includes("kraken"));
+    await page.locator("#orderSize").fill("10");
     await page.locator("#tradeButton").click();
+    await page.waitForFunction(()=>document.querySelector("#m63Quote")?.textContent
+      .includes("Expected 2.4800000 USDC"));
+    assert.equal(await page.locator("#m63Approve").isDisabled(),false);
+    assert.equal(await page.locator("#m45SigningLab").isVisible(),false,
+      "old internal M9 two-wallet process must not block the default Buy/Sell ticket");
+    await page.locator("#m55OpenLab").click();
     assert.equal(await page.locator("#m45SigningLab").isVisible(),true);
     assert.equal(await page.locator("#m55Submit").isDisabled(),true,
-      "spot review must never broadcast without two approved signatures");
+      "advanced M9 settlement still requires separately approved signatures");
     await page.locator('[data-book-view="trades"]').click();
     assert.equal(await page.locator("#m48BookFeed").isVisible(),false);
     assert.equal(await page.locator("#m59Settlements").isVisible(),true);
