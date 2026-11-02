@@ -63,7 +63,8 @@
     "test:m52": "node --test tests/m52-testnet-spot-finality.test.mjs",
     "build:m45": "node scripts/build-m45.mjs",
     "build": "node scripts/build-m45.mjs",
-    "test:m55": "node --test tests/m55-testnet-spot-submit.test.mjs"
+    "test:m55": "node --test tests/m55-testnet-spot-submit.test.mjs",
+    "m55:simulate:testnet": "node scripts/check-m55-live-spot-simulation.mjs"
   },
   "engines": {
     "node": ">=20"
