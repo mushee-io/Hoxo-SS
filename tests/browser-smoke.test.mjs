@@ -38,13 +38,12 @@ test("M2 desktop: reference markets, tabs, non-executable order drafts",async()=
     assert.equal(await page.locator("#chartEmptyTitle").innerText(),"DEPTH NOT DEPLOYED");
     await page.locator('[data-book-view="trades"]').click();
     assert.equal(await page.locator("#bookEmptyTitle").innerText(),"TRADE HISTORY");
-    await page.locator('[data-timeframe="1h"]').click();
-    assert.match(await page.locator("#chartMarketStatus").innerText(),/1h/);
+    assert.equal(await page.locator(".timeframes").isVisible(),false);
     await page.locator('[data-order-type="Limit"]').click();
     await page.locator("#orderSize").fill("1.25");
     await page.locator("#limitPrice").fill("15.50");
     assert.equal(await page.locator("#ticketNotional").innerText(),"19.375 USDC (input only)");
-    assert.equal(await page.locator("#tradeButton").isDisabled(),true);
+    assert.equal(await page.locator("#tradeButton").isDisabled(),false);
     assert.equal(await page.locator(".account-actions button:disabled").count(),2);
     await page.locator('[data-view="earn"]').click();
     assert.equal(await page.locator("#altTitle").innerText(),"MONEY MARKETS");
@@ -73,7 +72,7 @@ test("M2 mobile: market picker usable and no horizontal overflow",async()=>{
     assert.equal(await page.locator("#marketMenu").isVisible(),true);
     await page.keyboard.press("Escape");
     assert.equal(await page.locator("#marketMenu").isVisible(),false);
-    assert.equal(await page.locator("#tradeButton").isDisabled(),true);
+    assert.equal(await page.locator("#tradeButton").isDisabled(),false);
     assert.deepEqual(errors,[]);
   }finally{await context.close();}
 });
@@ -138,7 +137,7 @@ test("M3 Freighter mock: connected Testnet wallet shows verified holdings, no ex
     assert.match(await page.locator("#accountAddress").innerText(),new RegExp(TEST_G));
     assert.equal(await page.locator("#faucetButton").isDisabled(),true);
     assert.equal(await page.locator("#refreshWallet").isDisabled(),false);
-    assert.equal(await page.locator("#tradeButton").isDisabled(),true);
+    assert.equal(await page.locator("#tradeButton").isDisabled(),false);
     assert.equal(await page.locator(".account-actions button:disabled").count(),2);
     assert.deepEqual(errors,[]);
   }finally{await context.close();}
@@ -225,7 +224,7 @@ test("M4 Testnet network panel verifies Horizon/RPC and never claims deployed ex
     assert.ok(calls.includes("getNetwork")&&calls.includes("getHealth")&&calls.includes("getLatestLedger"));
     assert.match(await page.locator("#infraOverall").innerText(),/CONTRACTS NOT DEPLOYED/);
     await page.locator("#backToTrade").click();
-    assert.equal(await page.locator("#tradeButton").isDisabled(),true);
+    assert.equal(await page.locator("#tradeButton").isDisabled(),false);
     assert.deepEqual(errors,[]);
   }finally{await context.close();}
 });
@@ -250,7 +249,7 @@ test("M18 Transfers tab shows verified Testnet public payment without presenting
     await page.getByText("2.5000000 XLM").waitFor();
     assert.match(await page.locator("#portfolioBody").innerText(),/NOT HOXO TRADES/);
     assert.match(await page.locator("#portfolioBody").innerText(),/PAYMENT · VIEW TX/);
-    assert.equal(await page.locator("#tradeButton").isDisabled(),true);
+    assert.equal(await page.locator("#tradeButton").isDisabled(),false);
     assert.equal(await page.locator(".account-actions button:disabled").count(),2);
     assert.equal(await page.locator("#portfolioBody a").first().getAttribute("href"),
       "https://stellar.expert/explorer/testnet/tx/"+transaction);
@@ -260,27 +259,27 @@ test("M18 Transfers tab shows verified Testnet public payment without presenting
   }finally{await context.close();}
 });
 
-test("M47 Chromium terminal draws authentic-shaped Kraken OHLC fixture and changes timeframe without Hoxo execution",async()=>{
+test("M59 Chromium shows confirmed M9 transaction hashes and exact Testnet volume without Kraken market feeds",async()=>{
   const context=await browser.newContext({viewport:{width:1440,height:900}});
-  const now=Math.floor(Date.now()/60000)*60;
-  const intervals=[];
+  const txA="a".repeat(64),txB="b".repeat(64);
   await context.route("**/*",async route=>{
     const url=route.request().url();
-    if(url.startsWith(BASE+"/api/market-candles?")){
-      const params=new URL(url).searchParams;
-      const interval=Number(params.get("interval"));
-      intervals.push(interval);
-      const candles=Array.from({length:72},(_,i)=>{
-        const minute=(now-71*interval*60)+i*interval*60;
-        const base=0.31+(i%14)*0.0002;
-        return {time:minute,open:base,high:base+0.001,low:base-0.001,
-          close:base+0.0004,volume:100+i};
-      });
-      return route.fulfill({status:200,contentType:"application/json",
-        body:JSON.stringify({source:"Kraken",pair:"XLM/USD",interval,
-          venue:"External reference, not Hoxo",
-          candles,executableQuote:false,verifiedHoxoFills:0})});
-    }
+    if(url.startsWith(BASE+"/api/hoxo-testnet-activity"))
+      return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({
+        network:"Stellar Testnet",contract:"CCPT6NJCGNHFTTV54IHGSNKTKD74HFCTDKWA3XIP466YT7JHUILJZCYF",
+        fromLedger:6000,throughLedger:6500,verifiedCount:2,
+        verifiedXlmVolumeE7:"300000",verifiedUsdcVolumeE7:"51000",
+        mocked:false,records:[
+          {transactionHash:txB,ledger:6500,baseAmountE7:"200000",quoteAmountE7:"34000",priceQuotePerXlm:.17},
+          {transactionHash:txA,ledger:6499,baseAmountE7:"100000",quoteAmountE7:"17000",priceQuotePerXlm:.17}
+        ]
+      })});
+    if(url.startsWith(BASE+"/api/market-orderbook"))
+      return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({
+        source:"Stellar Horizon Testnet",sourceKind:"stellar-testnet",currency:"USDC",
+        executable:false,hoxoFills:false,tradeExecutable:false,hoxoSettlementEnabled:false,
+        bids:[],asks:[],spread:null
+      })});
     if(url.startsWith(BASE+"/"))return route.continue();
     return route.abort();
   });
@@ -288,28 +287,24 @@ test("M47 Chromium terminal draws authentic-shaped Kraken OHLC fixture and chang
   page.on("pageerror",e=>errors.push(e.message));
   try{
     await page.goto(BASE+"/app/?market=xlm-usdc-spot",{waitUntil:"domcontentloaded"});
-    await page.locator("#m47ChartSurface").waitFor({state:"visible",timeout:12000});
-    assert.match(await page.locator("#m47LastPriceSource").innerText(),/XLM\/USD · KRAKEN REFERENCE/);
-    assert.match(await page.locator("#chartMarketStatus").innerText(),/KRAKEN SPOT REFERENCE/);
-    assert.equal(await page.locator("#tradeButton").isDisabled(),true);
-    const bitmap=await page.locator("#m47CandleCanvas").evaluate(c=>({
-      width:c.width,height:c.height,
-      pixel:c.getContext("2d").getImageData(Math.floor(c.width/2),Math.floor(c.height/2),1,1).data.length
-    }));
-    assert.ok(bitmap.width>300&&bitmap.height>150,JSON.stringify(bitmap));
-    await page.locator('[data-timeframe="1m"]').click();
-    await page.waitForFunction(()=>document.querySelector("#m47SourceStatus")?.textContent.includes("1M"));
-    assert.ok(intervals.includes(30)&&intervals.includes(1),JSON.stringify(intervals));
+    await page.locator("#m47ChartSurface").waitFor({state:"visible",timeout:15000});
+    assert.match(await page.locator("#m59Volume").innerText(),/0\.03 XLM/);
+    assert.match(await page.locator("#m59Summary").innerText(),/2 VERIFIED SETTLEMENTS/);
+    assert.equal(await page.locator("#tradeButton").isDisabled(),false);
+    await page.locator('[data-book-view="trades"]').click();
+    await page.locator("#m59Settlements").waitFor({state:"visible"});
+    assert.equal(await page.locator("#m59TradeRows a").count(),2);
+    const url=await page.locator("#m59TradeRows a").first().getAttribute("href");
+    assert.ok(url.includes("/tx/"+txB));
     await page.locator('[data-chart-view="depth"]').click();
     assert.equal(await page.locator("#m47ChartSurface").isVisible(),false);
     await page.locator('[data-chart-view="price"]').click();
-    await page.locator("#m47ChartSurface").waitFor({state:"visible",timeout:12000});
+    await page.locator("#m47ChartSurface").waitFor({state:"visible"});
     assert.deepEqual(errors,[]);
   }finally{await context.close();}
 });
 
-
-test("M48 Chromium shows real-shaped red/green Kraken orderbook and switch to genuine Testnet offers",async()=>{
+test("M59 Chromium defaults to genuine Stellar Testnet classic DEX depth and enables only reviewed spot ticket",async()=>{
   const context=await browser.newContext({viewport:{width:1440,height:900}});
   const hits=[];
   await context.route("**/*",async route=>{
@@ -317,14 +312,6 @@ test("M48 Chromium shows real-shaped red/green Kraken orderbook and switch to ge
     if(url.startsWith(BASE+"/api/market-orderbook?")){
       const source=new URL(url).searchParams.get("source");
       hits.push(source);
-      if(source==="kraken"){
-        return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({
-          source:"Kraken",sourceKind:"kraken",currency:"USD",
-          executable:false,hoxoFills:false,tradeExecutable:false,hoxoSettlementEnabled:false,
-          bids:[{price:0.168,amount:10,total:1.68}],
-          asks:[{price:0.169,amount:9,total:1.521}],spread:0.001
-        })});
-      }
       return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({
         source:"Stellar Horizon Testnet",sourceKind:"stellar-testnet",currency:"USDC",
         executable:false,hoxoFills:false,tradeExecutable:false,hoxoSettlementEnabled:false,
@@ -332,6 +319,12 @@ test("M48 Chromium shows real-shaped red/green Kraken orderbook and switch to ge
         asks:[{price:0.18,amount:5,total:0.9}],spread:0.01
       })});
     }
+    if(url.startsWith(BASE+"/api/hoxo-testnet-activity"))
+      return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({
+        network:"Stellar Testnet",contract:"CCPT6NJCGNHFTTV54IHGSNKTKD74HFCTDKWA3XIP466YT7JHUILJZCYF",
+        fromLedger:6000,throughLedger:6500,verifiedCount:0,
+        verifiedXlmVolumeE7:"0",verifiedUsdcVolumeE7:"0",records:[],mocked:false
+      })});
     if(url.startsWith(BASE+"/"))return route.continue();
     return route.abort();
   });
@@ -340,26 +333,24 @@ test("M48 Chromium shows real-shaped red/green Kraken orderbook and switch to ge
   try{
     await page.goto(BASE+"/app/?market=xlm-usdc-spot",{waitUntil:"domcontentloaded"});
     await page.locator(".m48-bid .m48-price").first().waitFor({state:"visible",timeout:15000});
-    assert.match(await page.locator("#m48BookSourceWarning").innerText(),/KRAKEN · XLM\/USD/);
-    assert.equal(await page.locator("#bookPriceHeading").innerText(),"PRICE (USD)");
+    assert.equal(await page.locator("#m48BookSource").inputValue(),"stellar-testnet");
+    assert.equal(await page.locator("#bookPriceHeading").innerText(),"PRICE (USDC)");
     assert.equal(await page.locator(".m48-ask .m48-price").count(),1);
     assert.equal(await page.locator(".m48-bid .m48-price").count(),1);
-    assert.equal(await page.locator("#tradeButton").isDisabled(),true);
-    await page.locator("#m48BookSource").selectOption("stellar-testnet");
-    await page.waitForFunction(()=>document.querySelector("#bookPriceHeading")?.textContent==="PRICE (USDC)"&&
-      document.querySelector("#m48BookStatus")?.textContent.includes("LIVE DEPTH"));
-    assert.match(await page.locator("#m48BookSourceWarning").innerText(),/STELLAR TESTNET DEX/);
-    assert.equal(await page.locator(".m48-ask .m48-price").count(),1);
-    assert.ok(hits.includes("kraken")&&hits.includes("stellar-testnet"));
+    assert.equal(await page.locator("#tradeButton").isDisabled(),false);
+    assert.ok(hits.includes("stellar-testnet")&&!hits.includes("kraken"));
+    await page.locator("#tradeButton").click();
+    assert.equal(await page.locator("#m45SigningLab").isVisible(),true);
+    assert.equal(await page.locator("#m55Submit").isDisabled(),true,
+      "spot review must never broadcast without two approved signatures");
     await page.locator('[data-book-view="trades"]').click();
     assert.equal(await page.locator("#m48BookFeed").isVisible(),false);
+    assert.equal(await page.locator("#m59Settlements").isVisible(),true);
     await page.locator('[data-book-view="book"]').click();
     assert.equal(await page.locator("#m48BookFeed").isVisible(),true);
-    assert.equal(await page.locator("#tradeButton").isDisabled(),true);
-    assert.deepEqual(errors,[],"M48 must not throw in the browser");
+    assert.deepEqual(errors,[]);
   }finally{await context.close();}
 });
-
 
 test("M49 Chromium XLM-PERP opens real external perp depth by default and keeps Hoxo fills separate",async()=>{
   const context=await browser.newContext({viewport:{width:1440,height:900}});
@@ -398,7 +389,7 @@ test("M49 Chromium XLM-PERP opens real external perp depth by default and keeps 
     assert.match(await page.locator("#m48BookSourceWarning").innerText(),/HYPERLIQUID · XLM-PERP/);
     assert.match(await page.locator("#m48BookStatus").innerText(),/LIVE DEPTH/);
     assert.equal(await page.locator("#tradeButton").isDisabled(),true);
-    assert.equal(await page.locator("#marketPrimaryStat").innerText(),"REFERENCE PRICE");
+    assert.equal(await page.locator("#marketPrimaryStat").innerText(),"PERP REFERENCE PRICE");
     await page.locator(".announcement-details summary").click();
     assert.match(await page.locator(".announcement-panel").innerText(),/M9 spot settlement is deployed and has been independently verified unpaused/);
     await page.locator(".announcement-details summary").click();
@@ -407,7 +398,7 @@ test("M49 Chromium XLM-PERP opens real external perp depth by default and keeps 
     await page.locator("#marketTrigger").click();
     await page.locator("#marketResults .market-item").filter({hasText:"XLM/USDC"}).first().click();
     assert.equal(await page.locator('[data-book-view="book"]').getAttribute("aria-pressed"),"true");
-    assert.equal(await page.locator("#m48BookSource").inputValue(),"kraken");
+    assert.equal(await page.locator("#m48BookSource").inputValue(),"stellar-testnet");
     await page.locator("#marketTrigger").click();
     await page.locator("#marketResults .market-item").filter({hasText:"XLM-PERP"}).first().click();
     await page.locator(".m48-bid .m48-price").first().waitFor({state:"visible",timeout:15000});
@@ -423,7 +414,7 @@ test("M45 browser: controlled signing panel loads and remains non-executable whi
     await page.locator("#m45SigningLab").waitFor({state:"visible"});
     assert.match(await page.locator("#m45NoSend").innerText(),/NO TRANSACTION SENT/);
     assert.match(await page.locator("#m45Contract").innerText(),/NOT VERIFIED/);
-    assert.equal(await page.locator("#tradeButton").isDisabled(),true);
+    assert.equal(await page.locator("#tradeButton").isDisabled(),false);
     assert.equal(await page.locator("#m45Prepare").isDisabled(),true);
     assert.equal(await page.locator("#m45SignTaker").isDisabled(),true);
     assert.equal(await page.locator("#m45SignMaker").isDisabled(),true);
@@ -464,7 +455,7 @@ test("M46 Windows identity panel stays read-only without Freighter and has expli
     await page.waitForFunction(()=>document.getElementById("m46Status")?.textContent.includes("Freighter extension"));
     assert.match(await page.locator("#m46Status").innerText(),/No signature was requested/);
     assert.match(await page.locator("#m46Combined").innerText(),/PENDING/);
-    assert.equal(await page.locator("#tradeButton").isDisabled(),true);
+    assert.equal(await page.locator("#tradeButton").isDisabled(),false);
     await page.locator("#m46Reset").click();
     assert.equal(await page.locator("#m46VerifyWallet1").isDisabled(),true);
     await page.locator('[data-view="portfolio"]').click();
