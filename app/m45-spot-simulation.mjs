@@ -88,6 +88,14 @@ function termsScVal(terms){
     else sc=xdr.ScVal.scvU32(val);
     return new xdr.ScMapEntry({key:xdr.ScVal.scvSymbol(key),val:sc});
   });
+  // Soroban contracttype structs are ScMap maps and MUST use XDR-canonical
+  // lexicographic symbol ordering, not JavaScript object insertion order.
+  // Without this, real RPC simulation may reject the contract call even
+  // though deterministic unit tests using the same incorrect object pass.
+  fields.sort((a,b)=>{
+    const left=String(a.key.value),right=String(b.key.value);
+    return left<right?-1:left>right?1:0;
+  });
   return xdr.ScVal.scvMap(fields);
 }
 export async function simulateM45BilateralSpot({
@@ -112,7 +120,11 @@ export async function simulateM45BilateralSpot({
   }).addOperation(new Contract(M9_TESTNET_CONTRACT_ID).call("settle",termsScVal(terms)))
     .setTimeout(60).build();
   const sim=await server.simulateTransaction(tx);
-  if(!rpc.Api.isSimulationSuccess(sim))fail("M9 Soroban simulation failed; no wallet prompt permitted");
+  if(!rpc.Api.isSimulationSuccess(sim)){
+    const detail=typeof sim?.error==="string"?
+      sim.error.slice(0,750).replace(/[\r\n]+/g," "):"No simulation result from Stellar RPC";
+    fail("M9 Soroban simulation failed; no wallet prompt permitted. RPC: "+detail);
+  }
   const assembled=rpc.assembleTransaction(tx,sim).build();
   const sourceTxXdr=assembled.toXdr();
   reviewM44SourceEnvelope({sourceTxXdr,expectedTerms:terms,currentLedger:ledger,maxFeeStroops});
