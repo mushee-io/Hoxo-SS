@@ -61,7 +61,7 @@ test("M2 terminal exposes market selection, sections and disabled contract actio
   assert.match(html,/id="limitPriceRow"/);
   assert.match(html,/<script src="\.\/terminal-ui\.mjs" type="module"><\/script>/);
   assert.match(html,/id="portfolioBody"/);
-  assert.match(html,/disabled>EXECUTION UNAVAILABLE ON TESTNET/);
+  assert.match(html,/disabled>GENERAL MARKET ORDERS · NOT ACTIVE/);
   assert.match(html,/<button disabled>DEPOSIT<\/button>/);
   assert.match(html,/<button disabled>WITHDRAW<\/button>/);
   assert.match(css,/@media\(max-width:650px\)/);
