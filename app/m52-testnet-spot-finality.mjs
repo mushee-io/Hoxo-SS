@@ -7,15 +7,14 @@
  * Does not unpause M9. No automatic submission, no mainnet fallback.
  */
 import {TransactionBuilder} from "@stellar/stellar-sdk";
-import {M45_CANDIDATE,checkM45TestnetPreflight} from "./m45-spot-preflight.mjs";
+import {createM45ParticipantCandidate,checkM45TestnetPreflight} from "./m45-spot-preflight.mjs";
 import {M9_TESTNET_CONTRACT_ID,TESTNET_PASSPHRASE} from "./m43-freighter-auth-guard.mjs";
 import {reviewM44SourceEnvelope,verifyM44TakerAuth,verifyM44MakerEnvelope,
   createM44EnvelopePreparer,
   M44_XLM_SAC,M44_USDC_SAC} from "./m44-stellar-xdr-verifier.mjs";
 
 export const M52_SEND_ACK="SEND_SMALL_HOXO_STELLAR_TESTNET_SPOT";
-const CAP_XLM_E7=1_000_000n; // small internal test ceiling: 0.1 XLM
-const CAP_USDC_E7=10_000_000n; // 1 test USDC
+const M9_MAX_ASSET_E7=1_000_000_000_000_000n; // audited in deployed M9 contract (100m units)
 const MAX_FEE_STROOPS=1_000_000n;
 function fail(message){throw Error("M52 Testnet spot: "+message);}
 function numberText(s,name){
@@ -129,19 +128,24 @@ export async function m52ReviewedSpotSettlement({
     "getContractWasmByContractId","queryContract","sendTransaction","pollTransaction"]
     .some(fn=>typeof server[fn]!=="function"))
     fail("full official Stellar Testnet RPC required");
-  const proof=await checkM45TestnetPreflight({server,fetchImpl,nowMs});
+  if(expectedTerms?.base_token!==M44_XLM_SAC||
+     expectedTerms?.quote_token!==M44_USDC_SAC)
+    fail("unsigned M9 terms are not the exact approved assets");
+  let candidate;
+  try{
+    candidate=createM45ParticipantCandidate({
+      maker:expectedTerms?.maker,taker:expectedTerms?.taker
+    });
+  }catch{fail("two distinct valid Stellar G-addresses required in exact signed terms");}
+  const proof=await checkM45TestnetPreflight({server,fetchImpl,nowMs,candidate});
   if(proof.network!=="Stellar Testnet"||proof.contract!==M9_TESTNET_CONTRACT_ID||
      proof.contractPaused!==false||proof.readyForSimulation!==true||
-     proof.verifiedWasm!==true)
-    fail("M9 still paused or canonical Testnet signing preflight blocked");
-  if(expectedTerms?.maker!==M45_CANDIDATE.maker||
-     expectedTerms?.taker!==M45_CANDIDATE.taker||
-     expectedTerms?.base_token!==M44_XLM_SAC||
-     expectedTerms?.quote_token!==M44_USDC_SAC)
-    fail("unsigned M9 terms are not the exact approved wallets/assets");
-  if(numberText(expectedTerms.base_amount,"XLM amount")>CAP_XLM_E7||
-     numberText(expectedTerms.quote_amount,"USDC amount")>CAP_USDC_E7)
-    fail("initial Testnet trading limits exceeded");
+     proof.verifiedWasm!==true||proof.wallets[0].address!==expectedTerms.maker||
+     proof.wallets[1].address!==expectedTerms.taker)
+    fail("M9 paused or these exact participants lack current Testnet approval");
+  if(numberText(expectedTerms.base_amount,"XLM amount")>M9_MAX_ASSET_E7||
+     numberText(expectedTerms.quote_amount,"USDC amount")>M9_MAX_ASSET_E7)
+    fail("deployed M9 contract amount limits exceeded");
   reviewM44SourceEnvelope({sourceTxXdr,expectedTerms,
     currentLedger:proof.ledger,maxFeeStroops:MAX_FEE_STROOPS});
   const taker=verifyM44TakerAuth({
