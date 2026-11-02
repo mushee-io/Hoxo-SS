@@ -27,7 +27,7 @@ function mock({offerRows=[offer],tradeRows=[trade],wrongNetwork=false,
   wrongAccount=false}={}){
   const calls=[];
   const fetchImpl=async (url,opts)=>{
-    calls.push({url,method:opts.method,cache:opts.cache});
+    calls.push({url,method:opts.method,cache:opts.cache,redirect:opts.redirect});
     let data;
     if(url===TESTNET.horizon+"/")data={
       network_passphrase:wrongNetwork?"Public Global Stellar Network ; September 2015":TESTNET.passphrase,
@@ -105,6 +105,7 @@ test("M50 portfolio verifies fresh Horizon Testnet and exact owner before readin
   assert.equal(p.offersCompleteness,"LATEST_20_ONLY");
   assert.deepEqual(m.calls.map(x=>x.method),["GET","GET","GET","GET"]);
   assert.ok(m.calls.every(x=>x.url.startsWith("https://horizon-testnet.stellar.org/")));
+  assert.deepEqual(m.calls.map(x=>x.redirect),[undefined,undefined,"error","error"]);
   await assert.rejects(loadM50ClassicDexPortfolio("GFAKE",{fetchImpl:m.fetchImpl,nowMs:NOW}),/invalid public/);
 });
 
