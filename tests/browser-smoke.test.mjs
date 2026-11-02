@@ -37,7 +37,7 @@ test("M2 desktop: reference markets, tabs, non-executable order drafts",async()=
     await page.locator('[data-chart-view="depth"]').click();
     assert.equal(await page.locator("#chartEmptyTitle").innerText(),"DEPTH NOT DEPLOYED");
     await page.locator('[data-book-view="trades"]').click();
-    assert.equal(await page.locator("#bookEmptyTitle").innerText(),"NO VERIFIED HOXO FILLS");
+    assert.equal(await page.locator("#bookEmptyTitle").innerText(),"TRADE HISTORY");
     await page.locator('[data-timeframe="1h"]').click();
     assert.match(await page.locator("#chartMarketStatus").innerText(),/1h/);
     await page.locator('[data-order-type="Limit"]').click();
@@ -289,8 +289,8 @@ test("M47 Chromium terminal draws authentic-shaped Kraken OHLC fixture and chang
   try{
     await page.goto(BASE+"/app/?market=xlm-usdc-spot",{waitUntil:"domcontentloaded"});
     await page.locator("#m47ChartSurface").waitFor({state:"visible",timeout:12000});
-    assert.match(await page.locator("#m47LastPriceSource").innerText(),/KRAKEN XLM\/USD.*NOT EXECUTABLE/);
-    assert.match(await page.locator("#chartMarketStatus").innerText(),/KRAKEN EXTERNAL REFERENCE/);
+    assert.match(await page.locator("#m47LastPriceSource").innerText(),/XLM\/USD · KRAKEN REFERENCE/);
+    assert.match(await page.locator("#chartMarketStatus").innerText(),/KRAKEN SPOT REFERENCE/);
     assert.equal(await page.locator("#tradeButton").isDisabled(),true);
     const bitmap=await page.locator("#m47CandleCanvas").evaluate(c=>({
       width:c.width,height:c.height,
@@ -340,7 +340,7 @@ test("M48 Chromium shows real-shaped red/green Kraken orderbook and switch to ge
   try{
     await page.goto(BASE+"/app/?market=xlm-usdc-spot",{waitUntil:"domcontentloaded"});
     await page.locator(".m48-bid .m48-price").first().waitFor({state:"visible",timeout:15000});
-    assert.match(await page.locator("#m48BookSourceWarning").innerText(),/KRAKEN XLM\/USD/);
+    assert.match(await page.locator("#m48BookSourceWarning").innerText(),/KRAKEN · XLM\/USD/);
     assert.equal(await page.locator("#bookPriceHeading").innerText(),"PRICE (USD)");
     assert.equal(await page.locator(".m48-ask .m48-price").count(),1);
     assert.equal(await page.locator(".m48-bid .m48-price").count(),1);
@@ -348,7 +348,7 @@ test("M48 Chromium shows real-shaped red/green Kraken orderbook and switch to ge
     await page.locator("#m48BookSource").selectOption("stellar-testnet");
     await page.waitForFunction(()=>document.querySelector("#bookPriceHeading")?.textContent==="PRICE (USDC)"&&
       document.querySelector("#m48BookStatus")?.textContent.includes("Stellar Horizon"));
-    assert.match(await page.locator("#m48BookSourceWarning").innerText(),/CLASSIC DEX OFFERS/);
+    assert.match(await page.locator("#m48BookSourceWarning").innerText(),/STELLAR TESTNET DEX/);
     assert.equal(await page.locator(".m48-ask .m48-price").count(),1);
     assert.ok(hits.includes("kraken")&&hits.includes("stellar-testnet"));
     await page.locator('[data-book-view="trades"]').click();
@@ -395,7 +395,7 @@ test("M49 Chromium XLM-PERP opens real external perp depth by default and keeps 
     await page.locator(".m48-bid .m48-price").first().waitFor({state:"visible",timeout:15000});
     assert.equal(await page.locator("#m48BookSource").inputValue(),"hyperliquid-perp");
     assert.equal(await page.locator("#bookPriceHeading").innerText(),"PRICE (USD)");
-    assert.match(await page.locator("#m48BookSourceWarning").innerText(),/HYPERLIQUID XLM PERP/);
+    assert.match(await page.locator("#m48BookSourceWarning").innerText(),/HYPERLIQUID · XLM-PERP/);
     assert.match(await page.locator("#m48BookStatus").innerText(),/Hyperliquid/);
     assert.equal(await page.locator("#tradeButton").isDisabled(),true);
     assert.equal(await page.locator("#marketPrimaryStat").innerText(),"REFERENCE PRICE");
