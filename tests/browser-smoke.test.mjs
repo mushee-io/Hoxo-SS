@@ -259,3 +259,32 @@ test("M18 Transfers tab shows verified Testnet public payment without presenting
     assert.deepEqual(errors,[]);
   }finally{await context.close();}
 });
+
+
+test("M45 browser: controlled signing panel loads and remains non-executable while paused",async()=>{
+  const {page,context,errors}=await openTerminal("/app/?market=xlm-usdc-spot",{width:1280,height:900});
+  try{
+    await page.locator("#m45SigningLab").waitFor({state:"visible"});
+    assert.match(await page.locator("#m45NoSend").innerText(),/NO BROADCAST/);
+    assert.match(await page.locator("#m45Contract").innerText(),/NOT VERIFIED/);
+    assert.equal(await page.locator("#tradeButton").isDisabled(),true);
+    assert.equal(await page.locator("#m45Prepare").isDisabled(),true);
+    assert.equal(await page.locator("#m45SignTaker").isDisabled(),true);
+    assert.equal(await page.locator("#m45SignMaker").isDisabled(),true);
+    await page.locator("#m45TermsAck").check();
+    assert.equal(await page.locator("#m45Prepare").isDisabled(),true);
+    await page.locator("#m45Check").click();
+    await page.locator("#m45Check").waitFor({state:"visible"});
+    await page.waitForFunction(()=>document.querySelector("#m45Status")?.textContent.includes("preflight")||
+      document.querySelector("#m45Status")?.textContent.includes("fetch")||
+      document.querySelector("#m45Status")?.textContent.includes("network")||
+      document.querySelector("#m45Status")?.textContent.includes("not verified")||
+      document.querySelector("#m45Status")?.textContent.includes("Failed"));
+    assert.equal(await page.locator("#m45Prepare").isDisabled(),true);
+    assert.equal(await page.locator("#m45SignTaker").isDisabled(),true);
+    assert.equal(await page.locator("#m45SignMaker").isDisabled(),true);
+    await page.locator("#m45Reset").click();
+    assert.match(await page.locator("#m45NoSend").innerText(),/NO BROADCAST/);
+    assert.deepEqual(errors,[],"M45 bundle must not produce unhandled page errors");
+  }finally{await context.close();}
+});
