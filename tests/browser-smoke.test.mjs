@@ -426,6 +426,8 @@ test("M49 Chromium XLM-PERP opens real external perp depth by default and keeps 
 test("M45 browser: controlled signing panel loads and remains non-executable while paused",async()=>{
   const {page,context,errors}=await openTerminal("/app/?market=xlm-usdc-spot",{width:1280,height:900});
   try{
+    assert.equal(await page.locator("#m45SigningLab").isVisible(),false);
+    await page.locator("#m55OpenLab").click();
     await page.locator("#m45SigningLab").waitFor({state:"visible"});
     assert.match(await page.locator("#m45NoSend").innerText(),/NO TRANSACTION SENT/);
     assert.match(await page.locator("#m45Contract").innerText(),/NOT VERIFIED/);
@@ -466,7 +468,8 @@ test("M62 public terminal never exposes the M46 Windows operator checklist",asyn
     await page.locator("#switchToSpot").click();
     assert.equal(await page.locator("#marketLabel").innerText(),"XLM/USDC");
     assert.equal(await page.locator("#marketAvailabilityBanner").isVisible(),false);
-    assert.equal(await page.locator("#m45SigningLab").isVisible(),true);
+    assert.equal(await page.locator("#m45SigningLab").isVisible(),false);
+    assert.equal(await page.locator("#m63SpotSwap").isVisible(),true);
     assert.equal(await page.locator("#tradeButton").isDisabled(),false);
     assert.deepEqual(errors,[]);
   }finally{await context.close();}
@@ -476,7 +479,8 @@ test("M62 public spot screen has no internal Windows acceptance controls",async(
   const {page,context,errors}=await openTerminal("/app/?market=xlm-usdc-spot");
   try{
     assert.equal(await page.locator("#m46WindowsLab").count(),0);
-    assert.equal(await page.locator("#m45SigningLab").isVisible(),true);
+    assert.equal(await page.locator("#m45SigningLab").isVisible(),false);
+    assert.equal(await page.locator("#m63SpotSwap").isVisible(),true);
     assert.equal(await page.locator("#marketAvailabilityBanner").isVisible(),false);
     assert.equal(await page.locator("#tradeButton").isDisabled(),false);
     assert.deepEqual(errors,[]);
