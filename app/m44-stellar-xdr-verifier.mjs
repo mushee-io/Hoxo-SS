@@ -99,9 +99,19 @@ export function reviewM44SourceEnvelope({sourceTxXdr,expectedTerms,currentLedger
     fail("transaction fee exceeds configured ceiling");
   const actual=readTerms(invoke);
   verifyExpectedTerms(actual,expectedTerms,now);
-  if(op.auth?.length>1)fail("extra source envelope authorizations");
-  // Source envelope may be unsigned before simulation or contain precisely
-  // the non-source simulated entry. No other auth may be present.
+  const entries=op.auth??[];
+  if(entries.length<1||entries.length>2)fail("simulated source envelope must contain taker auth");
+  let sourceCount=0,takerCount=0;
+  for(const entry of entries){
+    const info=inspectAuthEntry(entry);
+    if(info.credentialType==="sourceAccount")sourceCount++;
+    else if(["address","addressV2"].includes(info.credentialType)&&
+            info.address===actual.taker&&!info.signed)takerCount++;
+    else fail("unexpected source envelope authorization");
+  }
+  if(takerCount!==1||sourceCount>1)fail("expected exact source/taker simulation authorization set");
+  // Never accept an arbitrary independent auth tree: it must have come from
+  // the exact reviewed simulated M9 operation.
   return Object.freeze({maker:actual.maker,taker:actual.taker,matchId:actual.match_id,
     argsXdr:xdr64(invoke.args[0]),invocationXdr:xdr64(invoke),feeStroops:fee.toString(),
     network:"Stellar Testnet",reviewed:true,verified:false,broadcast:false});
@@ -110,12 +120,15 @@ export function verifyM44TakerAuth({sourceTxXdr,takerAuthXdr,signedTakerAuthEntr
   expectedTerms,currentLedger,maxFeeStroops=1000000n}){
   const now=ledgerNumber(currentLedger);
   reviewM44SourceEnvelope({sourceTxXdr,expectedTerms,currentLedger:now,maxFeeStroops});
-  const {invoke}=decodeSource(sourceTxXdr);
+  const {invoke,op}=decodeSource(sourceTxXdr);
   let unsigned,signed;
   try{
     unsigned=xdr.SorobanAuthorizationEntry.fromXdr(b64(takerAuthXdr),"base64");
     signed=xdr.SorobanAuthorizationEntry.fromXdr(b64(signedTakerAuthEntry),"base64");
   }catch{fail("malformed Soroban authorization XDR");}
+  const simulatedAuth=(op.auth??[]).filter(entry=>inspectAuthEntry(entry).address===expectedTerms.taker);
+  if(simulatedAuth.length!==1||xdr64(simulatedAuth[0])!==xdr64(unsigned))
+    fail("unsigned taker auth entry does not match simulation");
   const u=inspectAuthEntry(unsigned),s=inspectAuthEntry(signed);
   if(!["address","addressV2"].includes(s.credentialType)||s.credentialType!==u.credentialType)
     fail("unsupported or substituted Soroban credential");
@@ -159,12 +172,17 @@ export function createM44EnvelopePreparer({expectedTerms,currentLedger,maxFeeStr
     // v17 Transaction objects are immutable: REBUILD with exact same host
     // function, resources, fee, conditions and a SINGLE verified taker auth.
     const auth=xdr.SorobanAuthorizationEntry.fromXdr(signedTakerAuthEntry,"base64");
+    const sourceAuth=(op.auth??[]).filter(a=>inspectAuthEntry(a).credentialType==="sourceAccount");
+    const originalTaker=(op.auth??[]).filter(a=>inspectAuthEntry(a).address===expectedTerms.taker);
+    if(sourceAuth.length>1||originalTaker.length!==1)fail("unexpected simulated auth entries");
+    const replacements=(op.auth??[]).map(a=>
+      inspectAuthEntry(a).address===expectedTerms.taker?auth:a);
     const prepared=TransactionBuilder.cloneFrom(tx,{fee:String(tx.fee)})
       .clearOperations()
-      .addOperation(Operation.invokeHostFunction({source:op.source,func:op.func,auth:[auth]}))
+      .addOperation(Operation.invokeHostFunction({source:op.source,func:op.func,auth:replacements}))
       .build();
     if(prepared.source!==expectedTerms.maker||prepared.operations.length!==1||
-        prepared.operations[0].auth?.length!==1)
+        prepared.operations[0].auth?.length!==(op.auth??[]).length)
       fail("prepared source envelope malformed");
     const preparedTxXdr=prepared.toXdr();
     if(preparedTxXdr===sourceTxXdr)fail("auth entry not attached");
@@ -177,8 +195,9 @@ export function verifyM44MakerEnvelope({preparedTxXdr,signedTxXdr,maker}){
   if(a.source!==maker||b.source!==maker)fail("source account mismatch");
   if(a.signatures.length!==0||b.signatures.length!==1)fail("expected only one maker envelope signature");
   if(!equalBytes(a.hash(),b.hash()))fail("signed transaction body diverged from prepared envelope");
-  if(a.operations[0].auth?.length!==1||b.operations[0].auth?.length!==1)
-    fail("missing verified taker auth entry");
+  if((a.operations[0].auth?.length??0)<1||
+      a.operations[0].auth?.length!==b.operations[0].auth?.length)
+    fail("missing or changed taker authorization set");
   if(!Keypair.fromPublicKey(maker).verify(b.hash(),b.signatures[0].signature))
     fail("maker envelope signature invalid");
   return Object.freeze({maker,signatureVerified:true,transactionBodyVerified:true,
