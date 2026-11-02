@@ -383,7 +383,7 @@ test("M45 browser: controlled signing panel loads and remains non-executable whi
     assert.equal(await page.locator("#m45SignTaker").isDisabled(),true);
     assert.equal(await page.locator("#m45SignMaker").isDisabled(),true);
     await page.locator("#m45Reset").click();
-    assert.match(await page.locator("#m45NoSend").innerText(),/NO BROADCAST/);
+    assert.match(await page.locator("#m45NoSend").innerText(),/NO TRANSACTION SENT/);
     assert.deepEqual(errors,[],"M45 bundle must not produce unhandled page errors");
   }finally{await context.close();}
 });
