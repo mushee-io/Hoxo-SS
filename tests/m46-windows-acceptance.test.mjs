@@ -149,3 +149,31 @@ test("M46 rejects wallet API errors, secret fields and accessor tricks without e
   assert.equal(h.accept.summary().wallet1Verified,false);
   assert.equal(h.signCount(),0);
 });
+
+
+test("M46 rejects two individually valid wallet checks across incompatible ledgers",async()=>{
+  const h=harness();
+  await h.accept.verify("wallet1");
+  h.select(M45_CANDIDATE.taker);
+  h.changeProof({ledger:5500025});
+  await assert.rejects(h.accept.verify("wallet2"),/incompatible Testnet ledger snapshots/);
+  assert.equal(h.accept.summary().wallet1Verified,false);
+  assert.equal(h.accept.summary().bothWalletsReviewed,false);
+  h.select(M45_CANDIDATE.maker);
+  h.changeProof({ledger:5500000});
+  await h.accept.verify("wallet1");
+  h.select(M45_CANDIDATE.taker);
+  h.changeProof({ledger:5499998});
+  await assert.rejects(h.accept.verify("wallet2"),/incompatible Testnet ledger snapshots/);
+  assert.equal(h.signCount(),0);
+});
+
+test("M46 accepts sequential wallet proofs within the bounded ledger window",async()=>{
+  const h=harness();
+  await h.accept.verify("wallet1");
+  h.select(M45_CANDIDATE.taker);
+  h.changeProof({ledger:5500024});
+  await h.accept.verify("wallet2");
+  assert.equal(h.accept.summary().bothWalletsReviewed,true);
+  assert.equal(h.signCount(),0);
+});
