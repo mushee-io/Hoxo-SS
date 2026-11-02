@@ -347,7 +347,7 @@ test("M48 Chromium shows real-shaped red/green Kraken orderbook and switch to ge
     assert.equal(await page.locator("#tradeButton").isDisabled(),true);
     await page.locator("#m48BookSource").selectOption("stellar-testnet");
     await page.waitForFunction(()=>document.querySelector("#bookPriceHeading")?.textContent==="PRICE (USDC)"&&
-      document.querySelector("#m48BookStatus")?.textContent.includes("Stellar Horizon"));
+      document.querySelector("#m48BookStatus")?.textContent.includes("LIVE DEPTH"));
     assert.match(await page.locator("#m48BookSourceWarning").innerText(),/STELLAR TESTNET DEX/);
     assert.equal(await page.locator(".m48-ask .m48-price").count(),1);
     assert.ok(hits.includes("kraken")&&hits.includes("stellar-testnet"));
@@ -396,7 +396,7 @@ test("M49 Chromium XLM-PERP opens real external perp depth by default and keeps 
     assert.equal(await page.locator("#m48BookSource").inputValue(),"hyperliquid-perp");
     assert.equal(await page.locator("#bookPriceHeading").innerText(),"PRICE (USD)");
     assert.match(await page.locator("#m48BookSourceWarning").innerText(),/HYPERLIQUID · XLM-PERP/);
-    assert.match(await page.locator("#m48BookStatus").innerText(),/Hyperliquid/);
+    assert.match(await page.locator("#m48BookStatus").innerText(),/LIVE DEPTH/);
     assert.equal(await page.locator("#tradeButton").isDisabled(),true);
     assert.equal(await page.locator("#marketPrimaryStat").innerText(),"REFERENCE PRICE");
     await page.locator(".announcement-details summary").click();
