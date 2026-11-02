@@ -87,3 +87,16 @@ test("rejects duplicate unsigned or signed maker/taker authorization entries",as
  const approved=await flow.approve("taker");
  assert.equal(approved.verified,false);assert.equal(flow.status.approvalCount,2);
 });
+
+test("requires own fields even when Object.prototype is polluted",()=>{
+ const missing={...input};delete missing.matchId;
+ const previous=Object.getOwnPropertyDescriptor(Object.prototype,"matchId");
+ try {
+  Object.defineProperty(Object.prototype,"matchId",{configurable:true,value:input.matchId});
+  assert.throws(()=>validateDualWalletHandoff(missing),/missing own field: matchId/);
+ } finally {
+  if(previous)Object.defineProperty(Object.prototype,"matchId",previous);
+  else delete Object.prototype.matchId;
+ }
+ assert.deepEqual(Object.keys(validateDualWalletHandoff(input)).sort(),Object.keys(input).sort());
+});
