@@ -8,9 +8,9 @@ const mk=(id,side,ledger,order)=>({match_id:id,maker_side:side,settled_ledger:le
  maker_order_id:order.repeat(64),taker_order_id:(side===1?"2":"4").repeat(64),
  base_amount:"100000",quote_amount:"17000"});
 const base={[buy.matchId]:mk(buy.matchId,1,55,"1"),[sell.matchId]:mk(sell.matchId,0,56,"3")};
-function rpc({passphrase=TESTNET_PASSPHRASE,receipts=base,settled=true,status="SUCCESS"}={}){
+function rpc({passphrase=TESTNET_PASSPHRASE,receipts=base,settled=true,status="SUCCESS",events=true}={}){
  return {getNetwork:async()=>({passphrase}),
- getTransaction:async h=>({hash:h,status,ledger:h===buy.txHash?55:56}),
+ getTransaction:async h=>({hash:h,status,ledger:h===buy.txHash?55:56,contractEvents:events?[{contractId:"C"+"A".repeat(55),type:"settled",matchId:h===buy.txHash?buy.matchId:sell.matchId,makerSide:h===buy.txHash?1:0}]:[]}),
  queryContract:async(_c,m,args)=>({isReadCall:true,result:m==="receipt"?
  receipts[Buffer.from(args.match_id).toString("hex")]:settled})};
 }
@@ -45,4 +45,15 @@ test("M58 accepts native Soroban bytes32 match IDs and i128 BigInt amounts",asyn
  const proof=await run(rpc({receipts}));
  assert.equal(proof.buyAndSellOnchainVerified,true);
  assert.equal(proof.volumeAttributionApproved,false);
+});
+
+test("M58 rejects unrelated successful transaction at same ledger",async()=>{
+ await assert.rejects(run(rpc({events:false})),/matching M9 settlement event/);
+ const bad=rpc();
+ const original=bad.getTransaction;
+ bad.getTransaction=async h=>({...await original(h),contractEvents:[{
+  contractId:"C"+"B".repeat(55),type:"settled",
+  matchId:h===buy.txHash?buy.matchId:sell.matchId,makerSide:h===buy.txHash?1:0
+ }]});
+ await assert.rejects(run(bad),/matching M9 settlement event/);
 });
