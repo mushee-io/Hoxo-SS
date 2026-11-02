@@ -370,6 +370,11 @@ test("M45 browser: controlled signing panel loads and remains non-executable whi
     assert.equal(await page.locator("#m45Prepare").isDisabled(),true);
     assert.equal(await page.locator("#m45SignTaker").isDisabled(),true);
     assert.equal(await page.locator("#m45SignMaker").isDisabled(),true);
+    assert.equal(await page.locator("#m55Submit").isDisabled(),true);
+    await page.locator("#m55SendAck").check();
+    await page.locator("#m55SendPhrase").fill("SEND_SMALL_HOXO_STELLAR_TESTNET_SPOT");
+    assert.equal(await page.locator("#m55Submit").isDisabled(),true,
+      "final send confirmation alone never enables a trade without both Freighter signatures");
     await page.locator("#m45TermsAck").check();
     assert.equal(await page.locator("#m45Prepare").isDisabled(),true);
     await page.locator("#m45Check").click();
