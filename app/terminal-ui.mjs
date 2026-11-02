@@ -48,7 +48,7 @@ function updateChart(){
 }
 function updateBook(){
   const book=bookView==="book";
-  $("bookEmptyTitle").textContent=book?"ORDER BOOK OFFLINE":"TRADES NOT DEPLOYED";
+  $("bookEmptyTitle").textContent=book?"LOADING LIVE ORDER BOOK":"TRADE HISTORY";
   $("bookEmptyDescription").textContent=book
     ?"No authenticated "+market.label+" orders exist. Matching is not deployed."
     :"Verified "+market.label+" fills require settlement and indexing.";
@@ -114,7 +114,8 @@ function chooseMarket(id){
   if(oldMarketId!==market.id)
     window.dispatchEvent(new CustomEvent("hoxo:market-change",{detail:{market:market.id}}));
   $("marketLabel").textContent=market.label;
-  $("marketSubheading").textContent=(market.type==="spot"?"SPOT":"PERPETUAL")+" REFERENCE · NOT LISTED";
+  $("marketSubheading").textContent=market.type==="spot"?
+    "SPOT · STELLAR TESTNET SETTLEMENT":"PERP · REFERENCE MARKET";
   $("marketPrimaryStat").textContent=market.type==="spot"?"REFERENCE PRICE":"MARK PRICE";
   $("fundingStatLabel").textContent=market.type==="spot"?"FUNDING / N/A":"FUNDING / 1H";
   $("marginMode").textContent=market.type==="spot"?"SPOT · NO MARGIN":"CROSS MARGIN · OFFLINE";
