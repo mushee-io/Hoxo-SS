@@ -157,7 +157,10 @@ async function refresh(){
 }
 window.addEventListener("hoxo:chart-selection",event=>{
   selectedChart=event.detail?.view??"price";
-  if(selectedChart==="price")render();
+  if(selectedChart!=="price"){
+    surface.classList.add("hidden");
+    canvas.setAttribute("aria-hidden","true");
+  }else render();
 });
 window.addEventListener("hoxo:market-change",event=>{
   selectedMarket=String(event.detail?.market||"");lastResult=null;epoch++;
