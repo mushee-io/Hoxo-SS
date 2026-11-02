@@ -392,7 +392,7 @@ test("M50 Chromium: connected wallet shows actual Horizon classic portfolio, Ear
   const {page,context,errors}=await openWalletHarness();
   try{
     await page.locator("#walletButton").click();
-    await page.locator("#walletStatus").getByText(/CONNECTED/).waitFor();
+    await page.waitForFunction(()=>document.querySelector("#walletStatus")?.textContent.includes("CONNECTED"));
     await page.locator('[data-view="portfolio"]').click();
     await page.getByRole("heading",{name:"Portfolio overview"}).waitFor();
     await page.waitForFunction(()=>document.querySelector("#m50PortfolioStatus")?.textContent.includes("LEDGER"));
