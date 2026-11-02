@@ -11,7 +11,7 @@ jobs:
   one-time-live-testnet-swaps:
     name: Genuine one-shot 10 XLM sell and 1 XLM buy with ephemeral Testnet wallet
     runs-on: ubuntu-latest
-    timeout-minutes: 6
+    timeout-minutes: 7
     steps:
       - uses: actions/checkout@v4
         with:
