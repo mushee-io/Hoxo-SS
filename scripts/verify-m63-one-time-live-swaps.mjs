@@ -44,7 +44,7 @@ async function doTx(operation,label){
   tx.sign(wallet);
   const submitted=await testnet.submitTransaction(tx);
   const hash=submitted?.hash;
-  const localHash=tx.hash().toString("hex");
+  const localHash=Array.from(tx.hash(),b=>b.toString(16).padStart(2,"0")).join("");
   if(!/^[0-9a-f]{64}$/i.test(hash??"")||submitted.successful===false||
      localHash!==hash.toLowerCase())
     throw Error(label+" signed transaction receipt check failed: "+
