@@ -82,6 +82,6 @@ test("M48 browser terminal warns about independent USD vs USDC book and leaves t
   assert.match(js,/KRAKEN · XLM\/USD · USD REFERENCE/);
   assert.match(js,/STELLAR TESTNET DEX · XLM\/USDC · USDC/);
   assert.match(main,/hoxo:book-selection/);
-  assert.match(html,/id="tradeButton"[^>]+disabled/);
+  assert.match(html,/id="tradeButton"[^>]+class="trade-review"/);
   assert.doesNotMatch(js,/signTransaction|sendTransaction|set_pause\(false\)/);
 });
