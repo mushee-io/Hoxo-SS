@@ -10,6 +10,7 @@ import {M45_CANDIDATE} from "./m45-spot-preflight.mjs";
 import {TESTNET_PASSPHRASE,M9_TESTNET_CONTRACT_ID} from "./m43-freighter-auth-guard.mjs";
 
 const AGE_LIMIT_MS=120_000;
+const MAX_REVIEW_LEDGER_DRIFT=24;
 const ROLES=Object.freeze({wallet1:M45_CANDIDATE.maker,wallet2:M45_CANDIDATE.taker});
 function fail(reason){throw Error("M46 Windows acceptance: "+reason);}
 function expectedProof(p,role,address,now){
@@ -67,9 +68,12 @@ export function createM46WindowsAcceptance({
       const item=checks.get(role);
       return Boolean(item&&moment>=item.at&&moment-item.at<=AGE_LIMIT_MS);
     };
+    const first=checks.get("wallet1"),second=checks.get("wallet2");
+    const coherent=Boolean(first&&second&&second.ledger>=first.ledger&&
+      second.ledger-first.ledger<=MAX_REVIEW_LEDGER_DRIFT);
     return Object.freeze({
       wallet1Verified:fresh("wallet1"),wallet2Verified:fresh("wallet2"),
-      bothWalletsReviewed:fresh("wallet1")&&fresh("wallet2"),
+      bothWalletsReviewed:fresh("wallet1")&&fresh("wallet2")&&coherent,
       currentLedger:checks.get("wallet2")?.ledger??checks.get("wallet1")?.ledger??null,
       activeNetwork:"Stellar Testnet", m9Paused:true,
       signaturesRequested:false,signingPermitted:false,
@@ -91,6 +95,11 @@ export function createM46WindowsAcceptance({
         const proof=await probe();
         const observedAt=now();
         const wallet=expectedProof(proof,role,address,observedAt);
+        if(role==="wallet2"&&checks.has("wallet1")){
+          const first=checks.get("wallet1");
+          if(proof.ledger<first.ledger||proof.ledger-first.ledger>MAX_REVIEW_LEDGER_DRIFT)
+            fail("wallet reviews span incompatible Testnet ledger snapshots; restart both checks");
+        }
         await readFreighter(api,address);
         checks.set(role,Object.freeze({
           at:observedAt,ledger:proof.ledger,address,
