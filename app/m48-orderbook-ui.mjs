@@ -33,14 +33,14 @@ function sourceHeading(){
 }
 function enforceSource(marketChanged=false){
   const isPerp=chosenMarket==="xlm-usdc-perp";
-  const allowed=isPerp?new Set(["hyperliquid-perp","kraken"]):
-    new Set(["kraken","stellar-testnet"]);
+  const allowed=isPerp?new Set(["hyperliquid-perp"]):
+    new Set(["stellar-testnet"]);
   for(const option of selector.options){
     option.disabled=!allowed.has(option.value);
     option.hidden=!allowed.has(option.value);
   }
   if(marketChanged||!allowed.has(selector.value))
-    selector.value=isPerp?"hyperliquid-perp":"kraken";
+    selector.value=isPerp?"hyperliquid-perp":"stellar-testnet";
 }
 function formatted(n,decimals=6){
   return Number(n).toLocaleString("en-US",{
