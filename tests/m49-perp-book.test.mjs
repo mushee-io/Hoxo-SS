@@ -81,6 +81,7 @@ test("M49 product status is transparent, shorter, and includes a real perp refer
   assert.match(html,/M9 spot settlement contract is deployed but paused/);
   assert.match(html,/value="hyperliquid-perp"/);
   assert.match(html,/Live Order Book/);
+  assert.doesNotMatch(html,/KRAKEN XLM\/USD · EXTERNAL SPOT ORDERS · NOT HOXO/);
   assert.match(html,/Hoxo Fills/);
   assert.doesNotMatch(html,/SPOT\/PERP EXECUTION, LENDING AND UNIFIED-MARGIN CONTRACTS ARE NOT YET DEPLOYED/);
   assert.match(ui,/Hyperliquid perpetual/);
