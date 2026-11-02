@@ -19,6 +19,15 @@ const terms={
 const receipt={...terms,settled_ledger:5500050};
 test("M52 exact signed M9 receipt verification rejects any amount, side or participant forgery",()=>{
   assert.equal(verifyM52Receipt(receipt,terms),5500050);
+  assert.equal(verifyM52Receipt({
+    ...receipt,base_amount:100000n,quote_amount:200000n
+  },terms),5500050,"real Soroban i128 receipts decode as BigInt");
+  assert.throws(()=>verifyM52Receipt({
+    ...receipt,base_amount:100001n
+  },terms),/receipt did not match/);
+  assert.throws(()=>verifyM52Receipt({
+    ...receipt,quote_amount:200000.1
+  },terms),/receipt did not match/);
   for(const corrupted of [
     {...receipt,match_id:"0".repeat(64)},
     {...receipt,maker_order_id:IDS[2]},
