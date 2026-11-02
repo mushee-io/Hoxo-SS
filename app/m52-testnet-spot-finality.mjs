@@ -32,7 +32,7 @@ export function verifyM52SubmissionHash(signedTransactionHash,reportedHash){
   if(!(signedTransactionHash instanceof Uint8Array)||signedTransactionHash.length!==32||
      typeof reportedHash!=="string"||!/^[0-9a-f]{64}$/i.test(reportedHash))
     fail("invalid RPC transaction hash proof");
-  const expected=Buffer.from(signedTransactionHash).toString("hex");
+  const expected=Array.from(signedTransactionHash,b=>b.toString(16).padStart(2,"0")).join("");
   if(reportedHash.toLowerCase()!==expected)
     fail("RPC returned hash for a different signed transaction");
   return expected;
