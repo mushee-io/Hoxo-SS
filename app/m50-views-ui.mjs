@@ -10,7 +10,8 @@ import {M48_CIRCLE_TEST_ISSUER} from "./m48-book-data.mjs";
 
 const $=id=>document.getElementById(id);
 let wallet={status:"disconnected",address:null,balances:[],ledger:null};
-let selectedView="trade",request=0,portfolio=null,loading=false,registryStatus=null;
+let selectedView="trade",request=0,portfolio=null,portfolioError=null,
+  loading=false,registryStatus=null;
 const fmt=address=>address?.slice(0,10)+"…"+address?.slice(-8);
 function node(tag,text,className){
   const el=document.createElement(tag);
@@ -53,7 +54,8 @@ function renderPortfolio(){
     return;
   }
   if(!portfolio||portfolio.owner!==wallet.address){
-    setState("Wallet connected · click Refresh Portfolio to read on-chain data");
+    setState(portfolioError?"Public portfolio unavailable: "+portfolioError:
+      "Wallet connected · click Refresh Portfolio to read on-chain data");
     root.append(panel("READ-ONLY PORTFOLIO",
       "Verified wallet holdings are available. Fetch public Horizon offers and classic DEX trades to continue."));
     return;
@@ -93,11 +95,10 @@ async function refreshPortfolio(){
   try{
     const result=await loadM50ClassicDexPortfolio(owner);
     if(seq!==request||wallet.address!==owner)return;
-    portfolio=result;
+    portfolio=result;portfolioError=null;
   }catch(error){
     if(seq===request&&wallet.address===owner){
-      portfolio=null;
-      $("m50PortfolioStatus").textContent="Portfolio feed unavailable: "+String(error?.message||error);
+      portfolio=null;portfolioError=String(error?.message||error);
     }
   }finally{
     if(seq===request){loading=false;renderPortfolio();}
@@ -156,8 +157,11 @@ $("m50EarnPreview").addEventListener("click",()=>{
 window.addEventListener("hoxo:wallet-state",event=>{
   const prev=wallet.address;
   wallet=event.detail;
-  if(prev!==wallet.address){request++;portfolio=null;loading=false;}
-  if(selectedView==="portfolio")renderPortfolio();
+  if(prev!==wallet.address){request++;portfolio=null;portfolioError=null;loading=false;}
+  if(selectedView==="portfolio"){
+    renderPortfolio();
+    if(verified()&&!portfolio&&!loading&&!portfolioError)void refreshPortfolio();
+  }
   if(selectedView==="earn")renderEarn();
 });
 window.addEventListener("hoxo:view",event=>{
