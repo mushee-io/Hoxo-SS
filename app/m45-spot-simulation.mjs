@@ -3,7 +3,7 @@
  * This is bilateral testing, NOT a live quoted market or order matcher.
  * Always simulates first; NEVER signs or broadcasts.
  */
-import {Address,Contract,TransactionBuilder,nativeToScVal,inspectAuthEntry,xdr,rpc} from "@stellar/stellar-sdk";
+import {Address,Contract,TransactionBuilder,nativeToScVal,inspectAuthEntry,xdr,rpc,StrKey} from "@stellar/stellar-sdk";
 import {TESTNET_PASSPHRASE,M9_TESTNET_CONTRACT_ID} from "./m43-freighter-auth-guard.mjs";
 import {M44_XLM_SAC,M44_USDC_SAC,reviewM44SourceEnvelope} from "./m44-stellar-xdr-verifier.mjs";
 import {M45_CANDIDATE} from "./m45-spot-preflight.mjs";
@@ -23,12 +23,17 @@ function randomId(randomBytes){
   return Array.from(buf,b=>b.toString(16).padStart(2,"0")).join("");
 }
 export function draftM45BilateralTerms({xlmAmount,usdcAmount,side="sell",ledger,
+  maker=M45_CANDIDATE.maker,taker=M45_CANDIDATE.taker,
   randomBytes=(n)=>crypto.getRandomValues(new Uint8Array(n))}){
   if(!["sell","buy"].includes(side))fail("side must be buy or sell XLM from Wallet 1");
+  if(!StrKey.isValidEd25519PublicKey(maker??"")||
+     !StrKey.isValidEd25519PublicKey(taker??"")||maker===taker)
+    fail("two different valid Stellar G-addresses are required");
   if(!Number.isSafeInteger(ledger)||ledger<1||ledger>0xffffffff-100)fail("verified fresh ledger required");
   const base=amountE7(xlmAmount,"XLM"),quote=amountE7(usdcAmount,"USDC");
-  // Enforce the same first-trade cap in the transaction builder, not only the UI.
-  if(base>1_000_000n)fail("first Testnet settlement pilot is limited to 0.1 XLM");
+  // The deployed M9 contract itself enforces amount/price limits.
+  // Match size is instead constrained by both parties' verified balances,
+  // exact reviewed consideration and a successful Soroban simulation.
   // User-selected manual bilateral price; no data feed or price oracle.
   const numerator=quote*SCALE;
   if(numerator%base!==0n)fail("bilateral price must be exactly representable at 7 decimals");
@@ -38,7 +43,7 @@ export function draftM45BilateralTerms({xlmAmount,usdcAmount,side="sell",ledger,
   if(new Set(ids).size!==3)fail("match and order IDs must be unique");
   return Object.freeze({
     match_id:ids[0],maker_order_id:ids[1],taker_order_id:ids[2],
-    maker:M45_CANDIDATE.maker,taker:M45_CANDIDATE.taker,
+    maker,taker,
     base_token:M44_XLM_SAC,quote_token:M44_USDC_SAC,
     base_amount:base.toString(),quote_amount:quote.toString(),
     maker_side:side==="sell"?0:1,
@@ -113,7 +118,12 @@ export async function simulateM45BilateralSpot({
   const ledger=Number(latest?.sequence);
   if(!Number.isSafeInteger(ledger)||Math.abs(ledger-preflight.ledger)>4)
     fail("RPC ledger moved: run a new preflight");
-  const terms=draftM45BilateralTerms({xlmAmount,usdcAmount,side,ledger,randomBytes});
+  if(!Array.isArray(preflight.wallets)||preflight.wallets.length!==2)
+    fail("two checked Stellar Testnet counterparties are required");
+  const terms=draftM45BilateralTerms({
+    xlmAmount,usdcAmount,side,ledger,randomBytes,
+    maker:preflight.wallets[0].address,taker:preflight.wallets[1].address
+  });
   verifyM51TradeCapacity(preflight,terms);
   const source=await server.getAccount(terms.maker);
   if(source?.accountId?.()!==terms.maker)fail("RPC returned wrong source account");
