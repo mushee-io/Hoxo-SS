@@ -25,9 +25,9 @@ function sourceHeading(){
   $("bookPriceHeading").textContent=selector.value==="stellar-testnet"?"PRICE (USDC)":"PRICE (USD)";
   $("bookSizeHeading").textContent="SIZE (XLM)";
   const message={
-    "kraken":"KRAKEN XLM/USD · EXTERNAL SPOT ORDERS · NOT HOXO",
-    "stellar-testnet":"STELLAR TESTNET XLM/USDC · CLASSIC DEX OFFERS · NOT HOXO",
-    "hyperliquid-perp":"HYPERLIQUID XLM PERP · USD PRICE / USDC MARGIN · NOT HOXO"
+    "kraken":"KRAKEN · XLM/USD · USD REFERENCE",
+    "stellar-testnet":"STELLAR TESTNET DEX · XLM/USDC · USDC",
+    "hyperliquid-perp":"HYPERLIQUID · XLM-PERP · USD REFERENCE"
   };
   $("m48BookSourceWarning").textContent=message[selector.value]||"EXTERNAL REFERENCE DATA ONLY";
 }
@@ -55,7 +55,7 @@ function paint(book){
     (selector.value==="hyperliquid-perp"&&
       (book.marketType!=="perpetual"||book.source!=="Hyperliquid"||
        book.currency!=="USD"||book.externalMainnet!==true))){
-    label("Orderbook source unavailable · no artificial price levels",true);
+    label("ORDER BOOK UNAVAILABLE · RETRY",true);
     return;
   }
   const bids=book.bids.slice(0,11),asks=book.asks.slice(0,11);
@@ -66,7 +66,7 @@ function paint(book){
       selector.value==="hyperliquid-perp"?
       "The external XLM perpetual venue currently reports no orders.":
       "No actual Stellar Testnet XLM/USDC offers exist in this classic DEX book.";
-    label("0 genuine offers · no synthetic book or automatic self-trading");
+    label("NO CURRENT ORDERS · AUTO REFRESH");
     return;
   }
   const max=Math.max(1,...bids.concat(asks).map(row=>row.amount));
@@ -101,8 +101,7 @@ function paint(book){
   list.classList.remove("hidden");
   $("m48Spread").textContent=book.spread===null?"—":
     formatted(book.spread,7)+" "+book.currency;
-  label(book.source+" · "+(bids.length+asks.length)+
-    " verified external offer levels · AUTO REFRESH · NOT HOXO FILLS");
+  label("LIVE DEPTH · "+(bids.length+asks.length)+" PRICE LEVELS · AUTO REFRESH");
 }
 async function sourceFetch(source){
   try{
@@ -139,7 +138,7 @@ async function refresh(){
       $("bookEmptyTitle").textContent="ORDER BOOK SOURCE UNAVAILABLE";
       $("bookEmptyDescription").textContent=
         "Genuine market levels could not be verified. Check the network and try again.";
-      label("No real-time verified price levels · no simulated liquidity",true);
+      label("LIVE DEPTH UNAVAILABLE · RETRY",true);
     }
   }
 }
@@ -159,9 +158,9 @@ function selection(data){
   feed.classList.remove("hidden");
   sourceHeading();
   $("bookEmptyTitle").textContent="LOADING LIVE ORDER BOOK";
-  $("bookEmptyDescription").textContent="Fetching actual offers. No demo prices.";
+  $("bookEmptyDescription").textContent="Fetching current bid and ask levels.";
   const feedName=selector.value==="kraken"?"Kraken spot":
-    selector.value==="hyperliquid-perp"?"Hyperliquid perpetual":"Stellar Testnet classic DEX";
+    selector.value==="hyperliquid-perp"?"Hyperliquid XLM perp":"Stellar Testnet DEX";
   label("Connecting to the "+feedName+" public order book...");
   refresh();
 }
