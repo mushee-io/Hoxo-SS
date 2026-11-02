@@ -7,7 +7,7 @@ const $=id=>document.getElementById(id);
 const surface=$("m47ChartSurface"),canvas=$("m47CandleCanvas"),ctx=canvas.getContext("2d");
 const rows=$("m59TradeRows"),panel=$("m59Settlements");
 let selectedMarket=new URLSearchParams(location.search).get("market")||"xlm-usdc-spot";
-let selectedTab="book",lastResult=null,loading=false,epoch=0;
+let selectedTab="book",selectedChart="price",lastResult=null,loading=false,epoch=0;
 const SCALE=10000000n;
 const isSpot=()=>selectedMarket==="xlm-usdc-spot";
 function formatE7(value){
@@ -21,6 +21,7 @@ function message(s){
   $("m59Status").textContent=s;
 }
 function showEmpty(title,details){
+  if(selectedChart!=="price")return;
   surface.classList.add("hidden");canvas.setAttribute("aria-hidden","true");
   $("chartEmptyTitle").parentElement.classList.remove("hidden");
   $("chartEmptyTitle").textContent=title;
@@ -30,7 +31,7 @@ function showEmpty(title,details){
   $("m47LastPriceSource").textContent="M9 · NO VERIFIED SETTLEMENT PRICE";
 }
 function draw(trades){
-  if(!isSpot()||!trades.length)return;
+  if(!isSpot()||selectedChart!=="price"||!trades.length)return;
   surface.classList.remove("hidden");canvas.setAttribute("aria-hidden","false");
   $("chartEmptyTitle").parentElement.classList.add("hidden");
   const rect=canvas.getBoundingClientRect(),w=rect.width,h=rect.height;
@@ -82,7 +83,8 @@ function render(){
   $("m59Summary").classList.toggle("hidden",!market);
   if(!market){
     $("m59Volume").textContent="—";
-    surface.classList.add("hidden");return;
+    if(selectedChart==="price")surface.classList.add("hidden");
+    return;
   }
   if(!result){
     $("m59Volume").textContent="—";
@@ -153,6 +155,10 @@ async function refresh(){
     if(ticket===epoch)lastResult={state:"unavailable"};
   }finally{loading=false;render();}
 }
+window.addEventListener("hoxo:chart-selection",event=>{
+  selectedChart=event.detail?.view??"price";
+  if(selectedChart==="price")render();
+});
 window.addEventListener("hoxo:market-change",event=>{
   selectedMarket=String(event.detail?.market||"");lastResult=null;epoch++;
   render();if(isSpot())refresh();
