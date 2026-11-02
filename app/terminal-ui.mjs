@@ -195,14 +195,20 @@ function openSpotSettlementReview(){
   }
   $("m45Xlm").value=requested;
   $("m45Xlm").dispatchEvent(new Event("input",{bubbles:true}));
-  $("draftFeedback").textContent="Checking Testnet readiness for "+requested+
-    " XLM. Specify a distinct counterparty's public G-address; both wallets must approve the exact XLM/USDC terms. No transaction sent.";
+  $("draftFeedback").textContent="Reviewing "+requested+
+    " XLM. Enter the counterparty's public G-address and the mutually agreed USDC total, then verify the trade. No transaction sent.";
   $("draftFeedback").classList.remove("invalid");
   input.setAttribute("aria-invalid","false");
   $("m45SigningLab")?.scrollIntoView({behavior:"smooth",block:"start"});
-  $("m45Check")?.focus();
-  // Read-only check only. Never trigger signatures or send from this button.
-  $("m45Check")?.click();
+  const counterparty=$("m45TakerAddress");
+  const quote=$("m45Usdc");
+  if(!counterparty.value.trim())counterparty.focus();
+  else if(!quote.value.trim())quote.focus();
+  else {
+    $("m45Check")?.focus();
+    // Read-only check. Never trigger signatures or send from the ticket.
+    $("m45Check")?.click();
+  }
 }
 $("tradeButton").addEventListener("click",openSpotSettlementReview);
 $("m55OpenLab")?.addEventListener("click",openSpotSettlementReview);
