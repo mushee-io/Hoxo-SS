@@ -100,7 +100,7 @@ export function readUsdcBalance(account){
     x.asset_code==="USDC"&&x.asset_issuer===USDC_TESTNET_ISSUER);
   if(!native)fail("native XLM wallet balance unavailable");
   if(!token)fail("USDC Testnet trustline missing; add the listed issuer in Freighter first");
-  if(token.is_authorized===false||token.is_authorized_to_maintain_liabilities===true)
+  if(token.is_authorized!==true)
     fail("USDC Testnet trustline not authorised to trade");
   return Object.freeze({
     xlmE7:parseBalance(native.balance),
