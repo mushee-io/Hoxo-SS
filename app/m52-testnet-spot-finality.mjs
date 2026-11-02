@@ -28,6 +28,15 @@ function sameReceiptId(id,expected){
     return Array.from(id,b=>b.toString(16).padStart(2,"0")).join("")===expected;
   return false;
 }
+export function verifyM52SubmissionHash(signedTransactionHash,reportedHash){
+  if(!(signedTransactionHash instanceof Uint8Array)||signedTransactionHash.length!==32||
+     typeof reportedHash!=="string"||!/^[0-9a-f]{64}$/i.test(reportedHash))
+    fail("invalid RPC transaction hash proof");
+  const expected=Buffer.from(signedTransactionHash).toString("hex");
+  if(reportedHash.toLowerCase()!==expected)
+    fail("RPC returned hash for a different signed transaction");
+  return expected;
+}
 export function verifyM52Receipt(receipt,terms){
   if(!receipt||!sameReceiptId(receipt.match_id,terms.match_id)||
      !sameReceiptId(receipt.maker_order_id,terms.maker_order_id)||
@@ -163,8 +172,8 @@ export async function m52ReviewedSpotSettlement({
   if(typeof hash!=="string"||!/^[0-9a-f]{64}$/i.test(hash)||
      !["PENDING","DUPLICATE"].includes(sent?.status))
     fail("RPC did not accept the exact signed Testnet transaction");
-  const final=await server.pollTransaction(hash);
-  if(final?.status!=="SUCCESS"||final?.hash?.toLowerCase()!==hash.toLowerCase())
+  const canonicalHash=verifyM52SubmissionHash(tx.hash(),hash);\n  const final=await server.pollTransaction(canonicalHash);
+  if(final?.status!=="SUCCESS"||final?.hash?.toLowerCase()!==canonicalHash)
     fail("transaction broadcast but confirmed success is missing; inspect hash "+hash);
   const matchId=Uint8Array.from(expectedTerms.match_id.match(/../g),x=>parseInt(x,16));
   const receipt=await read(server,M9_TESTNET_CONTRACT_ID,"receipt",{match_id:matchId});
@@ -175,7 +184,7 @@ export async function m52ReviewedSpotSettlement({
   reconcileM52Balances(before,after,expectedTerms,MAX_FEE_STROOPS);
   return Object.freeze({
     phase:"ONCHAIN_SETTLED_AND_RECONCILED",
-    transactionHash:hash.toLowerCase(),settledLedger:confirmedLedger,
+    transactionHash:canonicalHash,settledLedger:confirmedLedger,
     network:"Stellar Testnet",matchId:expectedTerms.match_id,
     observedBalancesReconciled:true,
     actualOnchainSettlement:true,publicBetaAuthorized:false
