@@ -60,7 +60,7 @@
   <button id="tradeButton" type="button" class="trade-review">REVIEW SMALL TESTNET BUY</button>
   <button type="button" class="m55-open-lab" id="m55OpenLab" aria-controls="m45SigningLab">VIEW WALLET-APPROVAL STEPS ↓</button>
   <div class="summary"><div><span>Selected instrument</span><b id="ticketMarket">XLM/USDC</b></div><div><span>Order size (draft)</span><b id="ticketSize">—</b></div><div><span>Input-only notional</span><b id="ticketNotional">—</b></div><div><span>Available margin</span><b>—</b></div></div>
-  <div class="order-warning" role="note"><strong>WALLET-APPROVED SETTLEMENT</strong><p>Use the small Testnet spot trade button above. General market matching and perpetual positions require separate deployment and approvals.</p></div>
+  <div class="order-warning" role="note"><strong>WALLET-APPROVED SETTLEMENT</strong><p>This is a pilot bilateral settlement: maximum 0.1 XLM and two preconfigured Freighter accounts. Connecting another wallet does not make it eligible to settle. General market matching and perpetual positions are not active.</p></div>
 </section>
 <section class="portfolio-panel panel" id="portfolio" aria-label="Portfolio data"><div class="tabbar position-tabs"><button class="tab active" data-portfolio-tab="Balances">Balances</button><button class="tab" data-portfolio-tab="Positions">Positions</button><button class="tab" data-portfolio-tab="Open Orders">Open Orders</button><button class="tab" data-portfolio-tab="Trade History">Trade History</button><button class="tab" data-portfolio-tab="Transfers">Transfers</button><button class="tab" data-portfolio-tab="Funding">Funding</button><button class="tab" data-portfolio-tab="Borrowing">Borrowing</button></div><div id="portfolioBody" class="portfolio-body"><span class="empty-icon">◎</span><strong>CONNECT A TESTNET WALLET</strong><p>Authorise Freighter to show your real Stellar Testnet asset balances.</p></div></section>
 <section class="account-panel panel"><div class="account-title"><strong>ACCOUNT</strong><span class="small-tag">TESTNET</span></div><div class="wallet-status" id="walletStatus" role="status" aria-live="polite">NOT CONNECTED · STELLAR TESTNET ONLY</div>
@@ -74,7 +74,7 @@
 <div class="wallet-help"><a href="https://freighter.app/" target="_blank" rel="noopener noreferrer">GET FREIGHTER ↗</a><span>DESKTOP EXTENSION · TESTNET</span></div><p class="account-note">Stellar wallet balances are read from verified Testnet Horizon. They are NOT exchange vault deposits, available margin or borrowing collateral. No wallet seed or private key is requested.</p></section>
 </main>
 <section class="m45-lab" id="m45SigningLab" aria-label="M45 controlled Testnet signing lab">
-  <div class="m45-top"><strong>M45 · TWO-WALLET SIGNING LAB</strong><span>NO BROADCAST</span></div>
+  <div class="m45-top"><strong>M45 · TWO-WALLET SETTLEMENT REVIEW</strong><span>EXPLICIT SEND ONLY</span></div>
   <p>Read-only deployment proof, exact manually agreed XLM/USDC amounts and two explicit Freighter approvals. This is an internal bilateral test, not an executable order book or market quote.</p>
   <div class="m45-meta"><div>NETWORK <b id="m45Network">Not checked</b></div><div>LEDGER <b id="m45Ledger">—</b></div><div>M9 CONTRACT <b id="m45Contract">NOT VERIFIED</b></div></div>
   <button id="m45Check" type="button" class="m45-main">1 · VERIFY LIVE STELLAR TESTNET</button>
@@ -84,7 +84,7 @@
     <label for="m45Xlm">XLM trade quantity (manual)<input id="m45Xlm" value="0.0100000" type="text" inputmode="decimal" autocomplete="off"></label>
     <label for="m45Usdc">USDC total (manual)<input id="m45Usdc" value="0.0017000" type="text" inputmode="decimal" autocomplete="off"></label>
   </div>
-  <label class="m45-consent"><input type="checkbox" id="m45TermsAck"> I have reviewed the XLM Buy/Sell side and amounts. These are manual Stellar Testnet terms, not an executable market quote, and this lab does not send a transaction.</label>
+  <label class="m45-consent"><input type="checkbox" id="m45TermsAck"> I have reviewed the XLM Buy/Sell side and amounts. These are manual Stellar Testnet terms, not a live market quote. Sending later requires both configured wallets to sign and a separate explicit approval.</label>
   <button id="m45Prepare" type="button" class="m45-main" disabled>2 · SIMULATE EXACT SOROBAN TERMS</button>
   <pre class="m45-terms" id="m45Terms">No Soroban transaction simulated or signed.</pre>
   <label class="m45-consent"><input type="checkbox" id="m45TakerAck"> I have reviewed the exact simulated terms and want Wallet 2 to sign only the non-source Soroban authorization.</label>
