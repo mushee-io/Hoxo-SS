@@ -26,7 +26,7 @@ test("M2 desktop: reference markets, tabs, non-executable order drafts",async()=
   const {page,context,errors}=await openTerminal("/app/?market=btc-usdc-perp");
   try{
     assert.equal(await page.locator("#marketLabel").innerText(),"BTC-PERP");
-    assert.match(await page.locator("#marketSubheading").innerText(),/NOT LISTED/);
+    assert.match(await page.locator("#marketSubheading").innerText(),/EXTERNAL MARKET DATA/);
     await page.locator("#marketTrigger").click();
     await page.locator("#marketSearch").fill("xlm");
     await page.locator('[data-market-filter="spot"]').click();
@@ -37,7 +37,7 @@ test("M2 desktop: reference markets, tabs, non-executable order drafts",async()=
     await page.locator('[data-chart-view="depth"]').click();
     assert.equal(await page.locator("#chartEmptyTitle").innerText(),"DEPTH NOT DEPLOYED");
     await page.locator('[data-book-view="trades"]').click();
-    assert.equal(await page.locator("#bookEmptyTitle").innerText(),"TRADES NOT DEPLOYED");
+    assert.equal(await page.locator("#bookEmptyTitle").innerText(),"NO VERIFIED HOXO FILLS");
     await page.locator('[data-timeframe="1h"]').click();
     assert.match(await page.locator("#chartMarketStatus").innerText(),/1h/);
     await page.locator('[data-order-type="Limit"]').click();
