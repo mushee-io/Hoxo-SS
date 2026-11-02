@@ -3,7 +3,7 @@
  * This is bilateral testing, NOT a live quoted market or order matcher.
  * Always simulates first; NEVER signs or broadcasts.
  */
-import {Address,Account,Contract,TransactionBuilder,Operation,nativeToScVal,xdr,rpc} from "@stellar/stellar-sdk";
+import {Address,Contract,TransactionBuilder,nativeToScVal,inspectAuthEntry,xdr,rpc} from "@stellar/stellar-sdk";
 import {TESTNET_PASSPHRASE,M9_TESTNET_CONTRACT_ID} from "./m43-freighter-auth-guard.mjs";
 import {M44_XLM_SAC,M44_USDC_SAC,reviewM44SourceEnvelope} from "./m44-stellar-xdr-verifier.mjs";
 import {M45_CANDIDATE} from "./m45-spot-preflight.mjs";
@@ -82,11 +82,11 @@ export async function simulateM45BilateralSpot({
   reviewM44SourceEnvelope({sourceTxXdr,expectedTerms:terms,currentLedger:ledger,maxFeeStroops});
   const auth=assembled.operations[0].auth??[];
   const takerEntries=auth.filter(item=>{
-    try{return item.credentials?.addressV2?.address!=null||
-      item.credentials?.address?.address!=null;}catch{return false;}
+    const info=inspectAuthEntry(item);
+    return info.address===terms.taker&&["address","addressV2"].includes(info.credentialType)&&!info.signed;
   });
-  // The actual taker identity must still be independently verified by M44.
-  if(takerEntries.length!==1)fail("simulation must return one non-source auth entry");
+  if(takerEntries.length!==1||auth.length>2)
+    fail("simulation must return exactly one unsigned non-source taker auth entry");
   const takerAuthXdr=takerEntries[0].toXdr("base64");
   return Object.freeze({terms,sourceTxXdr,takerAuthXdr,currentLedger:ledger,
     feeStroops:String(assembled.fee),simulated:true,signaturesApplied:false,
