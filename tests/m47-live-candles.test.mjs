@@ -37,10 +37,10 @@ test("M47 parses only real Kraken XLM/USD OHLC channel updates with interval mat
   const packet=[42,
     ["1793576400.000","1793576460.000","0.312","0.318","0.310","0.317","0.315","420",12],
     "ohlc-1","XLM/USD"];
-  const c=parseKrakenOhlcMessage(JSON.stringify(packet),{interval:1});
+  const c=parseKrakenOhlcMessage(JSON.stringify(packet),{interval:1,nowSec:start+5000});
   assert.deepEqual(c,{time:start,open:0.312,high:0.318,low:0.310,close:0.317,volume:420});
-  assert.equal(parseKrakenOhlcMessage(JSON.stringify(packet),{interval:30}),null);
-  assert.equal(parseKrakenOhlcMessage(JSON.stringify([...packet.slice(0,3),"BTC/USD"]),{interval:1}),null);
+  assert.equal(parseKrakenOhlcMessage(JSON.stringify(packet),{interval:30,nowSec:start+5000}),null);
+  assert.equal(parseKrakenOhlcMessage(JSON.stringify([...packet.slice(0,3),"BTC/USD"]),{interval:1,nowSec:start+5000}),null);
   assert.equal(parseKrakenOhlcMessage("invalid json",{interval:1}),null);
   assert.equal(parseKrakenOhlcMessage(JSON.stringify({event:"heartbeat"}),{interval:1}),null);
 });
@@ -95,4 +95,11 @@ test("M47 price terminal labels Kraken USD reference and preserves disabled Hoxo
   assert.match(ui,/NOT HOXO FILLS/);
   assert.doesNotMatch(ui,/\.sendTransaction\(|\.signTransaction\(|set_pause\(false\)/);
   assert.match(html,/id="tradeButton"[^>]+disabled/);
+});
+
+
+test("M47 rejects future-dated streaming candles without synthesizing price movement",()=>{
+  const packet=[42,[String(start),String(start+60),"0.312","0.318","0.310","0.317","0.315","420",12],"ohlc-1","XLM/USD"];
+  assert.equal(parseKrakenOhlcMessage(packet,{interval:1,nowSec:start-1000}),null);
+  assert.equal(parseKrakenOhlcMessage(packet,{interval:1,nowSec:start+5000})?.time,start);
 });
