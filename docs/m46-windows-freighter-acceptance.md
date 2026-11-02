@@ -9,7 +9,7 @@ On a preview of this branch after CI's pinned SDK/browser build and a Vercel REA
 1. Use Chrome or Edge with the official Freighter extension installed. Switch to Stellar Testnet. Never input or export secrets or recovery phrases.
 2. Tick the Windows/Testnet acknowledgement. Select Wallet 1 in Freighter and click Verify Wallet 1. M46 calls only Freighter getNetwork and getAddress, plus live read-only public Stellar RPC/Horizon checks. It verifies selected public address, ledger freshness, expected deployed M9 WASM/owner, paused contract state, approved assets and authorized funded wallet trustlines.
 3. Switch Freighter to Wallet 2 and click Verify Wallet 2. Repeat the read-only checks. Wrong account, wrong network, stale ledger, unauthorised trustline or changed deployment clears earlier acceptance and rejects.
-4. Both Wallets Verified — No Trades appears only when both manual checks are fresh (maximum 120 seconds apart). This is not permission to sign, unpause or submit any transaction.
+4. Both Wallets Verified — No Trades appears only when both manual checks are fresh (maximum 120 seconds apart) and the second proof's ledger is not earlier than the first or more than 24 ledgers ahead. A ledger regression or excessive drift clears both reviews; restart from Wallet 1. This is not permission to sign, unpause or submit any transaction.
 5. Clear Windows Acceptance Session resets this in-memory state. No secrets, signed XDR or account details are persisted or uploaded.
 
 ## Separate release and activation gates
