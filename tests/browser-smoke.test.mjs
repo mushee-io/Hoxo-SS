@@ -400,7 +400,7 @@ test("M49 Chromium XLM-PERP opens real external perp depth by default and keeps 
     assert.equal(await page.locator("#tradeButton").isDisabled(),true);
     assert.equal(await page.locator("#marketPrimaryStat").innerText(),"REFERENCE PRICE");
     await page.locator(".announcement-details summary").click();
-    assert.match(await page.locator(".announcement-panel").innerText(),/M9 spot settlement contract is deployed but paused/);
+    assert.match(await page.locator(".announcement-panel").innerText(),/M9 spot settlement is deployed and has been independently verified unpaused/);
     await page.locator(".announcement-details summary").click();
     await page.locator('[data-book-view="trades"]').click();
     assert.equal(await page.locator("#m48BookFeed").isVisible(),false);
