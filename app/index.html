@@ -90,12 +90,21 @@
   <label class="m45-consent"><input type="checkbox" id="m45MakerAck"> I have reviewed the same terms and want Wallet 1 to sign only the source transaction envelope, without sending it.</label>
   <button id="m45SignMaker" type="button" class="m45-main" disabled>4 · WALLET 1 · SIGN ENVELOPE ONLY</button>
   <div class="m45-meta"><div>STATE <b id="m45Phase">READ-ONLY</b></div></div>
-  <p class="m45-no-send" id="m45NoSend">NO BROADCAST PATH · NO MAINNET · NO EXCHANGE ORDER</p>
+  <div class="m55-final-review" id="m55FinalReview" aria-label="Final explicit Stellar Testnet trade submission">
+    <strong>5 · FINAL TESTNET SPOT SETTLEMENT</strong>
+    <p>Complete both wallet signatures first. Submit only after reviewing the same XLM/USDC amounts, wallet roles, fee ceiling and ledger expiry. This action sends one real Testnet transaction; it cannot be undone.</p>
+    <label class="m45-consent"><input type="checkbox" id="m55SendAck"> I explicitly authorise submitting this small, two-wallet-signed Stellar Testnet M9 transaction.</label>
+    <label for="m55SendPhrase" class="m55-phrase-label">To confirm, type <code>SEND_SMALL_HOXO_STELLAR_TESTNET_SPOT</code></label>
+    <input id="m55SendPhrase" type="text" autocomplete="off" spellcheck="false" aria-label="Type exact Stellar Testnet submission confirmation" placeholder="Exact confirmation phrase required">
+    <button type="button" id="m55Submit" class="m45-main m55-send" disabled>SEND SIGNED TRANSACTION · STELLAR TESTNET</button>
+    <p id="m55Receipt" role="status" aria-live="polite">No transaction submitted. Confirmation requires an on-chain M9 receipt and both wallet balance changes.</p>
+  </div>
+  <p class="m45-no-send" id="m45NoSend">TWO-WALLET REVIEW · STELLAR TESTNET ONLY</p>
   <button id="m45Reset" type="button" class="m45-reset">CLEAR REVIEW & SIGNATURE SESSION</button>
 </section>
 <section class="m46-lab" id="m46WindowsLab" aria-label="M46 Windows Freighter acceptance">
   <div class="m45-top"><strong>M46 · WINDOWS WALLET ACCEPTANCE</strong><span>READ ONLY</span></div>
-  <p>Verify the exact connected Freighter account in your Windows browser and independently recheck live Stellar Testnet balances. You can test this <strong>while M9 remains paused</strong>. There are no signature requests or transfers.</p>
+  <p>Verify the exact connected Freighter account in your Windows browser and independently recheck live Stellar Testnet balances. Wallet identity checks never request signatures or transfer funds.</p>
   <div class="m45-meta">
     <div>WALLET 1 · MAKER <b id="m46Wallet1">NOT CHECKED</b></div>
     <div>WALLET 2 · TAKER <b id="m46Wallet2">NOT CHECKED</b></div>
@@ -106,7 +115,7 @@
   <button type="button" id="m46VerifyWallet2" class="m45-main" disabled>2 · SWITCH TO WALLET 2 · VERIFY READ ONLY</button>
   <button type="button" id="m46Reset" class="m45-reset">CLEAR WINDOWS ACCEPTANCE SESSION</button>
   <p id="m46Status" role="status" aria-live="polite" class="m45-status">Both wallets must be checked separately. This lab cannot sign transactions, unpause M9 or enable trading.</p>
-  <p class="m45-no-send">NO SIGNATURES · NO BROADCAST · M9 PAUSED · NO LIVE TRADE</p>
+  <p class="m45-no-send">WALLET IDENTITY CHECKS ONLY · NO SIGNATURES</p>
 </section>
 <section class="alternate hidden" id="alternateView"><div class="alternate-heading" id="altTitle">PORTFOLIO</div><p id="altDescription">This area is being developed.</p><div class="alternate-cards" id="alternateCards"><article><span>01 / ACCOUNT</span><h2>TESTNET BALANCES</h2><p>Real wallet balances are distinct from exchange collateral.</p></article><article><span>02 / UNIFIED MARGIN</span><h2>NOT DEPLOYED</h2><p>Account positions and margin health require Soroban clearing and risk contracts.</p></article><article><span>03 / MONEY MARKETS</span><h2>NOT DEPLOYED</h2><p>Supply and borrowing are unavailable until Soroban lending pools are verified.</p></article></div>
 <section id="networkPanel" class="network-panel hidden" aria-label="Stellar Testnet infrastructure diagnostics">
