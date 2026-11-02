@@ -172,7 +172,8 @@ export async function m52ReviewedSpotSettlement({
   if(typeof hash!=="string"||!/^[0-9a-f]{64}$/i.test(hash)||
      !["PENDING","DUPLICATE"].includes(sent?.status))
     fail("RPC did not accept the exact signed Testnet transaction");
-  const canonicalHash=verifyM52SubmissionHash(tx.hash(),hash);\n  const final=await server.pollTransaction(canonicalHash);
+  const canonicalHash=verifyM52SubmissionHash(tx.hash(),hash);
+  const final=await server.pollTransaction(canonicalHash);
   if(final?.status!=="SUCCESS"||final?.hash?.toLowerCase()!==canonicalHash)
     fail("transaction broadcast but confirmed success is missing; inspect hash "+hash);
   const matchId=Uint8Array.from(expectedTerms.match_id.match(/../g),x=>parseInt(x,16));
