@@ -1,39 +1,44 @@
-# M43 — Browser dual-wallet Freighter authorization guard (non-broadcasting)
+# M43 — Testnet M9 Freighter two-wallet signing handoff (NO BROADCAST)
 
-This is an **integration boundary**, not an operational trading terminal. The pure browser module `app/m43-freighter-auth-guard.mjs` provides explicit sequential maker/taker user approvals, requires distinct exact public G-addresses and Testnet network passphrase at each approval, and rejects injected secret fields/accessor objects. It does not generate, submit or sign any transaction without the user's explicit `approve(role)` call. The caller must supply the actual reviewed Freighter API adapter; the terminal is **not wired to it yet**.
+**Status: browser-compatible role/ordering guard only. No executable spot trading, verified signed transactions, contract unpause, or broadcast. This PR remains a draft.**
 
-A real implementation must generate Soroban authorization entries by simulating the **exact reviewed M9 settle invocation** with the expected contract, both assets, match ID, expiry and amount, then validate the decoded invocation trees, credential addresses, nonce and expiration against the simulation. The signed entries returned by Freighter must be independently decoded and cryptographically verified before attachment to a fresh, bounded-fee transaction. This guard deliberately marks all signatures `verified:false` and `broadcast:false`. It does not persist signed XDR, automatically switch wallets, ask for private keys, or allow mainnet.
+## Corrected source/non-source roles
 
-## Required next steps
-1. Complete and independently review M42's two `set_asset` administrative approvals while M9 remains paused; refresh M41 live read-only checks before and after each action.
-2. Implement a browser bundle using the pinned official Stellar SDK and Freighter's documented `signAuthEntry` method, with explicit user clicks and exact G-address/network display.
-3. Add Soroban XDR parsing and verification, per-wallet credential checks, simulation freshness, expiry and transaction fee ceilings, replay protection, and genuine signed receipt reconciliation.
-4. Independently review the unpause/spot-only gate before any signed settlement. Never count self-owned test accounts as genuine external trade volume.
+The existing [M9 Node reference](../matching/m9-wallet-settlement.mjs) treats **maker / Wallet 1** as the **transaction source** and **taker / Wallet 2** as the independent **non-source Soroban authorization signer**.
 
-Run `node --test tests/m43-freighter-auth-guard.test.mjs`. This feature does not enable lending, perps, public beta or any order submission.
+| Order | Wallet | What it must sign | Freighter API |
+| --- | --- | --- | --- |
+| 1 | Wallet 2 (taker; non-source) | Exact Soroban authorization entry for simulated M9 settle | signAuthEntry |
+| 2 | Wallet 1 (maker; source) | Reviewed transaction envelope **containing the taker's signed auth** | signTransaction |
 
-## M43 approval concurrency hardening
+The maker is **not** asked to sign a second Soroban authorization entry. The old design requiring makerAuthXdr plus takerAuthXdr was incorrect for this transaction shape.
 
-The handoff now allows at most one in-flight Freighter approval, preventing double-click or concurrent UI actions from creating two prompts for the same maker/taker role. It reads the selected wallet and Testnet passphrase again **after** the wallet returns a signed entry; a mid-prompt wallet or network switch rejects the result and leaves the role unapproved. Rejected prompts clear the in-flight lock for an explicit retry. Regression tests cover concurrency, account/network switching and safe retry.
+The browser guard now accepts only: canonical Testnet passphrase, pinned deployed M9 contract ID, distinct public maker/taker G-addresses, sourceTxXdr (unsigned envelope), takerAuthXdr (the one non-source entry), and exact 32-byte lowercase hex matchId. All fields must be own plain properties; secret fields, accessors, malformed base64, wrong network and substituted contract fail closed.
 
-This is defense in depth, **not cryptographic authorization verification**. A malicious adapter can lie about the selected wallet; the eventual integration must independently decode and verify signed Soroban auth entries, expected invocation tree, nonce and expiration, exact contract/assets/amounts and ledger freshness before any broadcast. Never unpause or count volume on the strength of this guard.
+## Explicit user-controlled sequence
 
-## Freighter response hardening
+1. createDualWalletHandoff(input, freighter, prepareEnvelope) requires an injected reviewed wallet adapter supporting getNetwork, getAddress, signAuthEntry, signTransaction and a separately reviewed SDK-powered prepareEnvelope callback. The module itself never contacts a wallet unless a user calls approve explicitly.
+2. First, approve("taker") checks Wallet 2 and the exact Testnet passphrase before and after signAuthEntry(takerAuthXdr, ...). It checks plain response shape, optional signer address, canonical base64 and refuses an unchanged unsigned entry.
+3. Then approve("maker") checks Wallet 1, calls prepareEnvelope with the source unsigned envelope and the signed taker authorization, validates a distinct canonical prepared envelope, checks wallet/network again, and calls signTransaction on the **prepared** envelope. It checks optional signer address, unchanged input and wallet/network again.
+4. No double prompts, reordering, duplicate approvals or concurrent signing. Errors do not advance the phase; retry requires a separate explicit action.
+5. Both results and status remain verified:false and broadcast:false. There is intentionally **no send or submit function**.
 
-The adapter response must be a plain own-data object containing only `signedAuthEntry` and optional `error`. Accessor-backed or symbol properties, unexpected secret fields, unbounded/malformed base64 and unchanged unsigned entries are rejected before the approval counter advances. This is a syntactic defense only: valid-looking base64 is **not** proof of a valid signature. Signed Soroban XDR, address credentials, exact invocation tree, expiry and transaction submission remain unimplemented and disabled.
+### IMPORTANT: What is NOT implemented
 
-## M43 cross-wallet authorization replay guard
+The SDK-powered prepareEnvelope callback is an integration contract, **not a finished assembler/verifier**. Canonical base64 is **not** XDR structural validation, signature verification or a demonstration that the taker auth was attached correctly. A malicious adapter can fabricate valid-looking responses. This guard MUST NOT be connected to live execution or used to justify unpausing M9.
 
-The browser handoff rejects identical maker/taker *unsigned* authorization entry XDR before prompting Freighter. After a successful maker approval, it also rejects a taker adapter response whose signed XDR is byte-for-byte identical to the maker response; the taker role stays pending for an explicit retry. Tests cover duplicate input, rejected replay, and a subsequent distinct response. This is a defense against accidental cross-wallet response reuse, **not** verification of account credentials, invocation trees, signatures, expiry or match binding. Do not enable broadcast on this basis.
+A separately reviewed SDK/Freighter integration must:
 
-## Required own-field protection
+1. Simulate exact M9 settle(MatchTerms) on Stellar Testnet with correct deployed code, maker/taker, both approved XLM and USDC SACs, seven-decimal amounts, limit prices, distinct match/order IDs, fresh expiry and bounded fee.
+2. Require exactly one non-source Soroban auth signer (taker), decode and verify its credential address, invocation tree, nonce, expiration and signature for the expected simulation.
+3. Attach the verified signed taker auth entry to that same original simulated transaction **before** maker signing. Validate that the final envelope source is maker, includes only the expected M9 call, has correct contract/assets/amounts/network, and that the source signature is valid.
+4. Fail closed on stale ledgers, replay, unexpected operations or auth, changed wallet/network, missing funds, or excessive fee. Never request or export private keys or recovery phrases.
+5. Design and independently review a **separate** explicit-consent, Testnet-only broadcast gate. Confirm on-chain SUCCESS, M9 receipt(match_id), is_settled(match_id), correct before/after balances, and replay rejection before claiming a genuine transaction. Self-owned Testnet wallet checks are internal, not independent user traction.
 
-Every authorization term must be an own data property on the supplied plain object. Inherited values (including values injected through `Object.prototype` pollution) are rejected before any Freighter prompt. This is input integrity hardening only; it does not validate the cryptographic Soroban authorization tree, enable transaction submission, or establish trading readiness.
+## Remaining launch boundary
 
-## Contract substitution protection
+M41 has independently verified M9 deployment, approved XLM/USDC, and two funded wallets. **M9 remains paused**. This PR never invokes set_pause(false), settle or any network broadcast. Perps, lending, unified margin, public trading and mainnet stay disabled.
 
-The browser handoff now pins `contractId` to the independently checked M9 Testnet candidate `CCPT6NJCGNHFTTV54IHGSNKTKD74HFCTDKWA3XIP466YT7JHUILJZCYF`. Any other contract is rejected before Freighter is called, including a different syntactically valid C-address. This is an anti-phishing boundary, **not** a live check of current deployed code, owner, pause status or invocation-tree binding. Before operator approval, rerun M41's public-only on-chain checks and compare the full transaction simulation; no broadcast or unpause is enabled by this change.
+Run npm run test:m43 for focused tests, or npm test for the repository suite. Passing tests do not establish real Freighter integration or trading readiness.
 
-## Canonical base64 transport boundary
-
-Both simulated unsigned entries and Freighter-returned signed entries must now use canonical padded base64 with a multiple-of-four length and zero discarded padding bits. Malformed lengths, extra padding, nonalphabet characters and alternate noncanonical encodings fail before approval advances. Regression tests cover rejection and retry. **This does not parse Soroban XDR or verify signatures**; only a separately reviewed SDK-based decoder bound to the exact M9 invocation, nonce, credential address, expiry and fresh simulation can establish that. No transaction is broadcast.
+See [M41](m41-live-spot-token-handoff.md) and [M9 operator reference](m9-wallet-operator.md).
