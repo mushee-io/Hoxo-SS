@@ -84,7 +84,7 @@ test("M49 product status is transparent, shorter, and includes a real perp refer
   assert.doesNotMatch(html,/KRAKEN XLM\/USD · EXTERNAL SPOT ORDERS · NOT HOXO/);
   assert.match(html,/Hoxo Fills/);
   assert.doesNotMatch(html,/SPOT\/PERP EXECUTION, LENDING AND UNIFIED-MARGIN CONTRACTS ARE NOT YET DEPLOYED/);
-  assert.match(ui,/Hyperliquid perpetual/);
+  assert.match(ui,/Hyperliquid XLM perp/);
   assert.match(terminal,/bookView="book";selectGroup/);
   assert.match(terminal,/REFERENCE PRICE/);
   assert.doesNotMatch(terminal,/"MARK PRICE"/);
