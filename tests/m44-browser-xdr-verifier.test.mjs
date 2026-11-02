@@ -45,8 +45,8 @@ function sourceEnvelope(terms=expectedTerms){
   }).addOperation(operation(terms)).setTimeout(40).build().toXdr();
 }
 async function signatureFixture(){
-  const sourceTxXdr=sourceEnvelope();
-  const tx=TransactionBuilder.fromXdr(sourceTxXdr,TESTNET_PASSPHRASE);
+  const initialXdr=sourceEnvelope();
+  const tx=TransactionBuilder.fromXdr(initialXdr,TESTNET_PASSPHRASE);
   const invoke=tx.operations[0].func.invokeContract;
   const invocation=new xdr.SorobanAuthorizedInvocation({
     function:xdr.SorobanAuthorizedFunction.sorobanAuthorizedFunctionTypeContractFn(invoke),
@@ -66,13 +66,17 @@ async function signatureFixture(){
       })
     )
   });
+  const sourceTxXdr=TransactionBuilder.cloneFrom(tx,{fee:String(tx.fee)})
+    .clearOperations()
+    .addOperation(Operation.invokeHostFunction({func:tx.operations[0].func,auth:[unsigned]}))
+    .build().toXdr();
   return {
     sourceTxXdr,takerAuthXdr:unsigned.toXdr("base64"),
     signedTakerAuthEntry:signed.toXdr("base64")
   };
 }
-test("SDK XDR source review pins single exact M9 settle op, 13 terms, amounts and fee",()=>{
-  const sourceTxXdr=sourceEnvelope();
+test("SDK XDR source review pins single exact M9 settle op, 13 terms, amounts and fee",async()=>{
+  const {sourceTxXdr}=await signatureFixture();
   const r=reviewM44SourceEnvelope({sourceTxXdr,expectedTerms,currentLedger});
   assert.equal(r.reviewed,true);
   assert.equal(r.broadcast,false);
@@ -98,6 +102,9 @@ test("SDK verifies non-source signed auth nonce, invocation and Ed25519 signatur
     currentLedger:currentLedger+50}),/expiry|deadline/);
   assert.throws(()=>verifyM44TakerAuth({...f,expectedTerms,
     signedTakerAuthEntry:f.takerAuthXdr,currentLedger}),/unsigned|expired|expiry/);
+  const otherSource=sourceEnvelope();
+  assert.throws(()=>verifyM44TakerAuth({...f,sourceTxXdr:otherSource,expectedTerms,currentLedger}),
+    /simulated source envelope|auth entry/);
   const other=await signatureFixture();
   assert.throws(()=>verifyM44TakerAuth({...f,signedTakerAuthEntry:other.signedTakerAuthEntry,
     expectedTerms,currentLedger}),/nonce/);
