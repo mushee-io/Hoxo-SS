@@ -23,6 +23,16 @@ test("M47 parses genuine Kraken REST OHLC into valid, ordered XLM/USD bars",()=>
   {nowSec:start+5000}).length,1);
 });
 
+
+test("M47 rejects unrelated or ambiguous Kraken REST instruments",()=>{
+  const opts={nowSec:start+5000};
+  assert.throws(()=>normalizeKrakenCandles({error:[],result:{XXBTZUSD:[row(start)],last:"1"}},opts),/ambiguous or missing XLM\/USD/);
+  assert.throws(()=>normalizeKrakenCandles({error:[],result:{XXLMZUSD:[row(start)],XLMUSD:[row(start)]}},opts),/ambiguous or missing XLM\/USD/);
+  const legitimate={error:[],result:{XXBTZUSD:[row(start)],XXLMZUSD:[row(start)],last:"1"}};
+  assert.equal(normalizeKrakenCandles(legitimate,opts)[0].time,start);
+  assert.equal(normalizeKrakenCandles({error:[],result:{XLMUSD:[row(start)]}},opts).length,1);
+});
+
 test("M47 parses only real Kraken XLM/USD OHLC channel updates with interval matching",()=>{
   const packet=[42,
     ["1793576400.000","1793576460.000","0.312","0.318","0.310","0.317","0.315","420",12],
