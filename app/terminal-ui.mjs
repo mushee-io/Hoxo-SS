@@ -4,7 +4,7 @@ import {getMarket,filterMarkets,orderDraft,parseAmount7} from "./terminal-state.
 const $=id=>document.getElementById(id);
 const all=selector=>[...document.querySelectorAll(selector)];
 const query=new URLSearchParams(window.location.search);
-let market=getMarket(query.get("market")),chartView="price",bookView="book",timeframe="30m",orderType="Market",view="trade",filter="all";
+let market=getMarket(query.get("market")),chartView="price",bookView="book",timeframe="30m",orderType="Market",view="trade",filter="all",advancedM9=false;
 function selectGroup(selector,value,key){
   all(selector).forEach(b=>{
     const selected=b.dataset[key]===value;
@@ -17,7 +17,7 @@ function setView(next){
   all("[data-view]").forEach(b=>b.classList.toggle("selected",b.dataset.view===view));
   $("tradeView").classList.toggle("hidden",view!=="trade");
   $("alternateView").classList.toggle("hidden",view==="trade");
-  $("m45SigningLab")?.classList.toggle("hidden",view!=="trade"||market.id!=="xlm-usdc-spot");
+  $("m45SigningLab")?.classList.toggle("hidden",view!=="trade"||market.id!=="xlm-usdc-spot"||!advancedM9);
   $("m55OpenLab")?.classList.toggle("hidden",view!=="trade"||market.id!=="xlm-usdc-spot");
   $("marketAvailabilityBanner")?.classList.toggle("hidden",view!=="trade"||market.id==="xlm-usdc-spot");
   if(view==="portfolio"){
@@ -85,7 +85,7 @@ function chooseSide(side){
   tradeButton.disabled=!spotAction;
   tradeButton.classList.toggle("trade-review",spotAction);
   tradeButton.textContent=spotAction?
-    "REVIEW TESTNET "+(side==="buy"?"BUY":"SELL"):
+    "GET LIVE "+(side==="buy"?"BUY":"SELL")+" QUOTE":
     market.type==="perp"?"PERP TRADING NOT DEPLOYED":"SPOT MARKET NOT DEPLOYED";
   const tradeSide=$("m51SpotSide");
   if(market.type==="spot"&&tradeSide&&tradeSide.value!==side){
@@ -124,8 +124,9 @@ function chooseMarket(id){
   market=getMarket(id);
   if(previousMarket!==market.id)
     window.dispatchEvent(new CustomEvent("hoxo:market-change",{detail:{market:market.id}}));
-  $("m45SigningLab")?.classList.toggle("hidden",market.id!=="xlm-usdc-spot"||view!=="trade");
+  $("m45SigningLab")?.classList.toggle("hidden",market.id!=="xlm-usdc-spot"||view!=="trade"||!advancedM9);
   $("m55OpenLab")?.classList.toggle("hidden",market.id!=="xlm-usdc-spot"||view!=="trade");
+  $("m63SpotSwap")?.classList.toggle("hidden",market.id!=="xlm-usdc-spot");
   const unavailable=market.id!=="xlm-usdc-spot";
   $("marketAvailabilityBanner").classList.toggle("hidden",!unavailable||view!=="trade");
   $("marketAvailabilityTitle").textContent=market.type==="perp"?
@@ -223,8 +224,23 @@ function openSpotSettlementReview(){
     $("m45Check")?.click();
   }
 }
-$("tradeButton").addEventListener("click",openSpotSettlementReview);
-$("m55OpenLab")?.addEventListener("click",openSpotSettlementReview);
+// The main BUY/SELL button is owned by M63: real one-wallet Classic DEX swaps.
+// The old two-party M9 workflow is deliberately optional and collapsed by default.
+$("m55OpenLab")?.addEventListener("click",()=>{
+  if(market.id!=="xlm-usdc-spot")return;
+  advancedM9=!advancedM9;
+  $("m55OpenLab").setAttribute("aria-expanded",String(advancedM9));
+  $("m45SigningLab").classList.toggle("hidden",!advancedM9||view!=="trade");
+  if(advancedM9){
+    const amount=parseAmount7($("orderSize").value.trim());
+    if(amount!==null){
+      $("m45Xlm").value=$("orderSize").value.trim();
+      $("m45Xlm").dispatchEvent(new Event("input",{bubbles:true}));
+    }
+    $("m45SigningLab").scrollIntoView({behavior:"smooth",block:"start"});
+    $("m45TakerAddress").focus();
+  }
+});
 $("orderSize").addEventListener("input",updateDraft);
 $("limitPrice").addEventListener("input",updateDraft);
 const initialView=window.location.hash.slice(1);
