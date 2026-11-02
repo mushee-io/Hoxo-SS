@@ -47,3 +47,9 @@ Test commands: `npm run test:m52`, `npm test` on Draft PR #34, plus M51 perp che
 ## M52 receipt type integrity
 
 Receipt verification now requires the M9 `maker_side` to be the exact numeric side (0 or 1) and `settled_ledger` to be a positive safe integer, rather than accepting strings or fractional/coerced values. Regression cases cover string side, null side, string ledger, fractional ledger and unsafe ledger values. These are validation safeguards only; no settlement receipt has been observed or submitted by this change.
+
+## M52 exact signed-envelope transaction-hash binding (2 November)
+
+The RPC submission response must report the SHA-256 transaction hash computed by the official Stellar SDK from the **exact already-verified signed transaction envelope**. A well-formed but different RPC hash fails closed **before** polling finality or accepting a receipt. This prevents accidentally attributing another transaction's SUCCESS to the approved two-party spot settlement. Tests cover the matching canonical hash, uppercase hex, malformed lengths, invalid types and substituted hashes. This check does not itself establish a signed on-chain trade; user-controlled authorization and independent balance/receipt checks remain mandatory.
+
+**Operational note:** The earlier documentation describing M9 as paused is historical. A separate read-only M41 rerun on 2026-11-02 at ~11:13 UTC reported M9 unpaused with XLM/USDC enabled; revalidate the current ledger before any approved send. No automatic unpause or send is performed here.
