@@ -76,6 +76,11 @@ function chooseSide(side){
     $(id).classList.toggle("selected",active);
     $(id).setAttribute("aria-pressed",String(active));
   }
+  const tradeSide=$("m51SpotSide");
+  if(market.type==="spot"&&tradeSide&&tradeSide.value!==side){
+    tradeSide.value=side;
+    tradeSide.dispatchEvent(new Event("input",{bubbles:true}));
+  }
 }
 function closeMenu(){
   $("marketMenu").classList.add("hidden");
