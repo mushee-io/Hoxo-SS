@@ -51,6 +51,9 @@ function updateBook(){
     :"Verified "+market.label+" fills require settlement and indexing.";
   $("bookPriceHeading").textContent="PRICE ("+market.quote+")";
   $("bookSizeHeading").textContent="SIZE ("+market.base+")";
+  window.dispatchEvent(new CustomEvent("hoxo:book-selection",{
+    detail:{market:market.id,view:bookView}
+  }));
 }
 function updateDraft(){
   const data=orderDraft({marketId:market.id,orderType,size:$("orderSize").value.trim(),limitPrice:$("limitPrice").value.trim()});
