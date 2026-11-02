@@ -113,3 +113,9 @@ Do not fund unreviewed contracts. No admin or private keys in this repo. Avoid u
 - [Two-publisher Testnet oracle-adapter source](contracts/oracle-adapter/src/lib.rs) and Soroban tests: independently authorised publisher accounts, 120-second price expiry, source and mark/index deviation checks, pause and execution approval always false. Not audited or approved as canonical market data.
 - [Secure operator deployment and proof handoff](docs/testnet-execution-handoff.md): one-role-at-a-time CLI using locally managed signer identity, valueless Testnet assets and an explicit network preflight. No unattended CI deployment or automatically verified receipt.
 - Native Soroban integration confirms the candidate oracle ABI can be called by M12 while a denying risk authority still prevents any financial position opening. M9/M11/M12/M15 custody remains isolated.
+
+## License
+
+Hoxo-SS source is provided under the [MIT License](LICENSE). Copyright © 2026 Mushee.
+
+The MIT licence covers repository-owned source code; third-party dependencies remain under their own licences.

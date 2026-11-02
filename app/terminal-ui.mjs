@@ -19,16 +19,18 @@ function setView(next){
   $("alternateView").classList.toggle("hidden",view==="trade");
   if(view==="portfolio"){
     $("altTitle").textContent="YOUR PORTFOLIO";
-    $("altDescription").textContent="Testnet wallet balances appear under Trade → Balances. Exchange collateral, positions and margin are not deployed.";
+    $("altDescription").textContent="Verified wallet assets, public Stellar classic DEX offers and historic trades. Hoxo protocol positions require on-chain settlement proofs.";
   }else if(view==="earn"){
     $("altTitle").textContent="MONEY MARKETS";
-    $("altDescription").textContent="Supply and borrowing require independently verified Soroban lending contracts and on-chain risk enforcement.";
+    $("altDescription").textContent="Read-only wallet holdings and unsigned supply review. Live supply, borrowing and rates require a verified Soroban money-market deployment.";
   }
   if(view==="network"){
     $("altTitle").textContent="STELLAR TESTNET INFRASTRUCTURE";
     $("altDescription").textContent="Live read-only Horizon and Stellar RPC health, exact network passphrase, ledger reconciliation, and undeployed contract registry.";
   }
-  $("alternateCards").classList.toggle("hidden",view==="network");
+  $("alternateCards").classList.add("hidden");
+  $("m50PortfolioView")?.classList.toggle("hidden",view!=="portfolio");
+  $("m50EarnView")?.classList.toggle("hidden",view!=="earn");
   $("networkPanel").classList.toggle("hidden",view!=="network");
   window.dispatchEvent(new CustomEvent("hoxo:view",{detail:{view}}));
   const location=window.location.pathname+"?market="+encodeURIComponent(market.id)+(view==="trade"?"":"#"+view);

@@ -13,6 +13,7 @@
 <script src="./network-market-ui.mjs" type="module"></script>
 <script src="./m47-live-chart-ui.mjs" type="module"></script>
 <script src="./m48-orderbook-ui.mjs" type="module"></script>
+<script src="./m50-views-ui.mjs" type="module"></script>
 </head>
 <body>
 <a class="skip-terminal" href="#tradeView">Skip to trading workspace</a>
@@ -70,6 +71,26 @@
 <div class="wallet-help"><a href="https://freighter.app/" target="_blank" rel="noopener noreferrer">GET FREIGHTER ↗</a><span>DESKTOP EXTENSION · TESTNET</span></div><p class="account-note">Stellar wallet balances are read from verified Testnet Horizon. They are NOT exchange vault deposits, available margin or borrowing collateral. No wallet seed or private key is requested.</p></section>
 </main>
 <section class="alternate hidden" id="alternateView"><div class="alternate-heading" id="altTitle">PORTFOLIO</div><p id="altDescription">This area is being developed.</p><div class="alternate-cards" id="alternateCards"><article><span>01 / ACCOUNT</span><h2>TESTNET BALANCES</h2><p>Real wallet balances are distinct from exchange collateral.</p></article><article><span>02 / UNIFIED MARGIN</span><h2>NOT DEPLOYED</h2><p>Account positions and margin health require Soroban clearing and risk contracts.</p></article><article><span>03 / MONEY MARKETS</span><h2>NOT DEPLOYED</h2><p>Supply and borrowing are unavailable until Soroban lending pools are verified.</p></article></div>
+<section id="m50PortfolioView" class="m50-workspace hidden" aria-label="Verified Stellar Testnet wallet portfolio">
+  <div class="m50-workspace-head"><div><span>PUBLIC STELLAR TESTNET ACCOUNT</span><h2>Portfolio overview</h2></div><button type="button" id="m50RefreshPortfolio" disabled>REFRESH PORTFOLIO ↻</button></div>
+  <p id="m50PortfolioStatus" role="status" aria-live="polite">Connect Freighter to inspect wallet balances.</p>
+  <div id="m50PortfolioContent" class="m50-grid"></div>
+  <p class="m50-foot">Classic Stellar DEX offers and trades are independent network activity, NOT Hoxo orders, positions, lending balances or profit/loss. All actions are read-only.</p>
+</section>
+<section id="m50EarnView" class="m50-workspace hidden" aria-label="Stellar Testnet Earn and lending review">
+  <div class="m50-workspace-head"><div><span>STELLAR TESTNET MONEY MARKETS</span><h2>Earn workspace</h2></div><span class="m50-neutral">READ-ONLY PREVIEW</span></div>
+  <p>Inspect your wallet assets and preview an unsigned amount. Deposits, withdrawals, borrowing, repayment and interest remain gated until a real Hoxo pool is deployed, independently verified and authorised.</p>
+  <div id="m50EarnContent" class="m50-grid"></div>
+  <div class="m50-preview">
+    <strong>SUPPLY AMOUNT REVIEW · DOES NOT SEND FUNDS</strong>
+    <div class="m50-form">
+      <label for="m50EarnAsset">Wallet asset<select id="m50EarnAsset"><option value="USDC">Testnet USDC (exact issuer)</option><option value="XLM">XLM native Testnet</option></select></label>
+      <label for="m50EarnAmount">Proposed amount<input id="m50EarnAmount" inputmode="decimal" autocomplete="off" placeholder="0.0000000"></label>
+      <button type="button" id="m50EarnPreview" disabled>REVIEW UNSIGNED AMOUNT</button>
+    </div>
+    <p id="m50EarnFeedback" role="status" aria-live="polite">No money-market deposit or lending transaction will be created.</p>
+  </div>
+</section>
 <section id="networkPanel" class="network-panel hidden" aria-label="Stellar Testnet infrastructure diagnostics">
   <p class="infra-caution">READ-ONLY NETWORK DIAGNOSTICS. THIS IS NOT EXCHANGE CONTRACT READINESS. NO SPOT, PERPETUAL OR LENDING CONTRACTS ARE LIVE.</p>
   <div class="infra-grid">

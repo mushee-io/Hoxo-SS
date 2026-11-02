@@ -117,6 +117,32 @@ async function openWalletHarness({funded=true,wrongNetwork=false}={}){
         account_id:TEST_G,balances:[{asset_type:"native",balance:"10000.0000000"}]
       })});
     }
+    if(url.startsWith("https://horizon-testnet.stellar.org/accounts/"+TEST_G+"/offers?")){
+      return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({
+        _embedded:{records:[{
+          id:"42",seller:TEST_G,
+          selling:{asset_type:"native"},
+          buying:{asset_type:"credit_alphanum4",asset_code:"USDC",
+            asset_issuer:"GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"},
+          amount:"1.5000000",price:"0.2",price_r:{n:1,d:5},
+          last_modified_ledger:9000100
+        }]}
+      })});
+    }
+    if(url.startsWith("https://horizon-testnet.stellar.org/accounts/"+TEST_G+"/trades?")){
+      return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({
+        _embedded:{records:[{
+          id:"123456789-0",paging_token:"123456789-0",
+          ledger_close_time:new Date(Date.now()-60000).toISOString(),
+          base_account:TEST_G,
+          counter_account:"GB6PLT5RXSSCCEI6AF4CIBBLC6DXIMDIFKHK5YY3EFZHLXK4TBK4RCZ2",
+          trade_type:"orderbook",base_asset_type:"native",base_amount:"2.5000000",
+          counter_asset_type:"credit_alphanum4",counter_asset_code:"USDC",
+          counter_asset_issuer:"GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+          counter_amount:"0.5000000"
+        }]}
+      })});
+    }
     if(url.startsWith("https://friendbot.stellar.org/?addr=")){
       friendbotCalls++;isFunded=true;
       return route.fulfill({status:200,contentType:"application/json",body:'{"hash":"test-only-mock"}'});
@@ -255,7 +281,8 @@ test("M18 Transfers tab shows verified Testnet public payment without presenting
     assert.equal(await page.locator("#portfolioBody a").first().getAttribute("href"),
       "https://stellar.expert/explorer/testnet/tx/"+transaction);
     await page.locator('[data-portfolio-tab="Trade History"]').click();
-    assert.match(await page.locator("#portfolioBody").innerText(),/NOT DEPLOYED/);
+    await page.waitForFunction(()=>document.querySelector("#portfolioBody")?.textContent.includes("CLASSIC DEX TRADES"));
+    assert.match(await page.locator("#portfolioBody").innerText(),/NOT HOXO FILLS/);
     assert.deepEqual(errors,[]);
   }finally{await context.close();}
 });
@@ -357,5 +384,39 @@ test("M48 Chromium shows real-shaped red/green Kraken orderbook and switch to ge
     assert.equal(await page.locator("#m48BookFeed").isVisible(),true);
     assert.equal(await page.locator("#tradeButton").isDisabled(),true);
     assert.deepEqual(errors,[],"M48 must not throw in the browser");
+  }finally{await context.close();}
+});
+
+
+test("M50 Chromium: connected wallet shows actual Horizon classic portfolio, Earn previews unsigned",async()=>{
+  const {page,context,errors}=await openWalletHarness();
+  try{
+    await page.locator("#walletButton").click();
+    await page.waitForFunction(()=>document.querySelector("#walletStatus")?.textContent.includes("CONNECTED"));
+    await page.locator('[data-view="portfolio"]').click();
+    await page.getByRole("heading",{name:"Portfolio overview"}).waitFor();
+    await page.waitForFunction(()=>document.querySelector("#m50PortfolioStatus")?.textContent.includes("LEDGER"));
+    const portfolioText=await page.locator("#m50PortfolioContent").innerText();
+    assert.match(portfolioText,/VERIFIED WALLET ASSETS/);
+    assert.match(portfolioText,/OPEN CLASSIC STELLAR DEX OFFERS/);
+    assert.match(portfolioText,/1.5000000 XLM/);
+    assert.match(portfolioText,/PUBLIC CLASSIC DEX TRADE HISTORY/);
+    assert.match(portfolioText,/2.5000000 XLM/);
+    await page.locator('[data-view="earn"]').click();
+    await page.getByRole("heading",{name:"Earn workspace"}).waitFor();
+    assert.match(await page.locator("#m50EarnContent").innerText(),/NOT ENABLED/);
+    assert.match(await page.locator("#m50EarnContent").innerText(),/NO LIVE RATE/);
+    await page.locator("#m50EarnAsset").selectOption("XLM");
+    await page.locator("#m50EarnAmount").fill("2.5000000");
+    await page.locator("#m50EarnPreview").click();
+    assert.match(await page.locator("#m50EarnFeedback").innerText(),/NO DEPOSIT, APY OR WALLET TRANSACTION/);
+    await page.locator("#backToTrade").click();
+    await page.locator('[data-portfolio-tab="Open Orders"]').click();
+    await page.waitForFunction(()=>document.querySelector("#portfolioBody")?.textContent.includes("CLASSIC DEX OFFERS"));
+    assert.match(await page.locator("#portfolioBody").innerText(),/NOT HOXO ORDERS/);
+    await page.locator('[data-portfolio-tab="Trade History"]').click();
+    assert.match(await page.locator("#portfolioBody").innerText(),/NOT HOXO FILLS/);
+    assert.equal(await page.locator("#tradeButton").isDisabled(),true);
+    assert.deepEqual(errors,[]);
   }finally{await context.close();}
 });
