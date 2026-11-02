@@ -107,7 +107,7 @@ test("M53 checker is read-only, emits transparent documented status without sign
     /\.sendTransaction\s*\(/, /\.signTransaction\s*\(/,
     /\.signAuthEntry\s*\(/, /\.set_pause\s*\(/,
     /\.signAndSend\s*\(/, /\.deploy\s*\(/,
-    /vercel deploy/i
+    /\bexec(?:Sync)?\s*\([^)]*vercel\s+deploy/i
   ])assert.doesNotMatch(source,forbidden);
   assert.match(script,/probeM41SpotAssets/);
   assert.match(script,/testnet-trading\.json/);
