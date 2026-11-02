@@ -206,3 +206,11 @@
 #tradeButton.trade-review:hover{background:#287e57}
 #tradeButton.trade-review:focus-visible{outline:2px solid #b5ffce;outline-offset:3px}
 #tradeButton:disabled{cursor:not-allowed}
+
+/* M61 · arbitrary, wallet-approved Stellar Testnet bilateral participants */
+.m45-participants{display:flex;flex-direction:column;gap:10px;margin:12px 0;padding:12px;border:1px solid #355846;background:#13241d}
+.m45-participants p,.m45-participants label{margin:0;font:600 11px/1.6 var(--mono);color:#c4e9d1}
+#m45MakerAddress{display:block;margin-top:4px;font:10px/1.6 var(--mono);color:#b5f3cb;overflow-wrap:anywhere}
+#m45TakerAddress{display:block;width:100%;box-sizing:border-box;margin-top:6px;padding:11px 9px;border:1px solid #467a5b;background:#091d13;color:#e9faee;border-radius:3px;font:11px/1.5 var(--mono)}
+#m45TakerAddress:focus-visible{outline:2px solid var(--lime);outline-offset:2px}
+.m45-participants .m45-status{font-weight:400;color:#a0bba8}

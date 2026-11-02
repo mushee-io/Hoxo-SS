@@ -62,11 +62,8 @@ function updateDraft(){
   const quantity=$("orderSize").value.trim();
   const data=orderDraft({marketId:market.id,orderType,size:quantity,limitPrice:$("limitPrice").value.trim()});
   const amount=parseAmount7(quantity);
-  const exceedsPilot=market.id==="xlm-usdc-spot"&&amount!==null&&amount>1_000_000n;
-  const invalid=(quantity!==""&&!data.valid)||exceedsPilot;
-  $("draftFeedback").textContent=exceedsPilot?
-    "Testnet pilot limit: 0.1 XLM per settlement. A 10 XLM order is not supported and has NOT been submitted.":
-    data.message;
+  const invalid=quantity!==""&&!data.valid;
+  $("draftFeedback").textContent=data.message;
   $("draftFeedback").classList.toggle("invalid",invalid);
   $("orderSize").setAttribute("aria-invalid",String(invalid));
   $("ticketSize").textContent=data.sizeLabel;
@@ -188,10 +185,9 @@ $("sellSide").addEventListener("click",()=>chooseSide("sell"));
 function openSpotSettlementReview(){
   if(market.id!=="xlm-usdc-spot")return;
   const input=$("orderSize"),requested=input.value.trim(),units=parseAmount7(requested);
-  if(units===null||units>1_000_000n){
-    $("draftFeedback").textContent=units===null?
-      "Enter an XLM quantity greater than zero, up to 0.1 XLM. No order has been sent.":
-      "This pilot cannot buy or sell "+requested+" XLM. Maximum: 0.1 XLM. No order has been sent.";
+  if(units===null){
+    $("draftFeedback").textContent=
+      "Enter a positive XLM amount using up to seven decimals. No order has been sent.";
     $("draftFeedback").classList.add("invalid");
     input.setAttribute("aria-invalid","true");
     input.focus();
@@ -199,13 +195,20 @@ function openSpotSettlementReview(){
   }
   $("m45Xlm").value=requested;
   $("m45Xlm").dispatchEvent(new Event("input",{bubbles:true}));
-  $("draftFeedback").textContent="Checking M9 Testnet readiness. This is a manual bilateral trade with two configured wallets, not an instant market buy. Nothing has been sent.";
+  $("draftFeedback").textContent="Reviewing "+requested+
+    " XLM. Enter the counterparty's public G-address and the mutually agreed USDC total, then verify the trade. No transaction sent.";
   $("draftFeedback").classList.remove("invalid");
   input.setAttribute("aria-invalid","false");
   $("m45SigningLab")?.scrollIntoView({behavior:"smooth",block:"start"});
-  $("m45Check")?.focus();
-  // Read-only check only. Never trigger signatures or send from this button.
-  $("m45Check")?.click();
+  const counterparty=$("m45TakerAddress");
+  const quote=$("m45Usdc");
+  if(!counterparty.value.trim())counterparty.focus();
+  else if(!quote.value.trim())quote.focus();
+  else {
+    $("m45Check")?.focus();
+    // Read-only check. Never trigger signatures or send from the ticket.
+    $("m45Check")?.click();
+  }
 }
 $("tradeButton").addEventListener("click",openSpotSettlementReview);
 $("m55OpenLab")?.addEventListener("click",openSpotSettlementReview);

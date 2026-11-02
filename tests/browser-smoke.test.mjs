@@ -427,11 +427,8 @@ test("M45 browser: controlled signing panel loads and remains non-executable whi
     assert.equal(await page.locator("#m45Prepare").isDisabled(),true);
     await page.locator("#m45Check").click();
     await page.locator("#m45Check").waitFor({state:"visible"});
-    await page.waitForFunction(()=>document.querySelector("#m45Status")?.textContent.includes("preflight")||
-      document.querySelector("#m45Status")?.textContent.includes("fetch")||
-      document.querySelector("#m45Status")?.textContent.includes("network")||
-      document.querySelector("#m45Status")?.textContent.includes("not verified")||
-      document.querySelector("#m45Status")?.textContent.includes("Failed"));
+    await page.waitForFunction(()=>/Connect Freighter|G-addresses|Freighter|preflight|fetch|network|not verified|Failed/i
+      .test(document.querySelector("#m45Status")?.textContent??""));
     assert.equal(await page.locator("#m45Prepare").isDisabled(),true);
     assert.equal(await page.locator("#m45SignTaker").isDisabled(),true);
     assert.equal(await page.locator("#m45SignMaker").isDisabled(),true);
