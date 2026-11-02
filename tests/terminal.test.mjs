@@ -78,16 +78,17 @@ test("M2 browser entrypoints parse without syntax errors",()=>{
 });
 
 
+
 test("M61 spot ticket accepts 10 XLM review and checks any chosen counterparty read-only",async()=>{
   const ui=await readFile(resolve(root,"app/terminal-ui.mjs"),"utf8");
   const lab=await readFile(resolve(root,"app/m45-spot-ui.mjs"),"utf8");
   const html=await readFile(resolve(root,"app/index.html"),"utf8");
-  assert.doesNotMatch(ui,/units>1_000_000n|0\\.1 XLM/);
-  assert.match(ui,/if\\(units===null\\)/);
+  assert.doesNotMatch(ui,/units>1_000_000n|0\.1 XLM/);
+  assert.match(ui,/if\(units===null\)/);
   assert.match(ui,/m45Check/);
   assert.match(lab,/createM45ParticipantCandidate/);
   assert.match(lab,/m45TakerAddress/);
-  assert.match(lab,/nowMs:Date\\.now\\(\\),candidate/);
+  assert.match(lab,/nowMs:Date\.now\(\),candidate/);
   assert.match(html,/id="m45TakerAddress"/);
   assert.match(html,/id="m45MakerAddress"/);
 });
