@@ -36,11 +36,11 @@ export function verifyM52Receipt(receipt,terms){
      receipt.base_token!==M44_XLM_SAC||receipt.quote_token!==M44_USDC_SAC||
      String(receipt.base_amount)!==terms.base_amount||
      String(receipt.quote_amount)!==terms.quote_amount||
-     Number(receipt.maker_side)!==terms.maker_side||
-     !Number.isSafeInteger(Number(receipt.settled_ledger))||
-     Number(receipt.settled_ledger)<=0)
+     receipt.maker_side!==terms.maker_side||
+     !Number.isSafeInteger(receipt.settled_ledger)||
+     receipt.settled_ledger<=0)
     fail("on-chain M9 receipt did not match exact signed settlement");
-  return Number(receipt.settled_ledger);
+  return receipt.settled_ledger;
 }
 async function read(server,contract,method,args){
   const reply=await server.queryContract(contract,method,args);
