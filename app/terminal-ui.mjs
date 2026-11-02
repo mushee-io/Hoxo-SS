@@ -45,7 +45,7 @@ function updateChart(){
 }
 function updateBook(){
   const book=bookView==="book";
-  $("bookEmptyTitle").textContent=book?"CONNECTING LIVE ORDER BOOK":"NO VERIFIED HOXO FILLS";
+  $("bookEmptyTitle").textContent=book?"CONNECTING LIVE ORDER BOOK":"TRADE HISTORY";
   $("bookEmptyDescription").textContent=book
     ?"No authenticated "+market.label+" orders exist. Matching is not deployed."
     :"Hoxo "+market.label+" executions will appear here after verified on-chain settlement.";
