@@ -53,7 +53,7 @@ const invariants={
   noApprovedRiskOracle:markets.oracleStatus.startsWith("HALTED") && markets.configured===0,
   uiExecutionDisabled:app.includes('id="tradeButton" type="button" class="trade-review"')&&
     app.includes('id="m55Submit" class="m45-main m55-send" disabled')&&
-    terminalUi.includes('PERP EXECUTION NOT YET DEPLOYED'),
+    terminalUi.includes('PERP TRADING NOT DEPLOYED'),
   uiCustodyDisabled:app.includes("<button disabled>DEPOSIT</button>") && app.includes("<button disabled>WITHDRAW</button>"),
   sandboxUnsettled:!sandbox.tradingEnabled && !sandbox.settleable && !sandbox.onchain,
   riskExecutionGateDisabled:risk.includes("pub fn authorization_enabled() -> bool { false }") &&
@@ -146,7 +146,7 @@ const invariants={
     matchingCore.includes('SIGNED_SANDBOX_OPERATOR_NOT_M5_ORACLE')&&
     !matchingCore.includes('broadcastTransaction('),
   m17ReadinessStillBlocked:registry.deployedVerified===0&&
-    terminalUi.includes('PERP EXECUTION NOT YET DEPLOYED')&&
+    terminalUi.includes('PERP TRADING NOT DEPLOYED')&&
     app.includes("General public matching and automated liquidity remain under development."),
   m18HorizonNotSettlement:walletHistory.includes('HORIZON_REPORTED_SUCCESS')&&
     walletHistory.includes('hoxoTrade:false,hoxoDeposit:false')&&
