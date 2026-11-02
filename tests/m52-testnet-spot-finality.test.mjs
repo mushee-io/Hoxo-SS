@@ -27,6 +27,11 @@ test("M52 exact signed M9 receipt verification rejects any amount, side or parti
     {...receipt,base_amount:"100001"},
     {...receipt,quote_amount:"199999"},
     {...receipt,maker_side:1},
+    {...receipt,maker_side:"0"},
+    {...receipt,maker_side:null},
+    {...receipt,settled_ledger:"5500050"},
+    {...receipt,settled_ledger:5500050.5},
+    {...receipt,settled_ledger:Number.MAX_SAFE_INTEGER+1},
     {...receipt,settled_ledger:-1},
     {...receipt,quote_token:M44_XLM_SAC}
   ])assert.throws(()=>verifyM52Receipt(corrupted,terms),/receipt did not match/);
