@@ -59,9 +59,16 @@ function updateBook(){
   }));
 }
 function updateDraft(){
-  const data=orderDraft({marketId:market.id,orderType,size:$("orderSize").value.trim(),limitPrice:$("limitPrice").value.trim()});
-  $("draftFeedback").textContent=data.message;
-  $("draftFeedback").classList.toggle("invalid",$("orderSize").value.trim()!==""&&!data.valid);
+  const quantity=$("orderSize").value.trim();
+  const data=orderDraft({marketId:market.id,orderType,size:quantity,limitPrice:$("limitPrice").value.trim()});
+  const amount=parseAmount7(quantity);
+  const exceedsPilot=market.id==="xlm-usdc-spot"&&amount!==null&&amount>1_000_000n;
+  const invalid=(quantity!==""&&!data.valid)||exceedsPilot;
+  $("draftFeedback").textContent=exceedsPilot?
+    "Testnet pilot limit: 0.1 XLM per settlement. A 10 XLM order is not supported and has NOT been submitted.":
+    data.message;
+  $("draftFeedback").classList.toggle("invalid",invalid);
+  $("orderSize").setAttribute("aria-invalid",String(invalid));
   $("ticketSize").textContent=data.sizeLabel;
   $("ticketNotional").textContent=data.notional;
 }
@@ -180,20 +187,25 @@ $("buySide").addEventListener("click",()=>chooseSide("buy"));
 $("sellSide").addEventListener("click",()=>chooseSide("sell"));
 function openSpotSettlementReview(){
   if(market.id!=="xlm-usdc-spot")return;
-  const requested=$("orderSize").value.trim();
-  if(requested){
-    const units=parseAmount7(requested);
-    if(units===null||units>1_000_000n){
-      $("draftFeedback").textContent=
-        "The first signed Testnet settlement is limited to 0.1 XLM. "+
-        "Review a smaller quantity and a manually agreed USDC amount below.";
-    }else{
-      $("m45Xlm").value=requested;
-      $("m45Xlm").dispatchEvent(new Event("input",{bubbles:true}));
-    }
+  const input=$("orderSize"),requested=input.value.trim(),units=parseAmount7(requested);
+  if(units===null||units>1_000_000n){
+    $("draftFeedback").textContent=units===null?
+      "Enter an XLM quantity greater than zero, up to 0.1 XLM. No order has been sent.":
+      "This pilot cannot buy or sell "+requested+" XLM. Maximum: 0.1 XLM. No order has been sent.";
+    $("draftFeedback").classList.add("invalid");
+    input.setAttribute("aria-invalid","true");
+    input.focus();
+    return;
   }
+  $("m45Xlm").value=requested;
+  $("m45Xlm").dispatchEvent(new Event("input",{bubbles:true}));
+  $("draftFeedback").textContent="Checking M9 Testnet readiness. This is a manual bilateral trade with two configured wallets, not an instant market buy. Nothing has been sent.";
+  $("draftFeedback").classList.remove("invalid");
+  input.setAttribute("aria-invalid","false");
   $("m45SigningLab")?.scrollIntoView({behavior:"smooth",block:"start"});
   $("m45Check")?.focus();
+  // Read-only check only. Never trigger signatures or send from this button.
+  $("m45Check")?.click();
 }
 $("tradeButton").addEventListener("click",openSpotSettlementReview);
 $("m55OpenLab")?.addEventListener("click",openSpotSettlementReview);
