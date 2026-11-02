@@ -92,7 +92,7 @@ test("M47 price terminal labels Kraken USD reference and preserves disabled Hoxo
   assert.match(html,/m47-live-chart-ui\.mjs/);
   assert.match(main,/hoxo:chart-selection/);
   assert.match(ui,/KRAKEN XLM\/USD/);
-  assert.match(ui,/NOT HOXO FILLS/);
+  assert.match(ui,/XLM\/USD · KRAKEN SPOT REFERENCE · USD/);
   assert.doesNotMatch(ui,/\.sendTransaction\(|\.signTransaction\(|set_pause\(false\)/);
   assert.match(html,/id="tradeButton"[^>]+disabled/);
 });
