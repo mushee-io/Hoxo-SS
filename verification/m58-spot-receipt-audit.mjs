@@ -23,7 +23,13 @@ export async function auditM58SpotPair({rpc,contractId,buy,sell}={}){
   // A receipt at the same ledger is not proof that this transaction settled it.
   // Require transaction-local, contract-scoped evidence from an independent RPC decoder.
   if(!Array.isArray(tx.contractEvents))fail("transaction events unavailable");
-  const matchingEvents=tx.contractEvents.filter(e=>
+  // Reject conflicting or duplicate events for this match, even when only one
+  // has the expected side. Otherwise a forged second event could be ignored.
+  const scopedEvents=tx.contractEvents.filter(e=>e&&e.contractId===contractId&&
+    e.type==="settled"&&typeof e.matchId==="string"&&hashPattern.test(e.matchId)&&
+    e.matchId.toLowerCase()===matchId);
+  if(scopedEvents.length!==1)fail("ambiguous M9 settlement events for match");
+  const matchingEvents=scopedEvents.filter(e=>
      e&&e.contractId===contractId&&e.type==="settled"&&
      typeof e.txHash==="string"&&hashPattern.test(e.txHash)&&e.txHash.toLowerCase()===txHash&&
      e.ledger===tx.ledger&&
