@@ -271,8 +271,8 @@ test("M55 real Soroban MatchTerms map uses canonical sorted keys for contracttyp
 test("M60 transaction builder rejects 10 XLM even if a user bypasses the ticket",()=>{
   assert.throws(()=>draftM45BilateralTerms({
     xlmAmount:"10",usdcAmount:"1.7",side:"buy",ledger:1000
-  }),/0\\.1 XLM/);
+  }),/0\.1 XLM/);
   assert.throws(()=>draftM45BilateralTerms({
     xlmAmount:"0.1000001",usdcAmount:"0.017",side:"sell",ledger:1000
-  }),/0\\.1 XLM/);
+  }),/0\.1 XLM/);
 });
