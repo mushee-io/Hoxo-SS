@@ -8,7 +8,8 @@ import {normalizeM48KrakenDepth,normalizeM48HorizonBook,
 const $=id=>document.getElementById(id);
 const feed=$("m48BookFeed"),selector=$("m48BookSource"),list=$("m48BookLevels");
 const state=$("m48BookStatus");
-let chosenMarket="xlm-usdc-spot",bookView="book",sequence=0,requestId=0;
+let chosenMarket=new URLSearchParams(window.location.search).get("market")||"xlm-usdc-spot",
+  bookView="book",sequence=0,requestId=0;
 const eligible=new Set(["xlm-usdc-spot","xlm-usdc-perp"]);
 function safe(){return eligible.has(chosenMarket)&&bookView==="book";}
 function label(s,error=false){
@@ -23,9 +24,23 @@ function clearRows(){
 function sourceHeading(){
   $("bookPriceHeading").textContent=selector.value==="kraken"?"PRICE (USD)":"PRICE (USDC)";
   $("bookSizeHeading").textContent="SIZE (XLM)";
-  $("m48BookSourceWarning").textContent=selector.value==="kraken"?
-    "KRAKEN XLM/USD · EXTERNAL SPOT ORDERS · NOT HOXO / NOT USDC":
-    "STELLAR TESTNET XLM/USDC · CLASSIC DEX OFFERS · NOT HOXO M9";
+  const message={
+    "kraken":"KRAKEN XLM/USD · EXTERNAL SPOT ORDERS · NOT HOXO",
+    "stellar-testnet":"STELLAR TESTNET XLM/USDC · CLASSIC DEX OFFERS · NOT HOXO",
+    "hyperliquid-perp":"HYPERLIQUID XLM PERP · EXTERNAL MAINNET MARKET · NOT HOXO"
+  };
+  $("m48BookSourceWarning").textContent=message[selector.value]||"EXTERNAL REFERENCE DATA ONLY";
+}
+function enforceSource(marketChanged=false){
+  const isPerp=chosenMarket==="xlm-usdc-perp";
+  const allowed=isPerp?new Set(["hyperliquid-perp","kraken"]):
+    new Set(["kraken","stellar-testnet"]);
+  for(const option of selector.options){
+    option.disabled=!allowed.has(option.value);
+    option.hidden=!allowed.has(option.value);
+  }
+  if(marketChanged||!allowed.has(selector.value))
+    selector.value=isPerp?"hyperliquid-perp":"kraken";
 }
 function formatted(n,decimals=6){
   return Number(n).toLocaleString("en-US",{
@@ -36,7 +51,10 @@ function paint(book){
   if(!safe())return;
   clearRows();
   if(!book||!Array.isArray(book.bids)||!Array.isArray(book.asks)||
-    book.executable!==false||book.hoxoFills!==false){
+    book.executable!==false||book.hoxoFills!==false||
+    (selector.value==="hyperliquid-perp"&&
+      (book.marketType!=="perpetual"||book.source!=="Hyperliquid"||
+       book.currency!=="USDC"||book.externalMainnet!==true))){
     label("Orderbook source unavailable · no artificial price levels",true);
     return;
   }
@@ -44,7 +62,9 @@ function paint(book){
   if(!bids.length&&!asks.length){
     $("bookEmptyTitle").textContent="NO LIVE OFFERS";
     $("bookEmptyDescription").textContent=selector.value==="kraken"?
-      "External Kraken order book returned no verified levels.":
+      "External Kraken spot order book returned no verified levels.":
+      selector.value==="hyperliquid-perp"?
+      "The external XLM perpetual venue currently reports no orders.":
       "No actual Stellar Testnet XLM/USDC offers exist in this classic DEX book.";
     label("0 genuine offers · no synthetic book or automatic self-trading");
     return;
@@ -95,6 +115,8 @@ async function sourceFetch(source){
     return book;
   }catch{
     // Direct public API fallback for local static hosting, never placeholder data.
+    if(source==="hyperliquid-perp")
+      throw Error("Verified perpetual market endpoint unavailable");
     const url=source==="kraken"?
       "https://api.kraken.com/0/public/Depth?pair=XLMUSD&count=20":
       m48HorizonBookUrl();
@@ -122,8 +144,11 @@ async function refresh(){
   }
 }
 function selection(data){
-  chosenMarket=data.market??chosenMarket;
+  const nextMarket=data.market??chosenMarket;
+  const marketChanged=nextMarket!==chosenMarket;
+  chosenMarket=nextMarket;
   bookView=data.view??bookView;
+  enforceSource(marketChanged);
   sequence++;
   clearRows();
   if(!safe()){
@@ -135,8 +160,9 @@ function selection(data){
   sourceHeading();
   $("bookEmptyTitle").textContent="LOADING LIVE ORDER BOOK";
   $("bookEmptyDescription").textContent="Fetching actual offers. No demo prices.";
-  label("Connecting to the "+(selector.value==="kraken"?"Kraken":"Stellar Testnet")+
-    " public order book...");
+  const feedName=selector.value==="kraken"?"Kraken spot":
+    selector.value==="hyperliquid-perp"?"Hyperliquid perpetual":"Stellar Testnet classic DEX";
+  label("Connecting to the "+feedName+" public order book...");
   refresh();
 }
 selector.addEventListener("change",()=>selection({}));
