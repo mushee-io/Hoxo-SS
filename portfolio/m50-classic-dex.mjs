@@ -22,7 +22,6 @@ function asset(entry){
   if(!["credit_alphanum4","credit_alphanum12"].includes(entry.asset_type)||
      typeof entry.asset_code!=="string"||!ASSET_RE.test(entry.asset_code)||
      (entry.asset_type==="credit_alphanum4"&&entry.asset_code.length>4)||
-     (entry.asset_type==="credit_alphanum12"&&entry.asset_code.length<=4)||
      !isStellarGAddress(entry.asset_issuer))fail("invalid asset identity");
   return Object.freeze({code:entry.asset_code,issuer:entry.asset_issuer,
     assetId:entry.asset_code+":"+entry.asset_issuer});
