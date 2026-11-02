@@ -135,6 +135,12 @@ $("m55SendPhrase").addEventListener("input",paint);
 for(const id of ["m45Xlm","m45Usdc","m51SpotSide"]){
   $(id).addEventListener("input",()=>{proof=null;clearSession();note("Trade side or amounts changed. Run a fresh Testnet preflight.");});
 }
+window.addEventListener("hoxo:market-change",event=>{
+  proof=null;
+  clearSession();
+  note("Market changed to "+String(event.detail?.market??"another instrument")+
+    ". Previous Testnet signatures and approvals cleared.");
+});
 $("m45Reset").addEventListener("click",()=>{
   proof=null;clearSession();note("Signing lab reset. No transaction has been broadcast.");
 });
