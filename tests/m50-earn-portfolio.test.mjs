@@ -58,10 +58,14 @@ test("M50 normalizes exact account-owned Stellar classic DEX offers but never ca
   assert.equal(result.buying.issuer,ISSUER);
   assert.equal(result.hoxoOrder,false);
   assert.equal(result.tradeExecutable,false);
+  const short12=normalizeM50Offer({...offer,buying:{...USDC,asset_type:"credit_alphanum12"}},OWNER,ledger);
+  assert.equal(short12.buying.code,"USDC");
   for(const bad of [
     {...offer,seller:OTHER},{...offer,last_modified_ledger:ledger+1},
     {...offer,amount:"-1.0"},{...offer,buying:XLM},
-    {...offer,price_r:{n:0,d:5}},{...offer,buying:{...USDC,asset_issuer:"GFAKE"}}
+    {...offer,price_r:{n:0,d:5}},
+    {...offer,buying:{...USDC,asset_code:"TOOLONG"}},
+    {...offer,buying:{...USDC,asset_issuer:"GFAKE"}}
   ])assert.throws(()=>normalizeM50Offer(bad,OWNER,ledger));
 });
 
