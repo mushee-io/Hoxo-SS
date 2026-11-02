@@ -44,6 +44,38 @@ export function draftM45BilateralTerms({xlmAmount,usdcAmount,side="sell",ledger,
     expires_at_ledger:ledger+20
   });
 }
+/**
+ * Review exact seller/buyer funding for both settlement directions.
+ * Stellar Horizon balances are advisory preflight; Soroban simulation must
+ * still verify actual token contract balances and fees before signature.
+ */
+export function verifyM51TradeCapacity(preflight,terms){
+  if(!terms||![0,1].includes(terms.maker_side)||
+     !/^[1-9]\d*$/.test(terms.base_amount??"")||
+     !/^[1-9]\d*$/.test(terms.quote_amount??""))
+    fail("invalid reviewed settlement amounts/side");
+  if(!preflight||!Array.isArray(preflight.wallets)||preflight.wallets.length!==2||
+     preflight.wallets[0].address!==terms.maker||
+     preflight.wallets[1].address!==terms.taker||
+     !preflight.wallets.every(w=>w.trustlineAuthorized===true))
+    fail("exact participant balances and authorized issuer from fresh Testnet preflight required");
+  const baseFrom=terms.maker_side===0?preflight.wallets[0]:preflight.wallets[1];
+  const quoteFrom=terms.maker_side===0?preflight.wallets[1]:preflight.wallets[0];
+  const nativeGasReserve=10_000_000n;
+  if(!/^(0|[1-9]\d*)$/.test(baseFrom.xlmE7??"")||
+     !/^(0|[1-9]\d*)$/.test(quoteFrom.usdcE7??""))
+    fail("invalid exact balances from Testnet Horizon");
+  if(BigInt(baseFrom.xlmE7)<BigInt(terms.base_amount)+nativeGasReserve)
+    fail("XLM selling wallet lacks funds and native reserve");
+  if(BigInt(quoteFrom.usdcE7)<BigInt(terms.quote_amount))
+    fail("USDC paying wallet lacks exact issuer funds");
+  return Object.freeze({
+    side:terms.maker_side===0?"SELL_XLM":"BUY_XLM",
+    xlmSeller:baseFrom.address,usdcPayer:quoteFrom.address,
+    xlmAmountE7:terms.base_amount,usdcAmountE7:terms.quote_amount,
+    fundingPreflightOnly:true,executionPermitted:false
+  });
+}
 function termsScVal(terms){
   const idKeys=new Set(["match_id","maker_order_id","taker_order_id"]);
   const addressKeys=new Set(["maker","taker","base_token","quote_token"]);
@@ -72,17 +104,7 @@ export async function simulateM45BilateralSpot({
   if(!Number.isSafeInteger(ledger)||Math.abs(ledger-preflight.ledger)>4)
     fail("RPC ledger moved: run a new preflight");
   const terms=draftM45BilateralTerms({xlmAmount,usdcAmount,side,ledger,randomBytes});
-  if(!Array.isArray(preflight.wallets)||preflight.wallets.length!==2||
-     preflight.wallets[0].address!==terms.maker||
-     preflight.wallets[1].address!==terms.taker)
-    fail("exact participant balances from fresh Testnet preflight required");
-  const baseFrom=terms.maker_side===0?preflight.wallets[0]:preflight.wallets[1];
-  const quoteFrom=terms.maker_side===0?preflight.wallets[1]:preflight.wallets[0];
-  const nativeGasReserve=10_000_000n;
-  if(BigInt(baseFrom.xlmE7??"0")<BigInt(terms.base_amount)+nativeGasReserve)
-    fail("XLM selling wallet lacks funds and native fee reserve");
-  if(BigInt(quoteFrom.usdcE7??"0")<BigInt(terms.quote_amount))
-    fail("USDC paying wallet lacks exact issuer funds");
+  verifyM51TradeCapacity(preflight,terms);
   const source=await server.getAccount(terms.maker);
   if(source?.accountId?.()!==terms.maker)fail("RPC returned wrong source account");
   const tx=new TransactionBuilder(source,{
