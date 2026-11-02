@@ -20,6 +20,13 @@ export async function auditM58SpotPair({rpc,contractId,buy,sell}={}){
   const tx=await rpc.getTransaction(txHash);
   if(tx?.status!=="SUCCESS"||hash(tx.hash)!==txHash||!ledger(tx.ledger))
     fail("transaction finality unverified");
+  // A receipt at the same ledger is not proof that this transaction settled it.
+  // Require transaction-local, contract-scoped evidence from an independent RPC decoder.
+  if(!Array.isArray(tx.contractEvents)||!tx.contractEvents.some(e=>
+     e&&e.contractId===contractId&&e.type==="settled"&&
+     typeof e.matchId==="string"&&hashPattern.test(e.matchId)&&
+     e.matchId.toLowerCase()===matchId&&e.makerSide===side))
+    fail("transaction does not contain matching M9 settlement event");
   const args={match_id:Uint8Array.from(matchId.match(/../g),x=>parseInt(x,16))};
   const observed=await rpc.queryContract(contractId,"receipt",args);
   if(observed?.isReadCall!==true)fail("receipt must be independent read");
