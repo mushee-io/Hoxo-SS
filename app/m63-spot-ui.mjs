@@ -11,6 +11,15 @@ import {HORIZON_TESTNET,USDC_TESTNET_ISSUER,TESTNET_NETWORK,
 
 const $=id=>document.getElementById(id);
 const server=new Horizon.Server(HORIZON_TESTNET);
+async function fundedAccount(address){
+  try{return await server.loadAccount(address);}
+  catch(error){
+    if(error?.response?.status===404||
+       error?.response?.data?.status===404)
+      throw Error("This wallet is not funded on Stellar Testnet. Use the Hoxo Friendbot button first.");
+    throw error;
+  }
+}
 const xlm=Asset.native();
 const usdc=new Asset("USDC",USDC_TESTNET_ISSUER);
 let reviewed=null,reviewedType=null,busy=false;
@@ -137,7 +146,7 @@ async function approve(){
      quote.side==="sell"&&BigInt(refreshed.expectedQuoteE7)<BigInt(quote.limitQuoteE7))
     fail("market price moved beyond your confirmed protection; review a new quote");
   label("Verifying exact Testnet account balance and building atomic direct swap...");
-  const account=await server.loadAccount(owner);
+  const account=await fundedAccount(owner);
   const balances=readUsdcBalance(account);
   assertCapacity({side:quote.side,quote,balance:balances,account});
   const operation=quote.side==="buy"?
@@ -210,7 +219,7 @@ async function addUsdcTrustline(){
   if(net?.networkPassphrase!==Networks.TESTNET||
     !StrKey.isValidEd25519PublicKey(owner??""))
     fail("select a valid funded Stellar TESTNET account in Freighter");
-  const account=await server.loadAccount(owner);
+  const account=await fundedAccount(owner);
   const found=account.balances.find(x=>x.asset_type==="credit_alphanum4"&&
     x.asset_code==="USDC"&&x.asset_issuer===USDC_TESTNET_ISSUER);
   if(found){
