@@ -58,3 +58,7 @@ The RPC submission response must report the SHA-256 transaction hash computed by
 ### M52 parser and finality regression (2026-11-02)
 
 The exact signed-envelope hash must be compared with the RPC submission hash before finality polling; the poller receives only the verified canonical hash. A source-level regression test now checks this invocation and guards against an accidentally escaped `\\n` token in the module. This correction is **code-only**, does not authorize submission, and requires passing GitHub CI before review or merge. The existing separate operator acknowledgement and independent Testnet safety checks remain mandatory.
+
+### M52 receipt amount type boundary (2026-11-02)
+
+Read-only M9 settlement receipt verification now requires `base_amount` and `quote_amount` to be canonical decimal **strings** exactly equal to the reviewed terms. Numeric, BigInt, and object-coercible representations are rejected rather than silently converted with `String(...)`. This prevents untrusted RPC adapter output from passing through JavaScript coercion. The regression suite includes matching-looking numeric, BigInt and custom `toString` values. This is a validation hardening change only; it is not evidence of an executed Testnet trade. The dual-wallet signature, explicit send acknowledgement, replay, balance and finality gates remain mandatory; do not enable unattended submission or production release.
