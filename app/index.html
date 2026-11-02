@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="./terminal.css">
 <script src="https://unpkg.com/@stellar/freighter-api@6.0.1/build/index.min.js" defer></script>
 <script src="./terminal.js" type="module"></script>
+<script src="./m45-spot.bundle.js" defer></script>
 <script src="./wallet-ui.mjs" type="module"></script>
 <script src="./terminal-ui.mjs" type="module"></script>
 <script src="./infra-ui.mjs" type="module"></script>
@@ -21,9 +22,9 @@
   <nav class="topnav" aria-label="Terminal navigation"><button class="toplink selected" data-view="trade">Trade</button><button class="toplink" data-view="portfolio">Portfolio</button><button class="toplink" data-view="earn">Earn</button><button class="toplink" data-view="network">Network</button><a href="../docs/milestones.md" class="toplink external">Roadmap ↗</a></nav>
   <div class="header-right"><span class="network-badge"><i></i> STELLAR TESTNET</span><button type="button" id="walletButton" class="wallet-button" aria-describedby="walletStatus">CONNECT FREIGHTER</button></div>
 </header>
-<div class="announcement"><span class="announcement-brand">✳ STELLAR TESTNET</span><span class="announcement-message">LIVE XLM CHARTS · EXTERNAL SPOT &amp; PERP ORDER BOOKS · FREIGHTER WALLET</span><details class="announcement-details"><summary>PRODUCT STATUS</summary><div class="announcement-panel"><strong>Stellar Testnet development</strong><p>M9 spot settlement contract is deployed but paused. Hoxo's own spot matching and transaction execution are not enabled. Perpetual execution, lending and unified margin are still in development.</p><p>Charts and order books show independent external venue data or Stellar Testnet classic DEX offers—not Hoxo trades or executable Hoxo quotes.</p><a href="https://github.com/mushee-io/Hoxo-SS" target="_blank" rel="noopener noreferrer">View source ↗</a></div></details></div>
-<div class="market-line"><div class="market-picker"><button type="button" class="market-trigger" id="marketTrigger" aria-expanded="false" aria-controls="marketMenu" aria-haspopup="dialog"><span class="coin">✳</span><span class="market-current"><b id="marketLabel">XLM/USDC</b><small id="marketSubheading">SPOT REFERENCE · NOT LISTED</small></span><span class="market-chevron" aria-hidden="true">⌄</span></button>
-<div class="market-menu hidden" id="marketMenu" role="dialog" aria-label="Choose reference instrument"><p class="market-menu-title">REFERENCE INSTRUMENTS <span>NOT LISTED</span></p><label class="sr-only" for="marketSearch">Search reference instruments</label><input id="marketSearch" type="search" autocomplete="off" placeholder="Search XLM, BTC, spot, perps…"><div class="market-filters" role="group" aria-label="Market type filter"><button type="button" data-market-filter="all" class="selected" aria-pressed="true">All</button><button type="button" data-market-filter="spot" aria-pressed="false">Spot</button><button type="button" data-market-filter="perp" aria-pressed="false">Perps</button></div><div id="marketResults" class="market-results"></div><p class="market-menu-foot">Reference selections are not deployable tokens or executable markets.</p></div></div>
+<div class="announcement"><span class="announcement-brand">✳ STELLAR TESTNET</span><span class="announcement-message">LIVE XLM CHARTS · EXTERNAL SPOT &amp; PERP ORDER BOOKS · FREIGHTER WALLET</span><details class="announcement-details"><summary>PRODUCT STATUS</summary><div class="announcement-panel"><strong>Stellar Testnet development</strong><p>M9 spot settlement is deployed and has been independently verified unpaused on Stellar Testnet. A small, two-wallet Freighter-approved spot settlement test is available below; general order matching remains under development. Perpetual execution, lending and unified margin are not yet live.</p><p>Charts and order books show independent external venue data or Stellar Testnet classic DEX offers—not Hoxo trades or executable Hoxo quotes.</p><a href="https://github.com/mushee-io/Hoxo-SS" target="_blank" rel="noopener noreferrer">View source ↗</a></div></details></div>
+<div class="market-line"><div class="market-picker"><button type="button" class="market-trigger" id="marketTrigger" aria-expanded="false" aria-controls="marketMenu" aria-haspopup="dialog"><span class="coin">✳</span><span class="market-current"><b id="marketLabel">XLM/USDC</b><small id="marketSubheading">SPOT · STELLAR TESTNET SETTLEMENT</small></span><span class="market-chevron" aria-hidden="true">⌄</span></button>
+<div class="market-menu hidden" id="marketMenu" role="dialog" aria-label="Choose reference instrument"><p class="market-menu-title">MARKETS <span>STELLAR TESTNET</span></p><label class="sr-only" for="marketSearch">Search reference instruments</label><input id="marketSearch" type="search" autocomplete="off" placeholder="Search XLM, BTC, spot, perps…"><div class="market-filters" role="group" aria-label="Market type filter"><button type="button" data-market-filter="all" class="selected" aria-pressed="true">All</button><button type="button" data-market-filter="spot" aria-pressed="false">Spot</button><button type="button" data-market-filter="perp" aria-pressed="false">Perps</button></div><div id="marketResults" class="market-results"></div><p class="market-menu-foot">Reference selections are not deployable tokens or executable markets.</p></div></div>
   <div class="market-stat"><small id="marketPrimaryStat">REFERENCE PRICE</small><b id="marketPrice">—</b></div><div class="market-stat"><small>INDEX PRICE</small><b>—</b></div><div class="market-stat"><small>24H CHANGE</small><b>—</b></div><div class="market-stat hide-small"><small>24H VOLUME</small><b>—</b></div><div class="market-stat hide-small"><small>OPEN INTEREST</small><b>—</b></div><div class="market-stat hide-small"><small id="fundingStatLabel">FUNDING / 1H</small><b>—</b></div><div class="market-stat ledger"><small>NETWORK LEDGER</small><b id="ledgerValue">CHECKING...</b></div>
 </div>
 <main class="terminal-grid" id="tradeView">
@@ -54,7 +55,8 @@
   <div class="draft-label">LOCAL ORDER DRAFT <span>NO TRANSACTION WILL BE SIGNED</span></div><label class="input-label" for="orderSize">ORDER SIZE <span id="sizeAssetLabel">XLM</span></label><div class="sizebox"><input id="orderSize" type="text" inputmode="decimal" placeholder="0.0000000" autocomplete="off" aria-describedby="draftFeedback"><span id="sizeAssetSuffix">XLM</span></div><div id="limitPriceRow" class="limit-field hidden"><label class="input-label" for="limitPrice">LIMIT PRICE <span>USDC</span></label><div class="sizebox"><input id="limitPrice" type="text" inputmode="decimal" autocomplete="off" placeholder="0.0000000" aria-describedby="draftFeedback"><span>USDC</span></div></div><div id="draftFeedback" class="draft-feedback" aria-live="polite">Enter a size to prepare a non-executable draft.</div>
   <div class="draft-helper">STELLAR TESTNET · ORDER REVIEW</div>
   <div class="order-toggles"><label><input type="checkbox" disabled> Reduce only</label><label><input type="checkbox" disabled> TP / SL</label></div>
-  <button id="tradeButton" class="trade-disabled" disabled>EXECUTION UNAVAILABLE ON TESTNET</button>
+  <button id="tradeButton" class="trade-disabled" disabled>GENERAL MARKET ORDERS · NOT ACTIVE</button>
+  <button type="button" class="m55-open-lab" id="m55OpenLab" aria-controls="m45SigningLab">OPEN SMALL TESTNET SPOT BUY/SELL ↓</button>
   <div class="summary"><div><span>Selected instrument</span><b id="ticketMarket">XLM/USDC</b></div><div><span>Order size (draft)</span><b id="ticketSize">—</b></div><div><span>Input-only notional</span><b id="ticketNotional">—</b></div><div><span>Available margin</span><b>—</b></div></div>
   <div class="order-warning" role="note"><strong>TESTNET ORDER REVIEW</strong><p>Trade entry is in development. The order ticket remains a local draft until reviewed wallet signing and contract settlement are enabled.</p></div>
 </section>
@@ -69,6 +71,52 @@
 </div>
 <div class="wallet-help"><a href="https://freighter.app/" target="_blank" rel="noopener noreferrer">GET FREIGHTER ↗</a><span>DESKTOP EXTENSION · TESTNET</span></div><p class="account-note">Stellar wallet balances are read from verified Testnet Horizon. They are NOT exchange vault deposits, available margin or borrowing collateral. No wallet seed or private key is requested.</p></section>
 </main>
+<section class="m45-lab" id="m45SigningLab" aria-label="M45 controlled Testnet signing lab">
+  <div class="m45-top"><strong>M45 · TWO-WALLET SIGNING LAB</strong><span>NO BROADCAST</span></div>
+  <p>Read-only deployment proof, exact manually agreed XLM/USDC amounts and two explicit Freighter approvals. This is an internal bilateral test, not an executable order book or market quote.</p>
+  <div class="m45-meta"><div>NETWORK <b id="m45Network">Not checked</b></div><div>LEDGER <b id="m45Ledger">—</b></div><div>M9 CONTRACT <b id="m45Contract">NOT VERIFIED</b></div></div>
+  <button id="m45Check" type="button" class="m45-main">1 · VERIFY LIVE STELLAR TESTNET</button>
+  <p class="m45-status" id="m45Status" role="status" aria-live="polite">Click Verify to inspect deployed M9, XLM/USDC allowlists, pause state and both funded wallet balances.</p>
+  <div class="m45-amounts">
+    <label for="m51SpotSide">Wallet 1 action<select id="m51SpotSide" aria-label="Choose XLM Buy or Sell from Wallet 1"><option value="sell">SELL XLM · Wallet 1 receives USDC</option><option value="buy">BUY XLM · Wallet 1 pays USDC</option></select></label>
+    <label for="m45Xlm">XLM trade quantity (manual)<input id="m45Xlm" value="0.0100000" type="text" inputmode="decimal" autocomplete="off"></label>
+    <label for="m45Usdc">USDC total (manual)<input id="m45Usdc" value="0.0017000" type="text" inputmode="decimal" autocomplete="off"></label>
+  </div>
+  <label class="m45-consent"><input type="checkbox" id="m45TermsAck"> I have reviewed the XLM Buy/Sell side and amounts. These are manual Stellar Testnet terms, not an executable market quote, and this lab does not send a transaction.</label>
+  <button id="m45Prepare" type="button" class="m45-main" disabled>2 · SIMULATE EXACT SOROBAN TERMS</button>
+  <pre class="m45-terms" id="m45Terms">No Soroban transaction simulated or signed.</pre>
+  <label class="m45-consent"><input type="checkbox" id="m45TakerAck"> I have reviewed the exact simulated terms and want Wallet 2 to sign only the non-source Soroban authorization.</label>
+  <button id="m45SignTaker" type="button" class="m45-main" disabled>3 · WALLET 2 · AUTHORIZE SOROBAN ENTRY</button>
+  <label class="m45-consent"><input type="checkbox" id="m45MakerAck"> I have reviewed the same terms and want Wallet 1 to sign only the source transaction envelope, without sending it.</label>
+  <button id="m45SignMaker" type="button" class="m45-main" disabled>4 · WALLET 1 · SIGN ENVELOPE ONLY</button>
+  <div class="m45-meta"><div>STATE <b id="m45Phase">READ-ONLY</b></div></div>
+  <div class="m55-final-review" id="m55FinalReview" aria-label="Final explicit Stellar Testnet trade submission">
+    <strong>5 · FINAL TESTNET SPOT SETTLEMENT</strong>
+    <p>Complete both wallet signatures first. Submit only after reviewing the same XLM/USDC amounts, wallet roles, fee ceiling and ledger expiry. This action sends one real Testnet transaction; it cannot be undone.</p>
+    <label class="m45-consent"><input type="checkbox" id="m55SendAck"> I explicitly authorise submitting this small, two-wallet-signed Stellar Testnet M9 transaction.</label>
+    <label for="m55SendPhrase" class="m55-phrase-label">To confirm, type <code>SEND_SMALL_HOXO_STELLAR_TESTNET_SPOT</code></label>
+    <input id="m55SendPhrase" type="text" autocomplete="off" spellcheck="false" aria-label="Type exact Stellar Testnet submission confirmation" placeholder="Exact confirmation phrase required">
+    <button type="button" id="m55Submit" class="m45-main m55-send" disabled>SEND SIGNED TRANSACTION · STELLAR TESTNET</button>
+    <p id="m55Receipt" role="status" aria-live="polite">No transaction submitted. Confirmation requires an on-chain M9 receipt and both wallet balance changes.</p>
+  </div>
+  <p class="m45-no-send" id="m45NoSend">TWO-WALLET REVIEW · STELLAR TESTNET ONLY</p>
+  <button id="m45Reset" type="button" class="m45-reset">CLEAR REVIEW & SIGNATURE SESSION</button>
+</section>
+<section class="m46-lab" id="m46WindowsLab" aria-label="M46 Windows Freighter acceptance">
+  <div class="m45-top"><strong>M46 · WINDOWS WALLET ACCEPTANCE</strong><span>READ ONLY</span></div>
+  <p>Verify the exact connected Freighter account in your Windows browser and independently recheck live Stellar Testnet balances. Wallet identity checks never request signatures or transfer funds.</p>
+  <div class="m45-meta">
+    <div>WALLET 1 · MAKER <b id="m46Wallet1">NOT CHECKED</b></div>
+    <div>WALLET 2 · TAKER <b id="m46Wallet2">NOT CHECKED</b></div>
+    <div>COMBINED STATUS <b id="m46Combined">PENDING</b></div>
+  </div>
+  <label class="m45-consent"><input type="checkbox" id="m46WindowsAck"> I am using the official Freighter extension on Windows, with Stellar Testnet selected. I will never enter a secret key or recovery phrase here.</label>
+  <button type="button" id="m46VerifyWallet1" class="m45-main" disabled>1 · SELECT WALLET 1 IN FREIGHTER · VERIFY READ ONLY</button>
+  <button type="button" id="m46VerifyWallet2" class="m45-main" disabled>2 · SWITCH TO WALLET 2 · VERIFY READ ONLY</button>
+  <button type="button" id="m46Reset" class="m45-reset">CLEAR WINDOWS ACCEPTANCE SESSION</button>
+  <p id="m46Status" role="status" aria-live="polite" class="m45-status">Both wallets must be checked separately. This lab cannot sign transactions, unpause M9 or enable trading.</p>
+  <p class="m45-no-send">WALLET IDENTITY CHECKS ONLY · NO SIGNATURES</p>
+</section>
 <section class="alternate hidden" id="alternateView"><div class="alternate-heading" id="altTitle">PORTFOLIO</div><p id="altDescription">This area is being developed.</p><div class="alternate-cards" id="alternateCards"><article><span>01 / ACCOUNT</span><h2>TESTNET BALANCES</h2><p>Real wallet balances are distinct from exchange collateral.</p></article><article><span>02 / UNIFIED MARGIN</span><h2>NOT DEPLOYED</h2><p>Account positions and margin health require Soroban clearing and risk contracts.</p></article><article><span>03 / MONEY MARKETS</span><h2>NOT DEPLOYED</h2><p>Supply and borrowing are unavailable until Soroban lending pools are verified.</p></article></div>
 <section id="networkPanel" class="network-panel hidden" aria-label="Stellar Testnet infrastructure diagnostics">
   <p class="infra-caution">READ-ONLY NETWORK DIAGNOSTICS. THIS IS NOT EXCHANGE CONTRACT READINESS. NO SPOT, PERPETUAL OR LENDING CONTRACTS ARE LIVE.</p>

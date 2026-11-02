@@ -78,7 +78,7 @@ test("M49 product status is transparent, shorter, and includes a real perp refer
   const terminal=await readFile(new URL("../app/terminal-ui.mjs",import.meta.url),"utf8");
   assert.match(html,/LIVE XLM CHARTS/);
   assert.match(html,/<summary>PRODUCT STATUS<\/summary>/);
-  assert.match(html,/M9 spot settlement contract is deployed but paused/);
+  assert.match(html,/M9 spot settlement is deployed and has been independently verified unpaused/);
   assert.match(html,/value="hyperliquid-perp"/);
   assert.match(html,/Live Order Book/);
   assert.doesNotMatch(html,/KRAKEN XLM\/USD · EXTERNAL SPOT ORDERS · NOT HOXO/);

@@ -26,7 +26,7 @@ test("M2 desktop: reference markets, tabs, non-executable order drafts",async()=
   const {page,context,errors}=await openTerminal("/app/?market=btc-usdc-perp");
   try{
     assert.equal(await page.locator("#marketLabel").innerText(),"BTC-PERP");
-    assert.match(await page.locator("#marketSubheading").innerText(),/EXTERNAL MARKET DATA/);
+    assert.match(await page.locator("#marketSubheading").innerText(),/PERP · REFERENCE MARKET/);
     await page.locator("#marketTrigger").click();
     await page.locator("#marketSearch").fill("xlm");
     await page.locator('[data-market-filter="spot"]').click();
@@ -400,7 +400,7 @@ test("M49 Chromium XLM-PERP opens real external perp depth by default and keeps 
     assert.equal(await page.locator("#tradeButton").isDisabled(),true);
     assert.equal(await page.locator("#marketPrimaryStat").innerText(),"REFERENCE PRICE");
     await page.locator(".announcement-details summary").click();
-    assert.match(await page.locator(".announcement-panel").innerText(),/M9 spot settlement contract is deployed but paused/);
+    assert.match(await page.locator(".announcement-panel").innerText(),/M9 spot settlement is deployed and has been independently verified unpaused/);
     await page.locator(".announcement-details summary").click();
     await page.locator('[data-book-view="trades"]').click();
     assert.equal(await page.locator("#m48BookFeed").isVisible(),false);
@@ -416,3 +416,63 @@ test("M49 Chromium XLM-PERP opens real external perp depth by default and keeps 
     assert.deepEqual(errors,[]);
   }finally{await context.close();}
 });
+
+test("M45 browser: controlled signing panel loads and remains non-executable while paused",async()=>{
+  const {page,context,errors}=await openTerminal("/app/?market=xlm-usdc-spot",{width:1280,height:900});
+  try{
+    await page.locator("#m45SigningLab").waitFor({state:"visible"});
+    assert.match(await page.locator("#m45NoSend").innerText(),/NO TRANSACTION SENT/);
+    assert.match(await page.locator("#m45Contract").innerText(),/NOT VERIFIED/);
+    assert.equal(await page.locator("#tradeButton").isDisabled(),true);
+    assert.equal(await page.locator("#m45Prepare").isDisabled(),true);
+    assert.equal(await page.locator("#m45SignTaker").isDisabled(),true);
+    assert.equal(await page.locator("#m45SignMaker").isDisabled(),true);
+    assert.equal(await page.locator("#m55Submit").isDisabled(),true);
+    await page.locator("#m55SendAck").check();
+    await page.locator("#m55SendPhrase").fill("SEND_SMALL_HOXO_STELLAR_TESTNET_SPOT");
+    assert.equal(await page.locator("#m55Submit").isDisabled(),true,
+      "final send confirmation alone never enables a trade without both Freighter signatures");
+    await page.locator("#m45TermsAck").check();
+    assert.equal(await page.locator("#m45Prepare").isDisabled(),true);
+    await page.locator("#m45Check").click();
+    await page.locator("#m45Check").waitFor({state:"visible"});
+    await page.waitForFunction(()=>document.querySelector("#m45Status")?.textContent.includes("preflight")||
+      document.querySelector("#m45Status")?.textContent.includes("fetch")||
+      document.querySelector("#m45Status")?.textContent.includes("network")||
+      document.querySelector("#m45Status")?.textContent.includes("not verified")||
+      document.querySelector("#m45Status")?.textContent.includes("Failed"));
+    assert.equal(await page.locator("#m45Prepare").isDisabled(),true);
+    assert.equal(await page.locator("#m45SignTaker").isDisabled(),true);
+    assert.equal(await page.locator("#m45SignMaker").isDisabled(),true);
+    await page.locator("#m45Reset").click();
+    assert.match(await page.locator("#m45NoSend").innerText(),/NO TRANSACTION SENT/);
+    assert.deepEqual(errors,[],"M45 bundle must not produce unhandled page errors");
+  }finally{await context.close();}
+});
+
+
+test("M46 Windows identity panel stays read-only without Freighter and has explicit opt-in",async()=>{
+  const {page,context,errors}=await openTerminal("/app/?market=xlm-usdc-spot",{width:1280,height:900});
+  try{
+    await page.locator("#m46WindowsLab").waitFor({state:"visible"});
+    assert.match(await page.locator("#m46Status").innerText(),/cannot sign transactions/);
+    assert.equal(await page.locator("#m46VerifyWallet1").isDisabled(),true);
+    assert.equal(await page.locator("#m46VerifyWallet2").isDisabled(),true);
+    await page.locator("#m46WindowsAck").check();
+    assert.equal(await page.locator("#m46VerifyWallet1").isDisabled(),false);
+    await page.locator("#m46VerifyWallet1").click();
+    await page.waitForFunction(()=>document.getElementById("m46Status")?.textContent.includes("Freighter extension"));
+    assert.match(await page.locator("#m46Status").innerText(),/No signature was requested/);
+    assert.match(await page.locator("#m46Combined").innerText(),/PENDING/);
+    assert.equal(await page.locator("#tradeButton").isDisabled(),true);
+    await page.locator("#m46Reset").click();
+    assert.equal(await page.locator("#m46VerifyWallet1").isDisabled(),true);
+    await page.locator('[data-view="portfolio"]').click();
+    assert.equal(await page.locator("#m46WindowsLab").isVisible(),false);
+    await page.locator('[data-view="trade"]').click();
+    assert.equal(await page.locator("#m46WindowsLab").isVisible(),true);
+    assert.deepEqual(errors,[]);
+  }finally{await context.close();}
+});
+
+

@@ -137,3 +137,54 @@
   .announcement{padding:7px 12px}
   .announcement-message{display:none}
 }
+
+/* M45 — internal, nonbroadcasting bilateral signing lab */
+.m45-lab{width:min(1100px,calc(100% - 32px));box-sizing:border-box;margin:20px auto 28px;padding:18px;border:1px solid #344b3a;background:var(--panel);font:10px/1.55 var(--mono);color:#afc1bd}
+.m45-top{display:flex;justify-content:space-between;gap:7px;align-items:center}
+.m45-top strong{color:#e0f2e4;letter-spacing:.02em;font-size:11px}.m45-top span{font-size:9px;color:#f5c88d;background:#403023;padding:4px 5px}
+.m45-lab p{font:10px/1.6 var(--mono);color:#91a49d;margin:9px 0 12px}
+.m45-meta{display:grid;grid-template-columns:1fr;gap:4px;padding:8px;background:#182222;border:1px solid #2f4641;margin:10px 0;font:9px/1.45 var(--mono)}
+.m45-meta>div{display:flex;justify-content:space-between;gap:8px}.m45-meta b{color:#d8eade;text-align:right;overflow-wrap:anywhere}
+.m45-main{display:block;width:100%;padding:11px 6px;color:#0d1c10;background:#b5d889;font:10px/1.4 var(--mono);font-weight:600;border:0;border-radius:2px;margin:8px 0;text-align:center;white-space:normal}
+.m45-main:disabled{opacity:.45;cursor:not-allowed;background:#687c6a}
+.m45-lab .m45-status{border-left:2px solid #657a4d;padding:7px 9px;background:#1f2925;color:#c1d3bd;overflow-wrap:anywhere}
+.m45-lab .m45-error{border-color:#b75b5b;color:#ffc4c4}
+.m45-amounts{display:grid;grid-template-columns:1fr;gap:7px;margin:12px 0}
+.m45-amounts label{font:9px/1.5 var(--mono);color:#b5c2c0}
+.m45-amounts input{display:block;width:100%;min-width:0;padding:9px;background:#151c1d;border:1px solid #3c4844;color:#f7f7eb;font:11px var(--mono);margin-top:4px;box-sizing:border-box}
+.m45-consent{display:flex;gap:8px;align-items:flex-start;font:10px/1.5 var(--mono);margin:10px 0;color:#c9d2ca}
+.m45-consent input{margin-top:3px;accent-color:#b5d889;flex:none}
+.m45-terms{font:9px/1.65 var(--mono);padding:9px;background:#101817;border:1px solid #2e3c37;white-space:pre-wrap;overflow-wrap:anywhere;max-height:220px;overflow:auto;color:#bbd5c2}
+.m45-no-send{padding:9px 7px;background:#31291f;color:#e4c794!important;border:1px solid #6e5833;text-align:center}
+.m45-reset{width:100%;font:9px var(--mono);background:transparent;border:1px solid #51645b;padding:8px;color:#a4b9ae}
+@media(min-width:1400px){.m45-amounts{grid-template-columns:1fr 1fr}}
+
+/* M46 — independent read-only wallet identity acceptance */
+.m46-lab{width:min(1100px,calc(100% - 32px));margin:14px auto 30px;padding:18px;background:var(--panel);box-sizing:border-box;border:1px solid #355043;color:#b6c9c0;font:11px/1.6 var(--mono)}
+.m46-lab p{font:10px/1.6 var(--mono);color:#a8bdb3}
+.m46-lab .m45-main{margin:9px 0}
+.m46-lab .m45-status{border-left:2px solid #617e6e;padding:9px;background:#182825;overflow-wrap:anywhere}
+.m46-lab .m45-error{border-left-color:#cc6575;color:#ffb5bb}
+.m46-lab .m45-no-send{border:1px solid #7c5f35;padding:9px;background:#2b2820;color:#ead2a5}
+
+
+
+
+
+/* M55 · explicit wallet-authorised Stellar Testnet settlement */
+.m55-final-review{background:#15241e;border:1px solid #3d6750;border-radius:3px;padding:15px;margin:14px 0;color:#c9e6d4}
+.m55-final-review>strong{display:block;font:700 12px var(--mono);color:#d5f0d9;margin-bottom:9px}
+.m55-final-review>p{font:10px/1.65 var(--mono);color:#abc7b4}
+.m55-phrase-label{display:block;margin:11px 0 5px;font:10px/1.6 var(--mono);color:#b3d3b8}
+.m55-phrase-label code{color:var(--lime);font:10px var(--mono);overflow-wrap:anywhere}
+#m55SendPhrase{display:block;width:100%;box-sizing:border-box;border:1px solid #5a7b5e;background:#0f1913;color:#f1f9ed;padding:11px 8px;font:10px/1.6 var(--mono)}
+#m55SendPhrase:focus-visible{outline:2px solid var(--lime);outline-offset:2px}
+#m55Submit{background:#5cd69a;color:#061c10;font-weight:700;margin-top:10px}
+#m55Submit:disabled{background:#253b31;color:#90a99d;cursor:not-allowed}
+#m55Receipt{overflow-wrap:anywhere;color:#e5f5df!important}
+#m55Receipt a{color:#94efb1}
+
+/* M55 small-amount wallet-approved spot testing entry from disabled general ticket */
+.m55-open-lab{width:100%;margin:9px 0;padding:11px 8px;border:1px solid #5c8c6c;border-radius:3px;background:#243d2f;color:#bef5c8;cursor:pointer;font:600 10px var(--mono)}
+.m55-open-lab:hover{background:#30553d}
+.m55-open-lab:focus-visible{outline:2px solid var(--lime);outline-offset:2px}

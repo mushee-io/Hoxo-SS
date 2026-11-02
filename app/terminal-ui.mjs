@@ -17,6 +17,9 @@ function setView(next){
   all("[data-view]").forEach(b=>b.classList.toggle("selected",b.dataset.view===view));
   $("tradeView").classList.toggle("hidden",view!=="trade");
   $("alternateView").classList.toggle("hidden",view==="trade");
+  $("m45SigningLab")?.classList.toggle("hidden",view!=="trade"||market.type!=="spot");
+  $("m55OpenLab")?.classList.toggle("hidden",view!=="trade"||market.type!=="spot");
+  $("m46WindowsLab")?.classList.toggle("hidden",view!=="trade");
   if(view==="portfolio"){
     $("altTitle").textContent="YOUR PORTFOLIO";
     $("altDescription").textContent="Testnet wallet balances appear under Trade → Balances. Exchange collateral, positions and margin are not deployed.";
@@ -73,6 +76,11 @@ function chooseSide(side){
     $(id).classList.toggle("selected",active);
     $(id).setAttribute("aria-pressed",String(active));
   }
+  const tradeSide=$("m51SpotSide");
+  if(market.type==="spot"&&tradeSide&&tradeSide.value!==side){
+    tradeSide.value=side;
+    tradeSide.dispatchEvent(new Event("input",{bubbles:true}));
+  }
 }
 function closeMenu(){
   $("marketMenu").classList.add("hidden");
@@ -103,6 +111,10 @@ function renderMenu(){
 function chooseMarket(id){
   const previousMarket=market.id;
   market=getMarket(id);
+  if(previousMarket!==market.id)
+    window.dispatchEvent(new CustomEvent("hoxo:market-change",{detail:{market:market.id}}));
+  $("m45SigningLab")?.classList.toggle("hidden",market.type!=="spot"||view!=="trade");
+  $("m55OpenLab")?.classList.toggle("hidden",market.type!=="spot"||view!=="trade");
   if(previousMarket!==market.id){
     // Return to live market depth when switching instruments. The earlier
     // Trades tab is Hoxo fills only, so it may correctly have no entries.
@@ -110,7 +122,7 @@ function chooseMarket(id){
   }
   $("marketLabel").textContent=market.label;
   $("marketSubheading").textContent=market.type==="spot"?
-    "SPOT · EXTERNAL MARKET DATA":"PERPETUAL · EXTERNAL MARKET DATA";
+    "SPOT · STELLAR TESTNET SETTLEMENT":"PERP · REFERENCE MARKET";
   $("marketPrimaryStat").textContent="REFERENCE PRICE"; // M47 is Kraken spot, not a perp mark price
   $("fundingStatLabel").textContent=market.type==="spot"?"FUNDING / N/A":"FUNDING / 1H";
   $("marginMode").textContent=market.type==="spot"?"SPOT · TESTNET":"PERP · TESTNET PREVIEW";
@@ -157,6 +169,10 @@ all("[data-timeframe]").forEach(b=>b.addEventListener("click",()=>{
 all("[data-order-type]").forEach(b=>b.addEventListener("click",()=>chooseOrderType(b.dataset.orderType)));
 $("buySide").addEventListener("click",()=>chooseSide("buy"));
 $("sellSide").addEventListener("click",()=>chooseSide("sell"));
+$("m55OpenLab")?.addEventListener("click",()=>{
+  if(market.type!=="spot")return;
+  $("m45SigningLab")?.scrollIntoView({behavior:"smooth",block:"start"});
+});
 $("orderSize").addEventListener("input",updateDraft);
 $("limitPrice").addEventListener("input",updateDraft);
 const initialView=window.location.hash.slice(1);
