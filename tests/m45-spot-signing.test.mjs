@@ -1,9 +1,9 @@
-import {Account} from "@stellar/stellar-sdk";
+import {Account,Keypair} from "@stellar/stellar-sdk";
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
 import {TESTNET_PASSPHRASE,M9_TESTNET_CONTRACT_ID} from "../app/m43-freighter-auth-guard.mjs";
-import {M45_CANDIDATE,checkM45TestnetPreflight} from "../app/m45-spot-preflight.mjs";
+import {M45_CANDIDATE,createM45ParticipantCandidate,checkM45TestnetPreflight} from "../app/m45-spot-preflight.mjs";
 import {draftM45BilateralTerms,simulateM45BilateralSpot,verifyM51TradeCapacity}
   from "../app/m45-spot-simulation.mjs";
 import {createM45SigningLab} from "../app/m45-signing-lab.mjs";
@@ -268,11 +268,47 @@ test("M55 real Soroban MatchTerms map uses canonical sorted keys for contracttyp
     "Soroban contracttype maps MUST be lexicographically canonical");
 });
 
-test("M60 transaction builder rejects 10 XLM even if a user bypasses the ticket",()=>{
-  assert.throws(()=>draftM45BilateralTerms({
-    xlmAmount:"10",usdcAmount:"1.7",side:"buy",ledger:1000
-  }),/0\.1 XLM/);
-  assert.throws(()=>draftM45BilateralTerms({
-    xlmAmount:"0.1000001",usdcAmount:"0.017",side:"sell",ledger:1000
-  }),/0\.1 XLM/);
+
+test("M61 contract-bounded 10 and 10m XLM terms accept user-chosen participants",()=>{
+  const maker=Keypair.random().publicKey(),taker=Keypair.random().publicKey();
+  const terms=draftM45BilateralTerms({xlmAmount:"10",usdcAmount:"1.7",
+    side:"buy",ledger:1000,maker,taker});
+  assert.equal(terms.base_amount,"100000000");
+  assert.equal(terms.quote_amount,"17000000");
+  assert.equal(terms.maker,maker);
+  assert.equal(terms.taker,taker);
+  const large=draftM45BilateralTerms({xlmAmount:"10000000",usdcAmount:"1700000",
+    side:"sell",ledger:1000,maker,taker});
+  assert.equal(large.base_amount,"100000000000000");
+  assert.throws(()=>draftM45BilateralTerms({xlmAmount:"100000001",usdcAmount:"17000000",
+    ledger:1000,maker,taker}),/out of bounds/);
+  assert.throws(()=>draftM45BilateralTerms({xlmAmount:"10",usdcAmount:"1.7",
+    ledger:1000,maker,taker:maker}),/two different valid/);
+  assert.throws(()=>createM45ParticipantCandidate({maker:"invalid",taker}),/two distinct valid/);
+});
+test("M61 preflight verifies arbitrary public participant wallets, keeping pinned contract owner",async()=>{
+  const maker=Keypair.random().publicKey(),taker=Keypair.random().publicKey();
+  const candidate=createM45ParticipantCandidate({maker,taker});
+  const customHorizon=async(url,options)=>{
+    if(url.endsWith("/accounts/"+maker)||url.endsWith("/accounts/"+taker)){
+      assert.equal(options.method,"GET");
+      return {ok:true,json:async()=>({
+        account_id:url.endsWith(maker)?maker:taker,
+        balances:[{asset_type:"native",balance:"100.0000000"},
+          {asset_type:"credit_alphanum4",asset_code:"USDC",
+          asset_issuer:M45_CANDIDATE.quoteIssuer,
+          balance:"50.0000000",is_authorized:true}]
+      })};
+    }
+    return horizon()(url,options);
+  };
+  await fakeHash(async()=>{
+    const proof=await checkM45TestnetPreflight({
+      server:fakeRpc({paused:false}),fetchImpl:customHorizon,candidate,nowMs
+    });
+    assert.equal(proof.readyForSimulation,true);
+    assert.equal(proof.wallets[0].address,maker);
+    assert.equal(proof.wallets[1].address,taker);
+    assert.equal(proof.blockers.length,0);
+  });
 });
