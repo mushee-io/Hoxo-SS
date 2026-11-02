@@ -37,3 +37,12 @@ test("M58 rejects self trades, incorrect side, forged ledger and reused order ID
  maker_order_id:base[buy.matchId].maker_order_id}};
  await assert.rejects(run(rpc({receipts})),/reused order/);
 });
+
+test("M58 accepts native Soroban bytes32 match IDs and i128 BigInt amounts",async()=>{
+ const receipts={...base,[buy.matchId]:{...base[buy.matchId],
+ match_id:Uint8Array.from(buy.matchId.match(/../g),x=>parseInt(x,16)),
+ base_amount:100000n,quote_amount:17000n}};
+ const proof=await run(rpc({receipts}));
+ assert.equal(proof.buyAndSellOnchainVerified,true);
+ assert.equal(proof.volumeAttributionApproved,false);
+});
