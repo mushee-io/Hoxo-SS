@@ -359,3 +359,60 @@ test("M48 Chromium shows real-shaped red/green Kraken orderbook and switch to ge
     assert.deepEqual(errors,[],"M48 must not throw in the browser");
   }finally{await context.close();}
 });
+
+
+test("M49 Chromium XLM-PERP opens real external perp depth by default and keeps Hoxo fills separate",async()=>{
+  const context=await browser.newContext({viewport:{width:1440,height:900}});
+  const hits=[];
+  await context.route("**/*",async route=>{
+    const url=route.request().url();
+    if(url.startsWith(BASE+"/api/market-orderbook?")){
+      const source=new URL(url).searchParams.get("source");
+      hits.push(source);
+      if(source==="hyperliquid-perp")return route.fulfill({
+        status:200,contentType:"application/json",
+        body:JSON.stringify({
+          sourceKind:"hyperliquid-perp",source:"Hyperliquid",
+          marketType:"perpetual",market:"XLM perpetual",
+          externalMainnet:true,quoteCurrency:"USD",currency:"USD",
+          marginCurrency:"USDC",executable:false,hoxoFills:false,
+          tradeExecutable:false,hoxoSettlementEnabled:false,
+          bids:[{price:0.168,amount:13,total:2.184,orderCount:2}],
+          asks:[{price:0.169,amount:12,total:2.028,orderCount:3}],
+          spread:0.001,observedAtMs:Date.now()
+        })
+      });
+      return route.fulfill({status:503,contentType:"application/json",
+        body:JSON.stringify({error:"unavailable"})});
+    }
+    if(url.startsWith(BASE+"/"))return route.continue();
+    return route.abort();
+  });
+  const page=await context.newPage(),errors=[];
+  page.on("pageerror",e=>errors.push(e.message));
+  try{
+    await page.goto(BASE+"/app/?market=xlm-usdc-perp",{waitUntil:"domcontentloaded"});
+    await page.locator(".m48-bid .m48-price").first().waitFor({state:"visible",timeout:15000});
+    assert.equal(await page.locator("#m48BookSource").inputValue(),"hyperliquid-perp");
+    assert.equal(await page.locator("#bookPriceHeading").innerText(),"PRICE (USD)");
+    assert.match(await page.locator("#m48BookSourceWarning").innerText(),/HYPERLIQUID XLM PERP/);
+    assert.match(await page.locator("#m48BookStatus").innerText(),/Hyperliquid/);
+    assert.equal(await page.locator("#tradeButton").isDisabled(),true);
+    assert.equal(await page.locator("#marketPrimaryStat").innerText(),"REFERENCE PRICE");
+    await page.locator(".announcement-details summary").click();
+    assert.match(await page.locator(".announcement-panel").innerText(),/M9 spot settlement contract is deployed but paused/);
+    await page.locator(".announcement-details summary").click();
+    await page.locator('[data-book-view="trades"]').click();
+    assert.equal(await page.locator("#m48BookFeed").isVisible(),false);
+    await page.locator("#marketTrigger").click();
+    await page.locator("#marketResults .market-item").filter({hasText:"XLM/USDC"}).first().click();
+    assert.equal(await page.locator('[data-book-view="book"]').getAttribute("aria-pressed"),"true");
+    assert.equal(await page.locator("#m48BookSource").inputValue(),"kraken");
+    await page.locator("#marketTrigger").click();
+    await page.locator("#marketResults .market-item").filter({hasText:"XLM-PERP"}).first().click();
+    await page.locator(".m48-bid .m48-price").first().waitFor({state:"visible",timeout:15000});
+    assert.equal(await page.locator("#m48BookSource").inputValue(),"hyperliquid-perp");
+    assert.ok(hits.includes("hyperliquid-perp"),JSON.stringify(hits));
+    assert.deepEqual(errors,[]);
+  }finally{await context.close();}
+});
