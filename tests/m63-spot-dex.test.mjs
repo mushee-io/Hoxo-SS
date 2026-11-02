@@ -56,6 +56,10 @@ test("M63 verifies real quote token balance/trustline and native reserve before 
     }]});
   const account=make("100.0000000","4.0000000");
   const balance=readUsdcBalance(account);
+  assert.doesNotThrow(()=>readUsdcBalance({...account,
+    balances:account.balances.map(item=>item.asset_code==="USDC"?
+      {...item,is_authorized_to_maintain_liabilities:true}:item)}),
+    "fully authorized trustline may expose a liability-maintenance flag");
   const buy=quoteDirectXlmUsdc({side:"buy",quantityXlm:"10",book,nowMs});
   assert.equal(assertCapacity({side:"buy",quote:buy,balance,account}),true);
   const sell=quoteDirectXlmUsdc({side:"sell",quantityXlm:"10",book,nowMs});
