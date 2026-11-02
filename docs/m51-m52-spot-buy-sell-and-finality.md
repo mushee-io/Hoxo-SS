@@ -53,3 +53,8 @@ Receipt verification now requires the M9 `maker_side` to be the exact numeric si
 The RPC submission response must report the SHA-256 transaction hash computed by the official Stellar SDK from the **exact already-verified signed transaction envelope**. A well-formed but different RPC hash fails closed **before** polling finality or accepting a receipt. This prevents accidentally attributing another transaction's SUCCESS to the approved two-party spot settlement. Tests cover the matching canonical hash, uppercase hex, malformed lengths, invalid types and substituted hashes. This check does not itself establish a signed on-chain trade; user-controlled authorization and independent balance/receipt checks remain mandatory.
 
 **Operational note:** The earlier documentation describing M9 as paused is historical. A separate read-only M41 rerun on 2026-11-02 at ~11:13 UTC reported M9 unpaused with XLM/USDC enabled; revalidate the current ledger before any approved send. No automatic unpause or send is performed here.
+
+
+### M52 parser and finality regression (2026-11-02)
+
+The exact signed-envelope hash must be compared with the RPC submission hash before finality polling; the poller receives only the verified canonical hash. A source-level regression test now checks this invocation and guards against an accidentally escaped `\\n` token in the module. This correction is **code-only**, does not authorize submission, and requires passing GitHub CI before review or merge. The existing separate operator acknowledgement and independent Testnet safety checks remain mandatory.
