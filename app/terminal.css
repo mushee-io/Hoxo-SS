@@ -188,3 +188,21 @@
 .m55-open-lab{width:100%;margin:9px 0;padding:11px 8px;border:1px solid #5c8c6c;border-radius:3px;background:#243d2f;color:#bef5c8;cursor:pointer;font:600 10px var(--mono)}
 .m55-open-lab:hover{background:#30553d}
 .m55-open-lab:focus-visible{outline:2px solid var(--lime);outline-offset:2px}
+
+
+/* M59 — verified Testnet-only Hoxo settlements and public transaction hashes */
+.m59-inline-summary{padding:10px 13px;background:#13251d;color:#c2e9cc;border-bottom:1px solid #244836;font:600 10px/1.6 var(--mono);overflow-wrap:anywhere}
+.m59-settlements{padding:16px 12px;border-bottom:1px solid #2c453b;background:#10201a;max-height:370px;overflow-y:auto}
+.m59-settlements>strong{display:block;font:700 11px var(--mono);color:#d7f4dd;margin-bottom:9px}
+#m59Status,.m59-none{font:10px/1.7 var(--mono);color:#a8c8b5}
+.m59-trades{display:flex;flex-direction:column;gap:5px;padding-top:7px}
+.m59-trade-row{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;padding:7px 4px;border-top:1px solid #2b4a3a;font:10px/1.4 var(--mono);color:#deeae0}
+.m59-trade-row a{color:#9beeab;text-decoration:underline;overflow-wrap:anywhere}
+.m59-trade-row small{grid-column:1/-1;color:#94ad9d}
+.m59-settlements a:focus-visible{outline:2px solid #9beeab;outline-offset:2px}
+
+/* Explicit reviewed Testnet spot ticket (not an automatic market order) */
+#tradeButton.trade-review{width:100%;padding:12px 10px;background:#1b6341;color:#e4ffea;border:1px solid #66d99a;border-radius:4px;cursor:pointer;font:700 11px var(--mono)}
+#tradeButton.trade-review:hover{background:#287e57}
+#tradeButton.trade-review:focus-visible{outline:2px solid #b5ffce;outline-offset:3px}
+#tradeButton:disabled{cursor:not-allowed}

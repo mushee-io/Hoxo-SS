@@ -76,7 +76,7 @@ test("M49 product status is transparent, shorter, and includes a real perp refer
   const html=await readFile(new URL("../app/index.html",import.meta.url),"utf8");
   const ui=await readFile(new URL("../app/m48-orderbook-ui.mjs",import.meta.url),"utf8");
   const terminal=await readFile(new URL("../app/terminal-ui.mjs",import.meta.url),"utf8");
-  assert.match(html,/LIVE XLM CHARTS/);
+  assert.match(html,/VERIFIED STELLAR TESTNET/);
   assert.match(html,/<summary>PRODUCT STATUS<\/summary>/);
   assert.match(html,/M9 spot settlement is deployed and has been independently verified unpaused/);
   assert.match(html,/value="hyperliquid-perp"/);
@@ -88,5 +88,5 @@ test("M49 product status is transparent, shorter, and includes a real perp refer
   assert.match(terminal,/bookView="book";selectGroup/);
   assert.match(terminal,/REFERENCE PRICE/);
   assert.doesNotMatch(terminal,/"MARK PRICE"/);
-  assert.match(html,/id="tradeButton"[^>]+disabled/);
+  assert.match(html,/id="tradeButton"[^>]+class="trade-review"/);
 });

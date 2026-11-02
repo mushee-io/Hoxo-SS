@@ -1,4 +1,4 @@
-import {getMarket,filterMarkets,orderDraft} from "./terminal-state.mjs";
+import {getMarket,filterMarkets,orderDraft,parseAmount7} from "./terminal-state.mjs";
 
 /** M2 — interface-only exchange workspace, explicitly no trading operations. */
 const $=id=>document.getElementById(id);
@@ -76,6 +76,13 @@ function chooseSide(side){
     $(id).classList.toggle("selected",active);
     $(id).setAttribute("aria-pressed",String(active));
   }
+  const spotAction=market.id==="xlm-usdc-spot";
+  const tradeButton=$("tradeButton");
+  tradeButton.disabled=!spotAction;
+  tradeButton.classList.toggle("trade-review",spotAction);
+  tradeButton.textContent=spotAction?
+    "REVIEW SMALL TESTNET "+(side==="buy"?"BUY":"SELL"):
+    "PERP EXECUTION NOT YET DEPLOYED";
   const tradeSide=$("m51SpotSide");
   if(market.type==="spot"&&tradeSide&&tradeSide.value!==side){
     tradeSide.value=side;
@@ -123,7 +130,8 @@ function chooseMarket(id){
   $("marketLabel").textContent=market.label;
   $("marketSubheading").textContent=market.type==="spot"?
     "SPOT · STELLAR TESTNET SETTLEMENT":"PERP · REFERENCE MARKET";
-  $("marketPrimaryStat").textContent="REFERENCE PRICE"; // M47 is Kraken spot, not a perp mark price
+  $("marketPrimaryStat").textContent=market.type==="spot"?
+    "LAST VERIFIED M9 PRICE":"PERP REFERENCE PRICE";
   $("fundingStatLabel").textContent=market.type==="spot"?"FUNDING / N/A":"FUNDING / 1H";
   $("marginMode").textContent=market.type==="spot"?"SPOT · TESTNET":"PERP · TESTNET PREVIEW";
   $("sizeAssetLabel").textContent=market.base;
@@ -132,6 +140,7 @@ function chooseMarket(id){
   $("buySide").textContent=market.type==="spot"?"BUY":"BUY / LONG";
   $("sellSide").textContent=market.type==="spot"?"SELL":"SELL / SHORT";
   $("orderSize").value="";$("limitPrice").value="";
+  chooseSide($("buySide").getAttribute("aria-pressed")==="true"?"buy":"sell");
   updateChart();updateBook();updateDraft();setView(view);
 }
 all("[data-view]").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.view)));
@@ -169,10 +178,25 @@ all("[data-timeframe]").forEach(b=>b.addEventListener("click",()=>{
 all("[data-order-type]").forEach(b=>b.addEventListener("click",()=>chooseOrderType(b.dataset.orderType)));
 $("buySide").addEventListener("click",()=>chooseSide("buy"));
 $("sellSide").addEventListener("click",()=>chooseSide("sell"));
-$("m55OpenLab")?.addEventListener("click",()=>{
-  if(market.type!=="spot")return;
+function openSpotSettlementReview(){
+  if(market.id!=="xlm-usdc-spot")return;
+  const requested=$("orderSize").value.trim();
+  if(requested){
+    const units=parseAmount7(requested);
+    if(units===null||units>1_000_000n){
+      $("draftFeedback").textContent=
+        "The first signed Testnet settlement is limited to 0.1 XLM. "+
+        "Review a smaller quantity and a manually agreed USDC amount below.";
+    }else{
+      $("m45Xlm").value=requested;
+      $("m45Xlm").dispatchEvent(new Event("input",{bubbles:true}));
+    }
+  }
   $("m45SigningLab")?.scrollIntoView({behavior:"smooth",block:"start"});
-});
+  $("m45Check")?.focus();
+}
+$("tradeButton").addEventListener("click",openSpotSettlementReview);
+$("m55OpenLab")?.addEventListener("click",openSpotSettlementReview);
 $("orderSize").addEventListener("input",updateDraft);
 $("limitPrice").addEventListener("input",updateDraft);
 const initialView=window.location.hash.slice(1);

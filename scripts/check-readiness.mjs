@@ -9,6 +9,7 @@ const read=async(path)=>await readFile(new URL(path,root),"utf8");
 const registry=validateRegistry(JSON.parse(await read("registry/testnet.json")));
 const markets=validateMarketRegistry(JSON.parse(await read("registry/market-data.testnet.json")));
 const app=await read("app/index.html");
+const terminalUi=await read("app/terminal-ui.mjs");
 const risk=await read("contracts/risk-engine/src/lib.rs");
 const analytics=await read("crates/risk-math/src/m16.rs");
 const vault=await read("contracts/collateral-vault/src/lib.rs");
@@ -50,7 +51,9 @@ const m24Incident=await read("mainnet/incident.mjs");
 const invariants={
   noVerifiedExchangeContracts:registry.deployedVerified===0 && registry.candidateContracts===0,
   noApprovedRiskOracle:markets.oracleStatus.startsWith("HALTED") && markets.configured===0,
-  uiExecutionDisabled:app.includes('id="tradeButton" class="trade-disabled" disabled'),
+  uiExecutionDisabled:app.includes('id="tradeButton" type="button" class="trade-review"')&&
+    app.includes('id="m55Submit" class="m45-main m55-send" disabled')&&
+    terminalUi.includes('PERP EXECUTION NOT YET DEPLOYED'),
   uiCustodyDisabled:app.includes("<button disabled>DEPOSIT</button>") && app.includes("<button disabled>WITHDRAW</button>"),
   sandboxUnsettled:!sandbox.tradingEnabled && !sandbox.settleable && !sandbox.onchain,
   riskExecutionGateDisabled:risk.includes("pub fn authorization_enabled() -> bool { false }") &&
@@ -143,7 +146,8 @@ const invariants={
     matchingCore.includes('SIGNED_SANDBOX_OPERATOR_NOT_M5_ORACLE')&&
     !matchingCore.includes('broadcastTransaction('),
   m17ReadinessStillBlocked:registry.deployedVerified===0&&
-    app.includes('id="tradeButton" class="trade-disabled" disabled'),
+    terminalUi.includes('PERP EXECUTION NOT YET DEPLOYED')&&
+    app.includes("general order matching remains under development"),
   m18HorizonNotSettlement:walletHistory.includes('HORIZON_REPORTED_SUCCESS')&&
     walletHistory.includes('hoxoTrade:false,hoxoDeposit:false')&&
     walletHistory.includes('validateHorizonRoot('),

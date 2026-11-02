@@ -78,7 +78,7 @@ test("M1: landing, mobile menu, and terminal navigation use real local resources
   assert.match(html, /href="\.\/docs\/milestones\.md"/);
   assert.match(css, /@media\(max-width:760px\)/);
   assert.match(css, /prefers-reduced-motion/);
-  assert.match(terminal, /GENERAL MARKET ORDERS · NOT ACTIVE/);
+  assert.match(terminal, /REVIEW SMALL TESTNET BUY/);
   for (const path of ["assets/landing.mjs", "assets/testnet-status.mjs", "assets/icon.svg", "app/index.html", "app/terminal.js", "docs/milestones.md"]) {
     await access(resolve(root, path));
   }
@@ -88,7 +88,7 @@ test("M1: landing links and terminal are strictly no-deposit/no-trade demos", as
   const html = await readFile(resolve(root, "index.html"), "utf8");
   const terminal = await readFile(resolve(root, "app/index.html"), "utf8");
   assert.match(html, /TRADING, BORROWING, MARGIN TRANSFERS AND CONTRACT DEPOSITS REMAIN DISABLED/);
-  assert.match(terminal, /disabled>GENERAL MARKET ORDERS · NOT ACTIVE/);
+  assert.match(terminal, /id="tradeButton"[^>]+class="trade-review"/);
   assert.match(terminal, /<button disabled>DEPOSIT<\/button>/);
   assert.match(terminal, /<button disabled>WITHDRAW<\/button>/);
 });

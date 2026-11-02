@@ -83,16 +83,18 @@ test("M47 external market proxy restricts pair and interval and never reports ex
       assert.throws(()=>validateM47Request(input),/M47 candles/);
 });
 
-test("M47 price terminal labels Kraken USD reference and preserves disabled Hoxo wallet settlement",async()=>{
+test("M59 terminal uses contract-verified Hoxo Testnet settlement prices instead of default Kraken bars",async()=>{
   const html=await readFile(new URL("../app/index.html",import.meta.url),"utf8");
-  const ui=await readFile(new URL("../app/m47-live-chart-ui.mjs",import.meta.url),"utf8");
+  const ui=await readFile(new URL("../app/m59-activity-ui.mjs",import.meta.url),"utf8");
   const main=await readFile(new URL("../app/terminal-ui.mjs",import.meta.url),"utf8");
   for(const id of ["m47CandleCanvas","m47ChartSurface","m47SourceStatus","m47LastPrice",
-     "m47LastPriceSource","marketPrice"])assert.match(html,new RegExp("id=\""+id+"\""));
-  assert.match(html,/m47-live-chart-ui\.mjs/);
+    "m47LastPriceSource","marketPrice","m59Volume","m59TradeRows"])
+    assert.match(html,new RegExp('id="'+id+'"'));
+  assert.ok(html.includes("m59-activity-ui.mjs"));
+  assert.doesNotMatch(html,/Kraken|KRAKEN/);
+  assert.ok(!html.includes("m47-live-chart-ui.mjs"));
   assert.match(main,/hoxo:chart-selection/);
-  assert.match(ui,/KRAKEN XLM\/USD/);
-  assert.match(ui,/XLM\/USD · KRAKEN SPOT REFERENCE · USD/);
-  assert.doesNotMatch(ui,/\.sendTransaction\(|\.signTransaction\(|set_pause\(false\)/);
-  assert.match(html,/id="tradeButton"[^>]+disabled/);
+  assert.match(ui,/hoxo-testnet-activity/);
+  assert.doesNotMatch(ui,/Kraken|sendTransaction|signTransaction|set_pause/);
+  assert.match(html,/id="tradeButton"[^>]+class="trade-review"/);
 });

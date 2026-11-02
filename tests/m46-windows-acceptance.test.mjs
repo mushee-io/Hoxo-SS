@@ -128,7 +128,7 @@ test("M46 Windows screen has two explicit read-only controls without sign/submit
   assert.match(ui,/createM46WindowsAcceptance/);
   assert.doesNotMatch(ui+acceptance,/\.(?:signAuthEntry|signTransaction|sendTransaction|signAndSend|requestAccess)\s*\(/);
   assert.doesNotMatch(ui+acceptance,/set_pause\(false\)|submit:\s*true/);
-  assert.match(html,/id="tradeButton"[^>]+disabled/);
+  assert.match(html,/id="tradeButton"[^>]+class="trade-review"/);
 });
 
 test("M46 rejects wallet API errors, secret fields and accessor tricks without executing getters",async()=>{
