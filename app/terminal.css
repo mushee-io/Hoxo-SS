@@ -101,3 +101,11 @@
 .m45-no-send{padding:9px 7px;background:#31291f;color:#e4c794!important;border:1px solid #6e5833;text-align:center}
 .m45-reset{width:100%;font:9px var(--mono);background:transparent;border:1px solid #51645b;padding:8px;color:#a4b9ae}
 @media(min-width:1400px){.m45-amounts{grid-template-columns:1fr 1fr}}
+
+/* M46 — independent read-only wallet identity acceptance */
+.m46-lab{width:min(1100px,calc(100% - 32px));margin:14px auto 30px;padding:18px;background:var(--panel);box-sizing:border-box;border:1px solid #355043;color:#b6c9c0;font:11px/1.6 var(--mono)}
+.m46-lab p{font:10px/1.6 var(--mono);color:#a8bdb3}
+.m46-lab .m45-main{margin:9px 0}
+.m46-lab .m45-status{border-left:2px solid #617e6e;padding:9px;background:#182825;overflow-wrap:anywhere}
+.m46-lab .m45-error{border-left-color:#cc6575;color:#ffb5bb}
+.m46-lab .m45-no-send{border:1px solid #7c5f35;padding:9px;background:#2b2820;color:#ead2a5}
