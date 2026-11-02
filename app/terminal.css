@@ -165,3 +165,8 @@
 #m55Submit:disabled{background:#253b31;color:#90a99d;cursor:not-allowed}
 #m55Receipt{overflow-wrap:anywhere;color:#e5f5df!important}
 #m55Receipt a{color:#94efb1}
+
+/* M55 small-amount wallet-approved spot testing entry from disabled general ticket */
+.m55-open-lab{width:100%;margin:9px 0;padding:11px 8px;border:1px solid #5c8c6c;border-radius:3px;background:#243d2f;color:#bef5c8;cursor:pointer;font:600 10px var(--mono)}
+.m55-open-lab:hover{background:#30553d}
+.m55-open-lab:focus-visible{outline:2px solid var(--lime);outline-offset:2px}
