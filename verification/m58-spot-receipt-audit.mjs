@@ -24,6 +24,8 @@ export async function auditM58SpotPair({rpc,contractId,buy,sell}={}){
   // Require transaction-local, contract-scoped evidence from an independent RPC decoder.
   if(!Array.isArray(tx.contractEvents)||!tx.contractEvents.some(e=>
      e&&e.contractId===contractId&&e.type==="settled"&&
+     typeof e.txHash==="string"&&hashPattern.test(e.txHash)&&e.txHash.toLowerCase()===txHash&&
+     e.ledger===tx.ledger&&
      typeof e.matchId==="string"&&hashPattern.test(e.matchId)&&
      e.matchId.toLowerCase()===matchId&&e.makerSide===side))
     fail("transaction does not contain matching M9 settlement event");
