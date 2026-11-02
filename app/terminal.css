@@ -82,7 +82,7 @@
 
 
 /* M45 — internal, nonbroadcasting bilateral signing lab */
-.m45-lab{margin-top:20px;padding:13px 0;border-top:2px solid #344b3a;font:10px/1.55 var(--mono);color:#afc1bd}
+.m45-lab{width:min(1100px,calc(100% - 32px));box-sizing:border-box;margin:20px auto 28px;padding:18px;border:1px solid #344b3a;background:var(--panel);font:10px/1.55 var(--mono);color:#afc1bd}
 .m45-top{display:flex;justify-content:space-between;gap:7px;align-items:center}
 .m45-top strong{color:#e0f2e4;letter-spacing:.02em;font-size:11px}.m45-top span{font-size:9px;color:#f5c88d;background:#403023;padding:4px 5px}
 .m45-lab p{font:10px/1.6 var(--mono);color:#91a49d;margin:9px 0 12px}
