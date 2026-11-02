@@ -288,3 +288,28 @@ test("M45 browser: controlled signing panel loads and remains non-executable whi
     assert.deepEqual(errors,[],"M45 bundle must not produce unhandled page errors");
   }finally{await context.close();}
 });
+
+
+test("M46 Windows identity panel stays read-only without Freighter and has explicit opt-in",async()=>{
+  const {page,context,errors}=await openTerminal("/app/?market=xlm-usdc-spot",{width:1280,height:900});
+  try{
+    await page.locator("#m46WindowsLab").waitFor({state:"visible"});
+    assert.match(await page.locator("#m46Status").innerText(),/cannot sign transactions/);
+    assert.equal(await page.locator("#m46VerifyWallet1").isDisabled(),true);
+    assert.equal(await page.locator("#m46VerifyWallet2").isDisabled(),true);
+    await page.locator("#m46WindowsAck").check();
+    assert.equal(await page.locator("#m46VerifyWallet1").isDisabled(),false);
+    await page.locator("#m46VerifyWallet1").click();
+    await page.waitForFunction(()=>document.getElementById("m46Status")?.textContent.includes("Freighter extension"));
+    assert.match(await page.locator("#m46Status").innerText(),/No signature was requested/);
+    assert.match(await page.locator("#m46Combined").innerText(),/PENDING/);
+    assert.equal(await page.locator("#tradeButton").isDisabled(),true);
+    await page.locator("#m46Reset").click();
+    assert.equal(await page.locator("#m46VerifyWallet1").isDisabled(),true);
+    await page.locator('[data-view="portfolio"]').click();
+    assert.equal(await page.locator("#m46WindowsLab").isVisible(),false);
+    await page.locator('[data-view="trade"]').click();
+    assert.equal(await page.locator("#m46WindowsLab").isVisible(),true);
+    assert.deepEqual(errors,[]);
+  }finally{await context.close();}
+});
