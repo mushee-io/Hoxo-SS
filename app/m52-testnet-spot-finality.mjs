@@ -43,8 +43,10 @@ export function verifyM52Receipt(receipt,terms){
      !sameReceiptId(receipt.taker_order_id,terms.taker_order_id)||
      receipt.maker!==terms.maker||receipt.taker!==terms.taker||
      receipt.base_token!==M44_XLM_SAC||receipt.quote_token!==M44_USDC_SAC||
-     String(receipt.base_amount)!==terms.base_amount||
-     String(receipt.quote_amount)!==terms.quote_amount||
+     typeof receipt.base_amount!=="string"||
+     receipt.base_amount!==terms.base_amount||
+     typeof receipt.quote_amount!=="string"||
+     receipt.quote_amount!==terms.quote_amount||
      receipt.maker_side!==terms.maker_side||
      !Number.isSafeInteger(receipt.settled_ledger)||
      receipt.settled_ledger<=0)
