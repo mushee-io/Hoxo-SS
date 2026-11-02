@@ -364,7 +364,7 @@ test("M45 browser: controlled signing panel loads and remains non-executable whi
   const {page,context,errors}=await openTerminal("/app/?market=xlm-usdc-spot",{width:1280,height:900});
   try{
     await page.locator("#m45SigningLab").waitFor({state:"visible"});
-    assert.match(await page.locator("#m45NoSend").innerText(),/NO BROADCAST/);
+    assert.match(await page.locator("#m45NoSend").innerText(),/NO TRANSACTION SENT/);
     assert.match(await page.locator("#m45Contract").innerText(),/NOT VERIFIED/);
     assert.equal(await page.locator("#tradeButton").isDisabled(),true);
     assert.equal(await page.locator("#m45Prepare").isDisabled(),true);
