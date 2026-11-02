@@ -81,6 +81,8 @@ test("M50 strict Horizon account trades are not fabricated Hoxo/perp fills or yi
     {...trade,base_amount:"1e5"},
     {...trade,trade_type:"hoxo"},
     {...trade,ledger_close_time:new Date(NOW+40000).toISOString()},
+    {...trade,ledger_close_time:"1970-01-01T00:00:00.000Z"},
+    {...trade,ledger_close_time:"2010-04-01T12:00:00.000Z"},
     {...trade,counter_asset_issuer:"GFAKE"}
   ])assert.throws(()=>normalizeM50Trade(bad,OWNER,NOW));
 });
