@@ -96,3 +96,25 @@
  .m47-last-price span{max-width:170px}
  #m47SourceStatus{max-width:140px}
 }
+
+
+/* M48 — strictly observed external and classic Testnet order books */
+.m48-book-feed{padding:10px 11px 9px;border-bottom:1px solid var(--edge);display:grid;grid-template-columns:minmax(0,1fr) 26px;column-gap:7px;row-gap:5px;background:#111a1b}
+.m48-book-feed label{grid-column:1/-1;color:#9eb4ab;font:9px var(--mono)}
+.m48-book-feed select{display:block;width:100%;min-width:0;appearance:none;color:#dcebdd;background:#1c2926;border:1px solid #3b574d;padding:7px 5px;font:9px var(--mono);text-overflow:ellipsis}
+.m48-book-feed button{background:#21332d;border:1px solid #45614c;color:var(--lime);font:15px var(--mono)}
+.m48-book-feed p{grid-column:1/-1;margin:1px 0 0;line-height:1.5;overflow-wrap:anywhere}
+#m48BookSourceWarning{font:9px var(--mono);color:#e7ad76}
+#m48BookStatus{font:9px var(--mono);color:#a4c8b3}
+#m48BookStatus.m48-feed-error{color:#f19a9f}
+.m48-book-levels{max-height:340px;min-height:150px;overflow-y:auto;border-bottom:1px solid var(--edge);font:10px var(--mono);flex:none}
+.m48-side{display:flex;flex-direction:column}
+.m48-level{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;padding:3px 10px;position:relative;font-size:10px;font-variant-numeric:tabular-nums}
+.m48-level:before{content:"";pointer-events:none;position:absolute;inset:0 auto 0 0;width:var(--m48-depth,0%);opacity:.19;z-index:0}
+.m48-level>span{position:relative;z-index:1;text-align:right;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.m48-level>span:first-child{text-align:left}
+.m48-ask:before{background:#ed617e}
+.m48-bid:before{background:#49ce97}
+.m48-ask .m48-price{color:#ff8496}
+.m48-bid .m48-price{color:#61dfaa}
+.m48-mid{padding:9px 10px;background:#202a26;text-align:center;color:var(--lime);border-top:1px solid #3c4d43;border-bottom:1px solid #3c4d43;font:10px var(--mono)}
