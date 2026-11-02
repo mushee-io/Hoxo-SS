@@ -4,14 +4,14 @@
  * No transaction broadcast, no wallet seed, no persistence.
  */
 import {rpc} from "@stellar/stellar-sdk";
-import {M45_CANDIDATE,probeM45TestnetPreflight} from "./m45-spot-preflight.mjs";
+import {M45_CANDIDATE,createM45ParticipantCandidate,probeM45TestnetPreflight} from "./m45-spot-preflight.mjs";
 import {createM44FreighterBrowserAdapter} from "./m44-freighter-adapter.mjs";
 import {createM45SigningLab} from "./m45-signing-lab.mjs";
 import {M52_SEND_ACK} from "./m52-testnet-spot-finality.mjs";
 
 const $=id=>document.getElementById(id);
 const server=new rpc.Server(M45_CANDIDATE.rpc);
-let lab=null,proof=null,busy=false;
+let lab=null,proof=null,candidate=null,busy=false;
 const buttons=["m45Check","m45Prepare","m45SignTaker","m45SignMaker"];
 function note(message,isError=false){
   const target=$("m45Status");
@@ -64,33 +64,38 @@ async function run(label,fn){
 }
 async function preflight(){
   clearSession();
-  const checked=await probeM45TestnetPreflight({server,nowMs:Date.now()});
-  // The read-only Connect button accepts any account; the pilot settlement
-  // is restricted to exactly two configured counterparties. Surface the gap.
-  let selectedAddress=null;
-  try{
-    const wallet=await window.freighterApi?.getAddress?.();
-    if(typeof wallet?.address==="string")selectedAddress=wallet.address;
-  }catch{ /* No usable Freighter selection: fail closed without signing. */ }
-  const walletReady=[M45_CANDIDATE.maker,M45_CANDIDATE.taker].includes(selectedAddress);
-  const blockers=[...checked.blockers];
-  if(!walletReady)blockers.push("Connected Freighter account is not one of the two configured pilot wallets. An ordinary connected wallet cannot trade in this bilateral flow.");
-  proof={...checked,readyForSimulation:checked.readyForSimulation&&walletReady,blockers};
+  proof=null;candidate=null;
+  if(!window.freighterApi?.getAddress)
+    throw Error("Connect Freighter on Stellar Testnet before reviewing a trade.");
+  const selected=await window.freighterApi.getAddress();
+  const maker=selected?.address;
+  const taker=$("m45TakerAddress").value.trim();
+  candidate=createM45ParticipantCandidate({maker,taker});
+  $("m45MakerAddress").textContent=maker;
+  // User chooses any valid funded Testnet wallet and an explicitly named
+  // distinct counterparty. Neither role has special M9 contract privileges.
+  proof=await probeM45TestnetPreflight({server,nowMs:Date.now(),candidate});
+  const blockers=proof.blockers??[];
   note("LEDGER "+proof.ledger+" · "+(blockers.length?blockers.join(" · "):
-    "Assets are ready; review both wallet signatures and explicit final send.")+
+    "Both wallets and M9 assets passed read-only preflight. Review the exact trade terms.")+
     " · No transaction sent.",blockers.length>0);
 }
 function requireLab(){
   if(!window.freighterApi)throw Error("Freighter API unavailable. Install/enable Freighter for this browser.");
+  if(!candidate||!proof?.readyForSimulation)throw Error("Run the Testnet preflight with a valid counterparty first.");
   if(!lab)lab=createM45SigningLab({
     server,
-    adapter:createM44FreighterBrowserAdapter(window.freighterApi)
+    adapter:createM44FreighterBrowserAdapter(window.freighterApi),
+    probe:()=>probeM45TestnetPreflight({server,nowMs:Date.now(),candidate})
   });
   return lab;
 }
 $("m45Check").addEventListener("click",()=>run("Checking live Stellar Testnet",preflight));
 $("m45Prepare").addEventListener("click",()=>run("Rechecking and simulating exact settlement",async()=>{
   const engine=requireLab();
+  const selected=await window.freighterApi.getAddress();
+  if(selected?.address!==candidate.maker)
+    throw Error("Switch Freighter back to your selected Wallet 1 before simulating.");
   const result=await engine.prepare({
     acknowledged:$("m45TermsAck").checked,
     xlmAmount:$("m45Xlm").value,
@@ -143,17 +148,20 @@ for(const id of ["m45TermsAck","m45TakerAck","m45MakerAck","m55SendAck"]){
   $(id).addEventListener("change",paint);
 }
 $("m55SendPhrase").addEventListener("input",paint);
-for(const id of ["m45Xlm","m45Usdc","m51SpotSide"]){
-  $(id).addEventListener("input",()=>{proof=null;clearSession();note("Trade side or amounts changed. Run a fresh Testnet preflight.");});
+for(const id of ["m45Xlm","m45Usdc","m51SpotSide","m45TakerAddress"]){
+  $(id).addEventListener("input",()=>{
+    proof=null;candidate=null;clearSession();
+    note("Counterparty or trade terms changed. Run a fresh Testnet preflight.");
+  });
 }
 window.addEventListener("hoxo:market-change",event=>{
-  proof=null;
+  proof=null;candidate=null;
   clearSession();
   note("Market changed to "+String(event.detail?.market??"another instrument")+
     ". Previous Testnet signatures and approvals cleared.");
 });
 $("m45Reset").addEventListener("click",()=>{
-  proof=null;clearSession();note("Signing lab reset. No transaction has been broadcast.");
+  proof=null;candidate=null;clearSession();note("Signing lab reset. No transaction has been broadcast.");
 });
 paint();
 
