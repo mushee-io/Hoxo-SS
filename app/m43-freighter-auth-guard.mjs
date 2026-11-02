@@ -15,6 +15,8 @@ export function validateDualWalletHandoff(input){
     const d=Object.getOwnPropertyDescriptor(input,key);
     if(!d||!("value" in d))fail("accessors prohibited");
   }
+  // Never read required fields from Object.prototype, even if it was polluted.
+  for(const key of allowed)if(!Object.prototype.hasOwnProperty.call(input,key))fail("missing own field: "+key);
   if(input.networkPassphrase!==TESTNET_PASSPHRASE)fail("Testnet passphrase required");
   if(typeof input.contractId!=="string"||!C.test(input.contractId))fail("invalid contract");
   if(typeof input.maker!=="string"||!G.test(input.maker)||typeof input.taker!=="string"||!G.test(input.taker)||input.maker===input.taker)fail("two distinct public wallets required");
