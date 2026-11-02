@@ -1,0 +1,108 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {createDualWalletHandoff,validateDualWalletHandoff,TESTNET_PASSPHRASE,M9_TESTNET_CONTRACT_ID} from "../app/m43-freighter-auth-guard.mjs";
+const maker="G"+"A".repeat(55),taker="G"+"B".repeat(55);
+const input={networkPassphrase:TESTNET_PASSPHRASE,contractId:M9_TESTNET_CONTRACT_ID,maker,taker,makerAuthXdr:"QUJDREVGR0hJSktM",takerAuthXdr:"QUJDREVGR0hJSktN",matchId:"a".repeat(64)};
+test("fail closed on mainnet, same-wallet, injected accessors and secret fields",()=>{
+ assert.throws(()=>validateDualWalletHandoff({...input,networkPassphrase:"Public Global Stellar Network ; September 2015"}),/Testnet/);
+ assert.throws(()=>validateDualWalletHandoff({...input,taker:maker}),/distinct/);
+ assert.throws(()=>validateDualWalletHandoff({...input,secret:"SSECRET"}),/unexpected/);
+ let invoked=false;const bad={...input};Object.defineProperty(bad,"maker",{enumerable:true,get(){invoked=true;return maker}});
+ assert.throws(()=>validateDualWalletHandoff(bad),/accessors/);assert.equal(invoked,false);
+});
+test("requires sequential, explicit distinct-wallet Freighter approvals and never broadcasts",async()=>{
+ let current=maker,calls=0;
+ const adapter={async getNetwork(){return {networkPassphrase:TESTNET_PASSPHRASE}},async getAddress(){return {address:current}},async signAuthEntry(xdr){calls++;return {signedAuthEntry:calls===1?"RkZGRkZGRkZGRkZG":"SEhISEhISEhISEhI"}}};
+ const flow=createDualWalletHandoff(input,adapter);
+ await assert.rejects(flow.approve("taker"),/out of order/);
+ const first=await flow.approve("maker");assert.equal(first.broadcast,false);assert.equal(first.verified,false);
+ await assert.rejects(flow.approve("maker"),/out of order/);
+ await assert.rejects(flow.approve("taker"),/switch Freighter/);
+ current=taker;const second=await flow.approve("taker");assert.equal(second.publicAddress,taker);
+ assert.equal(calls,2);assert.equal(flow.status.approvalCount,2);assert.equal(flow.status.broadcast,false);
+ await assert.rejects(flow.approve("taker"),/out of order/);
+});
+test("rejects wallet network switch and refused signature",async()=>{
+ const adapter={async getNetwork(){return {networkPassphrase:"mainnet"}},async getAddress(){return {address:maker}},async signAuthEntry(){throw Error("denied")}};
+ const flow=createDualWalletHandoff(input,adapter);
+ await assert.rejects(flow.approve("maker"),/Testnet/);assert.equal(flow.status.approvalCount,0);
+ adapter.getNetwork=async()=>({networkPassphrase:TESTNET_PASSPHRASE});
+ await assert.rejects(flow.approve("maker"),/denied/);assert.equal(flow.status.approvalCount,0);
+});
+
+test("blocks concurrent approvals while a Freighter prompt is outstanding",async()=>{
+ let release;
+ const wait=new Promise(resolve=>{release=resolve});
+ let calls=0;
+ const adapter={async getNetwork(){return {networkPassphrase:TESTNET_PASSPHRASE}},async getAddress(){return {address:maker}},async signAuthEntry(xdr){calls++;await wait;return {signedAuthEntry:"RkZGRkZGRkZGRkZG"}}};
+ const flow=createDualWalletHandoff(input,adapter);
+ const first=flow.approve("maker");
+ await assert.rejects(flow.approve("maker"),/in progress/);
+ release();
+ await first;
+ assert.equal(calls,1);
+ assert.equal(flow.status.approvalCount,1);
+});
+test("rejects wallet and network changes during signature approval without advancing",async()=>{
+ let address=maker,passphrase=TESTNET_PASSPHRASE;
+ const adapter={async getNetwork(){return {networkPassphrase:passphrase}},async getAddress(){return {address}},async signAuthEntry(){address=taker;return {signedAuthEntry:"RkZGRkZGRkZGRkZG"}}};
+ const flow=createDualWalletHandoff(input,adapter);
+ await assert.rejects(flow.approve("maker"),/changed during approval/);
+ assert.equal(flow.status.approvalCount,0);
+ assert.equal(flow.nextRole,"maker");
+ address=maker;
+ adapter.signAuthEntry=async()=>{passphrase="Public Global Stellar Network ; September 2015";return {signedAuthEntry:"RkZGRkZGRkZGRkZG"}};
+ await assert.rejects(flow.approve("maker"),/changed during approval/);
+ assert.equal(flow.status.approvalCount,0);
+ passphrase=TESTNET_PASSPHRASE;
+ adapter.signAuthEntry=async()=>({signedAuthEntry:"RkZGRkZGRkZGRkZG"});
+ await flow.approve("maker");
+ assert.equal(flow.status.approvalCount,1);
+});
+
+test("rejects hostile Freighter responses without executing accessors or advancing",async()=>{
+ let response={signedAuthEntry:"RkZGRkZGRkZGRkZG"};
+ const adapter={async getNetwork(){return {networkPassphrase:TESTNET_PASSPHRASE}},async getAddress(){return {address:maker}},async signAuthEntry(){return response}};
+ const flow=createDualWalletHandoff(input,adapter);
+ let accessed=false;response={};Object.defineProperty(response,"signedAuthEntry",{enumerable:true,get(){accessed=true;throw Error("getter executed")}});
+ await assert.rejects(flow.approve("maker"),/accessors prohibited/);assert.equal(accessed,false);assert.equal(flow.status.approvalCount,0);
+ response={signedAuthEntry:input.makerAuthXdr};
+ await assert.rejects(flow.approve("maker"),/valid signed/);
+ response={signedAuthEntry:"RkZGRkZGRkZGRkZG",secret:"SSECRET"};
+ await assert.rejects(flow.approve("maker"),/unexpected Freighter/);
+ response={signedAuthEntry:"RkZGRkZGRkZGRkZG"};
+ const accepted=await flow.approve("maker");assert.equal(accepted.verified,false);assert.equal(accepted.broadcast,false);
+});
+
+test("rejects duplicate unsigned or signed maker/taker authorization entries",async()=>{
+ assert.throws(()=>validateDualWalletHandoff({...input,takerAuthXdr:input.makerAuthXdr}),/distinct wallet authorization/);
+ let current=maker;
+ const adapter={async getNetwork(){return {networkPassphrase:TESTNET_PASSPHRASE}},async getAddress(){return {address:current}},async signAuthEntry(){return {signedAuthEntry:"RkZGRkZGRkZGRkZG"}}};
+ const flow=createDualWalletHandoff(input,adapter);
+ await flow.approve("maker");current=taker;
+ await assert.rejects(flow.approve("taker"),/duplicate maker\/taker/);
+ assert.equal(flow.status.approvalCount,1);
+ assert.equal(flow.nextRole,"taker");
+ adapter.signAuthEntry=async()=>({signedAuthEntry:"SEhISEhISEhISEhI"});
+ const approved=await flow.approve("taker");
+ assert.equal(approved.verified,false);assert.equal(flow.status.approvalCount,2);
+});
+
+test("requires own fields even when Object.prototype is polluted",()=>{
+ const missing={...input};delete missing.matchId;
+ const previous=Object.getOwnPropertyDescriptor(Object.prototype,"matchId");
+ try {
+  Object.defineProperty(Object.prototype,"matchId",{configurable:true,value:input.matchId});
+  assert.throws(()=>validateDualWalletHandoff(missing),/missing own field: matchId/);
+ } finally {
+  if(previous)Object.defineProperty(Object.prototype,"matchId",previous);
+  else delete Object.prototype.matchId;
+ }
+ assert.deepEqual(Object.keys(validateDualWalletHandoff(input)).sort(),Object.keys(input).sort());
+});
+
+test("rejects arbitrary contract substitution before Freighter prompt",()=>{
+ assert.throws(()=>validateDualWalletHandoff({...input,contractId:"C"+"A".repeat(55)}),/invalid contract/);
+ assert.throws(()=>validateDualWalletHandoff({...input,contractId:"C"+"B".repeat(55)}),/invalid contract/);
+ assert.equal(validateDualWalletHandoff(input).contractId,M9_TESTNET_CONTRACT_ID);
+});
