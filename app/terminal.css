@@ -244,3 +244,11 @@
 .m63-receipt strong{display:block;color:#b8f0c4}
 .m63-receipt a{color:#abffbc;text-decoration:underline}
 @media(max-width:600px){.m63-heading{align-items:flex-start;flex-direction:column}}
+
+/* One-click on-chain Testnet USDC trustline, publicly sourced Circle faucet. */
+.m63-funding{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:9px 0 6px}
+#m63AddTrustline{padding:9px 10px;border:1px solid #426f61;border-radius:3px;background:#1a3a31;color:#d5ffdd;font:bold 9px var(--mono);cursor:pointer}
+#m63AddTrustline:hover:not(:disabled){background:#285647}
+#m63AddTrustline:disabled{opacity:.6;cursor:not-allowed}
+.m63-funding a{font:bold 9px var(--mono);text-decoration:underline;color:#d4ffaa}
+.m63-swap .m63-funding-note{font:10px/1.65 var(--mono);color:#b4c6b6}
