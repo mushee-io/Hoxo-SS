@@ -30,13 +30,28 @@ function expectedProof(p,role,address,now){
   if(role==="wallet2"&&usdc<=0n)fail("Wallet 2 has no authorized test USDC");
   return wallet;
 }
+function strictWalletReply(value,allowed,label){
+  if(!value||Object.getPrototypeOf(value)!==Object.prototype)
+    fail(label+" must return a plain data object");
+  for(const key of Reflect.ownKeys(value)){
+    if(typeof key!=="string"||!allowed.includes(key))
+      fail(label+" returned unexpected field");
+    const descriptor=Object.getOwnPropertyDescriptor(value,key);
+    if(!descriptor||!("value" in descriptor))
+      fail(label+" returned an unsafe accessor");
+  }
+  if(Object.prototype.hasOwnProperty.call(value,"error")&&value.error!=null)
+    fail(label+" returned a wallet error");
+  return value;
+}
 async function readFreighter(api,address){
-  const network=await api.getNetwork();
+  const network=strictWalletReply(await api.getNetwork(),
+    ["network","networkPassphrase","networkUrl","sorobanRpcUrl","error"],"network");
   if(!network||network.networkPassphrase!==TESTNET_PASSPHRASE||
      (network.network!==undefined&&network.network!=="TESTNET"))
     fail("Freighter must be on Stellar Testnet");
-  const account=await api.getAddress();
-  if(!account||account.address!==address)fail("select the exact expected Freighter account");
+  const account=strictWalletReply(await api.getAddress(),["address","error"],"account");
+  if(account.address!==address)fail("select the exact expected Freighter account");
 }
 export function createM46WindowsAcceptance({
   api,probe,now=()=>Date.now()
