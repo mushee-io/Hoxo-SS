@@ -78,10 +78,11 @@
   <button id="m45Check" type="button" class="m45-main">1 · VERIFY LIVE STELLAR TESTNET</button>
   <p class="m45-status" id="m45Status" role="status" aria-live="polite">Click Verify to inspect deployed M9, XLM/USDC allowlists, pause state and both funded wallet balances.</p>
   <div class="m45-amounts">
-    <label for="m45Xlm">Wallet 1 sells XLM (manual)<input id="m45Xlm" value="0.0100000" type="text" inputmode="decimal" autocomplete="off"></label>
-    <label for="m45Usdc">Wallet 2 pays USDC (manual)<input id="m45Usdc" value="0.0200000" type="text" inputmode="decimal" autocomplete="off"></label>
+    <label for="m51SpotSide">Wallet 1 action<select id="m51SpotSide" aria-label="Choose XLM Buy or Sell from Wallet 1"><option value="sell">SELL XLM · Wallet 1 receives USDC</option><option value="buy">BUY XLM · Wallet 1 pays USDC</option></select></label>
+    <label for="m45Xlm">XLM trade quantity (manual)<input id="m45Xlm" value="0.0100000" type="text" inputmode="decimal" autocomplete="off"></label>
+    <label for="m45Usdc">USDC total (manual)<input id="m45Usdc" value="0.0200000" type="text" inputmode="decimal" autocomplete="off"></label>
   </div>
-  <label class="m45-consent"><input type="checkbox" id="m45TermsAck"> I understand these are manually agreed Testnet amounts, not a live market quote, and no trade will be broadcast.</label>
+  <label class="m45-consent"><input type="checkbox" id="m45TermsAck"> I have reviewed the XLM Buy/Sell side and amounts. These are manual Stellar Testnet terms, not an executable market quote, and this lab does not send a transaction.</label>
   <button id="m45Prepare" type="button" class="m45-main" disabled>2 · SIMULATE EXACT SOROBAN TERMS</button>
   <pre class="m45-terms" id="m45Terms">No Soroban transaction simulated or signed.</pre>
   <label class="m45-consent"><input type="checkbox" id="m45TakerAck"> I have reviewed the exact simulated terms and want Wallet 2 to sign only the non-source Soroban authorization.</label>
