@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
-import {M52_SEND_ACK,verifyM52Receipt,reconcileM52Balances,
+import {M52_SEND_ACK,verifyM52Receipt,verifyM52SubmissionHash,reconcileM52Balances,
   m52ReviewedSpotSettlement} from "../app/m52-testnet-spot-finality.mjs";
 import {M45_CANDIDATE} from "../app/m45-spot-preflight.mjs";
 import {M44_XLM_SAC,M44_USDC_SAC}
@@ -90,4 +90,14 @@ test("M52 has explicit no-send defaults, strong signed-XDR reconstruction and se
     async sendTransaction(){sends++;throw Error("must never send without full preflight");}
   },expectedTerms:terms,send:true,acknowledgement:M52_SEND_ACK}),/full official/);
   assert.equal(sends,0);
+});
+
+test("M52 rejects an RPC transaction hash that differs from the exact signed envelope",()=>{
+  const bytes=Uint8Array.from({length:32},(_,i)=>i);
+  const canonical=Array.from(bytes,b=>b.toString(16).padStart(2,"0")).join("");
+  assert.equal(verifyM52SubmissionHash(bytes,canonical.toUpperCase()),canonical);
+  for(const bad of ["0".repeat(64),"not-a-hash",null,canonical.slice(2)])
+    assert.throws(()=>verifyM52SubmissionHash(bytes,bad),/transaction hash|different signed transaction/);
+  assert.throws(()=>verifyM52SubmissionHash(new Uint8Array(31),canonical),/transaction hash/);
+  assert.throws(()=>verifyM52SubmissionHash(Array(32).fill(0),canonical),/transaction hash/);
 });
