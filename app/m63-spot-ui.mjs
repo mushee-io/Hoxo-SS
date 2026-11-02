@@ -11,6 +11,7 @@ import {HORIZON_TESTNET,USDC_TESTNET_ISSUER,TESTNET_NETWORK,
 
 const $=id=>document.getElementById(id);
 const server=new Horizon.Server(HORIZON_TESTNET);
+const hashHex=bytes=>Array.from(bytes,b=>b.toString(16).padStart(2,"0")).join("");
 async function fundedAccount(address){
   try{return await server.loadAccount(address);}
   catch(error){
@@ -174,7 +175,7 @@ async function approve(){
   if(signedResult.signerAddress&&signedResult.signerAddress!==owner)
     fail("Freighter signed with a different account");
   const signed=TransactionBuilder.fromXDR(signedResult.signedTxXdr,Networks.TESTNET);
-  if(signed.source!==owner||signed.hash().toString("hex")!==tx.hash().toString("hex")||
+  if(signed.source!==owner||hashHex(signed.hash())!==hashHex(tx.hash())||
      signed.operations.length!==1||signed.signatures.length===0)
     fail("wallet returned modified or unsigned trade; refusing broadcast");
   net=await api.getNetwork();wallet=await api.getAddress();
@@ -244,7 +245,7 @@ async function addUsdcTrustline(){
      signedResult.signerAddress&&signedResult.signerAddress!==owner)
     fail("wallet did not approve the exact USDC trustline operation");
   const signed=TransactionBuilder.fromXDR(signedResult.signedTxXdr,Networks.TESTNET);
-  if(signed.hash().toString("hex")!==tx.hash().toString("hex")||
+  if(hashHex(signed.hash())!==hashHex(tx.hash())||
      signed.source!==owner||signed.operations.length!==1||!signed.signatures.length)
     fail("wallet signature altered or absent; trustline not submitted");
   const [postNetwork,postAccount]=await Promise.all([api.getNetwork(),api.getAddress()]);
