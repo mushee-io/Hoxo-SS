@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {createDualWalletHandoff,validateDualWalletHandoff,TESTNET_PASSPHRASE} from "../app/m43-freighter-auth-guard.mjs";
+import {createDualWalletHandoff,validateDualWalletHandoff,TESTNET_PASSPHRASE,M9_TESTNET_CONTRACT_ID} from "../app/m43-freighter-auth-guard.mjs";
 const maker="G"+"A".repeat(55),taker="G"+"B".repeat(55);
-const input={networkPassphrase:TESTNET_PASSPHRASE,contractId:"C"+"A".repeat(55),maker,taker,makerAuthXdr:"QUJDREVGR0hJSktM",takerAuthXdr:"QUJDREVGR0hJSktN",matchId:"a".repeat(64)};
+const input={networkPassphrase:TESTNET_PASSPHRASE,contractId:M9_TESTNET_CONTRACT_ID,maker,taker,makerAuthXdr:"QUJDREVGR0hJSktM",takerAuthXdr:"QUJDREVGR0hJSktN",matchId:"a".repeat(64)};
 test("fail closed on mainnet, same-wallet, injected accessors and secret fields",()=>{
  assert.throws(()=>validateDualWalletHandoff({...input,networkPassphrase:"Public Global Stellar Network ; September 2015"}),/Testnet/);
  assert.throws(()=>validateDualWalletHandoff({...input,taker:maker}),/distinct/);
@@ -99,4 +99,10 @@ test("requires own fields even when Object.prototype is polluted",()=>{
   else delete Object.prototype.matchId;
  }
  assert.deepEqual(Object.keys(validateDualWalletHandoff(input)).sort(),Object.keys(input).sort());
+});
+
+test("rejects arbitrary contract substitution before Freighter prompt",()=>{
+ assert.throws(()=>validateDualWalletHandoff({...input,contractId:"C"+"A".repeat(55)}),/invalid contract/);
+ assert.throws(()=>validateDualWalletHandoff({...input,contractId:"C"+"B".repeat(55)}),/invalid contract/);
+ assert.equal(validateDualWalletHandoff(input).contractId,M9_TESTNET_CONTRACT_ID);
 });
