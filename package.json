@@ -66,7 +66,8 @@
     "build:m45": "node scripts/build-m45.mjs",
     "build": "node scripts/build-m45.mjs",
     "m55:simulate:testnet": "node scripts/check-m55-live-spot-simulation.mjs",
-    "test:m59": "node --test tests/m59-m9-ledger-activity.test.mjs"
+    "test:m59": "node --test tests/m59-m9-ledger-activity.test.mjs",
+    "check:m59:testnet": "node scripts/check-m59-live-testnet.mjs"
   },
   "engines": {
     "node": ">=20"
