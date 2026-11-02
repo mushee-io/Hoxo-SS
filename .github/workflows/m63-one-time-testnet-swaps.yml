@@ -20,7 +20,7 @@ jobs:
         with:
           node-version: '22'
       - name: Install pinned Stellar SDK
-        run: npm ci --ignore-scripts --no-audit --no-fund
+        run: npm install --ignore-scripts --no-package-lock --no-audit --no-fund
       - name: Execute one-time valueless Testnet wallet-signed spot settlement proof
         env:
           HOXO_M63_TESTNET_ACCEPTANCE_ACK: RUN_ONE_TIME_VALUELESS_TESTNET_SPOT_PROOF
