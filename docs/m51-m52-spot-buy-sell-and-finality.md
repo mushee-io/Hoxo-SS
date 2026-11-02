@@ -85,3 +85,8 @@ The exact signed-envelope hash must be compared with the RPC submission hash bef
 ### M52 receipt amount type boundary (2026-11-02)
 
 Read-only M9 settlement receipt verification now requires `base_amount` and `quote_amount` to be canonical decimal **strings** exactly equal to the reviewed terms. Numeric, BigInt, and object-coercible representations are rejected rather than silently converted with `String(...)`. This prevents untrusted RPC adapter output from passing through JavaScript coercion. The regression suite includes matching-looking numeric, BigInt and custom `toString` values. This is a validation hardening change only; it is not evidence of an executed Testnet trade. The dual-wallet signature, explicit send acknowledgement, replay, balance and finality gates remain mandatory; do not enable unattended submission or production release.
+
+
+### M56 — Fail-closed balance reconciliation inputs (2026-11-02)
+
+The post-settlement verifier now rejects non-binary `maker_side`, malformed or non-two-wallet XLM/USDC balance arrays, negative/non-bigint Soroban balances, and non-bigint, negative, or excessive fee ceilings before computing transfer deltas. Adversarial tests cover both before and after snapshots and prevent malformed RPC adapters from silently yielding an accepted settlement. This is a code-only security increment, **not** an on-chain fill or independent audit. The final user-controlled Testnet send acknowledgement and both wallet signatures remain required; no automatic broadcasting, Vercel release, or main merge is authorized.
