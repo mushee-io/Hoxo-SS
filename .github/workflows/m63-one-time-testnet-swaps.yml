@@ -1,0 +1,27 @@
+name: M63 one-time valueless Stellar Testnet spot receipt proof
+on:
+  push:
+    branches:
+      - verification-m63-real-testnet-classic-dex-swaps
+    paths:
+      - .github/workflows/m63-one-time-testnet-swaps.yml
+permissions:
+  contents: read
+jobs:
+  one-time-live-testnet-swaps:
+    name: Genuine one-shot 10 XLM sell and 1 XLM buy with ephemeral Testnet wallet
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install pinned Stellar SDK
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Execute one-time valueless Testnet wallet-signed spot settlement proof
+        env:
+          HOXO_M63_TESTNET_ACCEPTANCE_ACK: RUN_ONE_TIME_VALUELESS_TESTNET_SPOT_PROOF
+        run: node scripts/verify-m63-one-time-live-swaps.mjs
