@@ -26,7 +26,7 @@ test("M2 desktop: reference markets, tabs, non-executable order drafts",async()=
   const {page,context,errors}=await openTerminal("/app/?market=btc-usdc-perp");
   try{
     assert.equal(await page.locator("#marketLabel").innerText(),"BTC-PERP");
-    assert.match(await page.locator("#marketSubheading").innerText(),/EXTERNAL MARKET DATA/);
+    assert.match(await page.locator("#marketSubheading").innerText(),/PERP · REFERENCE MARKET/);
     await page.locator("#marketTrigger").click();
     await page.locator("#marketSearch").fill("xlm");
     await page.locator('[data-market-filter="spot"]').click();
