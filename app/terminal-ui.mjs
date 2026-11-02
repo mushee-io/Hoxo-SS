@@ -17,9 +17,9 @@ function setView(next){
   all("[data-view]").forEach(b=>b.classList.toggle("selected",b.dataset.view===view));
   $("tradeView").classList.toggle("hidden",view!=="trade");
   $("alternateView").classList.toggle("hidden",view==="trade");
-  $("m45SigningLab")?.classList.toggle("hidden",view!=="trade"||market.type!=="spot");
-  $("m55OpenLab")?.classList.toggle("hidden",view!=="trade"||market.type!=="spot");
-  $("m46WindowsLab")?.classList.toggle("hidden",view!=="trade");
+  $("m45SigningLab")?.classList.toggle("hidden",view!=="trade"||market.id!=="xlm-usdc-spot");
+  $("m55OpenLab")?.classList.toggle("hidden",view!=="trade"||market.id!=="xlm-usdc-spot");
+  $("marketAvailabilityBanner")?.classList.toggle("hidden",view!=="trade"||market.id==="xlm-usdc-spot");
   if(view==="portfolio"){
     $("altTitle").textContent="YOUR PORTFOLIO";
     $("altDescription").textContent="Testnet wallet balances appear under Trade → Balances. Exchange collateral, positions and margin are not deployed.";
@@ -85,8 +85,8 @@ function chooseSide(side){
   tradeButton.disabled=!spotAction;
   tradeButton.classList.toggle("trade-review",spotAction);
   tradeButton.textContent=spotAction?
-    "REVIEW SMALL TESTNET "+(side==="buy"?"BUY":"SELL"):
-    "PERP EXECUTION NOT YET DEPLOYED";
+    "REVIEW TESTNET "+(side==="buy"?"BUY":"SELL"):
+    market.type==="perp"?"PERP TRADING NOT DEPLOYED":"SPOT MARKET NOT DEPLOYED";
   const tradeSide=$("m51SpotSide");
   if(market.type==="spot"&&tradeSide&&tradeSide.value!==side){
     tradeSide.value=side;
@@ -124,8 +124,16 @@ function chooseMarket(id){
   market=getMarket(id);
   if(previousMarket!==market.id)
     window.dispatchEvent(new CustomEvent("hoxo:market-change",{detail:{market:market.id}}));
-  $("m45SigningLab")?.classList.toggle("hidden",market.type!=="spot"||view!=="trade");
-  $("m55OpenLab")?.classList.toggle("hidden",market.type!=="spot"||view!=="trade");
+  $("m45SigningLab")?.classList.toggle("hidden",market.id!=="xlm-usdc-spot"||view!=="trade");
+  $("m55OpenLab")?.classList.toggle("hidden",market.id!=="xlm-usdc-spot"||view!=="trade");
+  const unavailable=market.id!=="xlm-usdc-spot";
+  $("marketAvailabilityBanner").classList.toggle("hidden",!unavailable||view!=="trade");
+  $("marketAvailabilityTitle").textContent=market.type==="perp"?
+    market.label+" · PERPETUAL TRADING NOT DEPLOYED":
+    market.label+" · SPOT TRADING NOT DEPLOYED";
+  $("marketAvailabilityText").textContent=market.type==="perp"?
+    "This is a reference-only market. Hoxo cannot open, close or liquidate perpetual positions on Stellar Testnet yet. The XLM/USDC spot market has a separate, wallet-approved bilateral review, not public instant liquidity.":
+    "No Hoxo settlement flow is deployed for this pair. XLM/USDC spot is currently the only pair with a wallet-approved bilateral settlement review.";
   if(previousMarket!==market.id){
     // Return to live market depth when switching instruments. The earlier
     // Trades tab is Hoxo fills only, so it may correctly have no entries.
@@ -149,6 +157,11 @@ function chooseMarket(id){
 }
 all("[data-view]").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.view)));
 $("backToTrade").addEventListener("click",()=>setView("trade"));
+$("switchToSpot").addEventListener("click",()=>{
+  chooseMarket("xlm-usdc-spot");
+  setView("trade");
+  window.scrollTo({top:0,behavior:"instant"});
+});
 $("marketTrigger").addEventListener("click",()=>{
   if($("marketMenu").classList.contains("hidden")){
     $("marketMenu").classList.remove("hidden");
