@@ -17,7 +17,8 @@ function setView(next){
   all("[data-view]").forEach(b=>b.classList.toggle("selected",b.dataset.view===view));
   $("tradeView").classList.toggle("hidden",view!=="trade");
   $("alternateView").classList.toggle("hidden",view==="trade");
-  $("m45SigningLab")?.classList.toggle("hidden",view!=="trade");
+  $("m45SigningLab")?.classList.toggle("hidden",view!=="trade"||market.type!=="spot");
+  $("m55OpenLab")?.classList.toggle("hidden",view!=="trade"||market.type!=="spot");
   $("m46WindowsLab")?.classList.toggle("hidden",view!=="trade");
   if(view==="portfolio"){
     $("altTitle").textContent="YOUR PORTFOLIO";
@@ -103,7 +104,10 @@ function renderMenu(){
   });
 }
 function chooseMarket(id){
+  const oldMarketId=market.id;
   market=getMarket(id);
+  if(oldMarketId!==market.id)
+    window.dispatchEvent(new CustomEvent("hoxo:market-change",{detail:{market:market.id}}));
   $("marketLabel").textContent=market.label;
   $("marketSubheading").textContent=(market.type==="spot"?"SPOT":"PERPETUAL")+" REFERENCE · NOT LISTED";
   $("marketPrimaryStat").textContent=market.type==="spot"?"REFERENCE PRICE":"MARK PRICE";
@@ -152,6 +156,10 @@ all("[data-timeframe]").forEach(b=>b.addEventListener("click",()=>{
 all("[data-order-type]").forEach(b=>b.addEventListener("click",()=>chooseOrderType(b.dataset.orderType)));
 $("buySide").addEventListener("click",()=>chooseSide("buy"));
 $("sellSide").addEventListener("click",()=>chooseSide("sell"));
+$("m55OpenLab")?.addEventListener("click",()=>{
+  if(market.type!=="spot")return;
+  $("m45SigningLab")?.scrollIntoView({behavior:"smooth",block:"start"});
+});
 $("orderSize").addEventListener("input",updateDraft);
 $("limitPrice").addEventListener("input",updateDraft);
 const initialView=window.location.hash.slice(1);
