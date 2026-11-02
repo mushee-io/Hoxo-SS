@@ -76,3 +76,14 @@ test("M2 browser entrypoints parse without syntax errors",()=>{
     assert.doesNotThrow(()=>execFileSync(process.execPath,["--check",resolve(root,path)],{stdio:"pipe"}),path);
   }
 });
+
+test("M60 spot ticket rejects oversized size and starts read-only preflight for valid size",async()=>{
+  const ui=await readFile(resolve(root,"app/terminal-ui.mjs"),"utf8");
+  const lab=await readFile(resolve(root,"app/m45-spot-ui.mjs"),"utf8");
+  assert.match(ui,/units===null\|\|units>1_000_000n/);
+  assert.match(ui,/input\.focus\(\);\s*return;/);
+  assert.match(ui,/m45Check/);
+  assert.match(ui,/No order has been sent/);
+  assert.match(lab,/Connected Freighter account is not one of the two configured pilot wallets/);
+  assert.match(lab,/readyForSimulation:checked\.readyForSimulation&&walletReady/);
+});

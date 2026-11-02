@@ -27,6 +27,8 @@ export function draftM45BilateralTerms({xlmAmount,usdcAmount,side="sell",ledger,
   if(!["sell","buy"].includes(side))fail("side must be buy or sell XLM from Wallet 1");
   if(!Number.isSafeInteger(ledger)||ledger<1||ledger>0xffffffff-100)fail("verified fresh ledger required");
   const base=amountE7(xlmAmount,"XLM"),quote=amountE7(usdcAmount,"USDC");
+  // Enforce the same first-trade cap in the transaction builder, not only the UI.
+  if(base>1_000_000n)fail("first Testnet settlement pilot is limited to 0.1 XLM");
   // User-selected manual bilateral price; no data feed or price oracle.
   const numerator=quote*SCALE;
   if(numerator%base!==0n)fail("bilateral price must be exactly representable at 7 decimals");
