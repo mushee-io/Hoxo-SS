@@ -1,3 +1,4 @@
+import {Account} from "@stellar/stellar-sdk";
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
@@ -233,4 +234,36 @@ test("M51 BUY/SELL spot preflight checks correct paying wallet, XLM fee reserve 
     wallets:[taker,maker]
   },{...base,maker_side:1}),/exact participant/);
   assert.throws(()=>verifyM51TradeCapacity(p,{...base,maker_side:2}),/invalid reviewed/);
+});
+
+
+test("M55 real Soroban MatchTerms map uses canonical sorted keys for contracttype struct",async()=>{
+  let keys=null;
+  const server={
+    async getLatestLedger(){return {sequence:1000};},
+    async getAccount(address){return new Account(address,"100");},
+    async simulateTransaction(tx){
+      const scval=tx.operations[0].func.invokeContract.args[0];
+      keys=(scval.value??[]).map(entry=>String(entry.key.value));
+      return {error:"fail-closed test fixture"};
+    }
+  };
+  const proof={
+    readyForSimulation:true,contractPaused:false,
+    contract:M9_TESTNET_CONTRACT_ID,network:"Stellar Testnet",
+    ledger:1000,
+    wallets:[{address:M45_CANDIDATE.maker,xlmE7:"1000000000",
+      usdcE7:"20000000",trustlineAuthorized:true},
+      {address:M45_CANDIDATE.taker,xlmE7:"1000000000",
+        usdcE7:"20000000",trustlineAuthorized:true}]
+  };
+  let next=0;
+  await assert.rejects(simulateM45BilateralSpot({
+    server,preflight:proof,side:"buy",xlmAmount:"0.0100000",
+    usdcAmount:"0.0017000",
+    randomBytes:n=>Uint8Array.from({length:n},()=>++next%251)
+  }),/fail-closed test fixture/);
+  assert.equal(keys.length,13);
+  assert.deepEqual(keys,[...keys].sort(),
+    "Soroban contracttype maps MUST be lexicographically canonical");
 });
