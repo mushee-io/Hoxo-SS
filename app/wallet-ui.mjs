@@ -1,6 +1,7 @@
 /** Hoxo-SS M3 wallet presentation. No wallet secrets or signing. */
 import {createWalletSession,FRIENDBOT} from "./wallet-core.mjs";
 import {loadStellarWalletActivity} from "../portfolio/stellar-history.mjs";
+import {loadM50ClassicDexPortfolio} from "../portfolio/m50-classic-dex.mjs";
 const $=id=>document.getElementById(id);
 const status=$("walletStatus");
 const button=$("walletButton");
@@ -15,6 +16,73 @@ let activeTab="Balances";
 let busy=false;
 let transferState={owner:null,rows:[],excluded:[],nextCursor:null,loading:false,error:null,ledger:null};
 let transferRequest=0;
+let classicState={owner:null,result:null,loading:false,error:null};
+let classicRequest=0;
+async function fetchClassicAccount(owner){
+  if(!owner||classicState.loading)return;
+  const request=++classicRequest;
+  classicState={...classicState,owner,loading:true,error:null};
+  renderBalances(controller.snapshot());
+  try{
+    const result=await loadM50ClassicDexPortfolio(owner);
+    if(request!==classicRequest||controller.snapshot().address!==owner)return;
+    classicState={owner,result,loading:false,error:null};
+  }catch(error){
+    if(request!==classicRequest)return;
+    classicState={owner,result:null,loading:false,error:String(error?.message||error)};
+  }
+  renderBalances(controller.snapshot());
+}
+function showClassicAccount(state){
+  const group=document.createElement("div");
+  group.className="wallet-transfer-history";
+  const title=document.createElement("strong");
+  const isOffers=activeTab==="Open Orders";
+  title.textContent=isOffers?
+    "STELLAR TESTNET CLASSIC DEX OFFERS · NOT HOXO ORDERS":
+    "STELLAR TESTNET CLASSIC DEX TRADES · NOT HOXO FILLS";
+  const note=document.createElement("p");
+  note.textContent=isOffers?
+    "Public Horizon offers attributable to this G-address. These are not Hoxo M9 orders or perpetual positions.":
+    "Public Horizon account trades. They are not Hoxo settlement receipts, PnL, interest or perpetual executions.";
+  group.append(title,note);
+  if(!["connected","unfunded"].includes(state.status)){
+    group.append(document.createElement("p")).textContent="Connect and verify Freighter on Stellar Testnet.";
+    body.append(group);return;
+  }
+  if(classicState.loading){
+    group.append(document.createElement("p")).textContent="Verifying Testnet account, offers and trades...";
+  }else if(classicState.error){
+    group.append(document.createElement("p")).textContent=
+      "PUBLIC HORIZON ACTIVITY UNAVAILABLE · "+classicState.error;
+  }else if(classicState.result?.owner===state.address){
+    const records=isOffers?classicState.result.offers:classicState.result.trades;
+    if(records.length){
+      const grid=document.createElement("div");grid.className="balance-grid";
+      for(const item of records){
+        const values=isOffers?[
+          "#"+item.id,
+          item.amount+" "+item.selling.code+" → "+item.buying.code,
+          "CLASSIC OFFER · NOT HOXO"
+        ]:[
+          item.createdAt.slice(0,10),
+          item.baseAmount+" "+item.base.code+" / "+item.counterAmount+" "+item.counter.code,
+          "CLASSIC "+item.mechanism.toUpperCase()+" · NOT HOXO"
+        ];
+        for(const value of values){
+          const cell=document.createElement("div");cell.textContent=value;grid.append(cell);
+        }
+      }
+      group.append(grid);
+    }else group.append(document.createElement("p")).textContent=
+      "No verified classic DEX "+(isOffers?"offers":"trades")+" in the latest 20 records.";
+    group.append(document.createElement("p")).textContent=
+      "HORIZON TESTNET · LEDGER "+classicState.result.ledger+" · LATEST PAGE ONLY";
+  }else group.append(document.createElement("p")).textContent=
+    "Connect your wallet or refresh public account activity.";
+  body.append(group);
+}
+
 async function fetchTransfers(owner,{more=false}={}){
   if(!owner)return;
   if(transferState.loading)return;
@@ -127,6 +195,10 @@ function renderBalances(state){
     showTransferHistory();
     return;
   }
+  if(activeTab==="Open Orders"||activeTab==="Trade History"){
+    showClassicAccount(state);
+    return;
+  }
   if(activeTab!=="Balances"){
     heading.textContent=activeTab.toUpperCase()+" · NOT DEPLOYED";
     description.textContent="Trading positions, lending, margin and order history require verified on-chain protocol deployments.";
@@ -166,6 +238,10 @@ function renderBalances(state){
 }
 function render(state){
   const connected=["connected","unfunded"].includes(state.status);
+  if(state.address!==classicState.owner){
+    classicRequest++;
+    classicState={owner:null,result:null,loading:false,error:null};
+  }
   if(state.address!==transferState.owner){
     transferRequest++;
     transferState={owner:null,rows:[],excluded:[],nextCursor:null,loading:false,error:null,ledger:null};
@@ -186,6 +262,12 @@ function render(state){
   explorer.classList.toggle("hidden",!hasVerified);
   if(hasVerified)explorer.href="https://stellar.expert/explorer/testnet/account/"+encodeURIComponent(state.address);
   renderBalances(state);
+  // Share ONLY the verified public address, Horizon holdings and ledger.
+  // Never expose Freighter methods, private keys, signatures or auth entries.
+  window.dispatchEvent(new CustomEvent("hoxo:wallet-state",{detail:{
+    status:state.status,address:state.address,ledger:state.ledger,
+    balances:state.balances.map(x=>({...x}))
+  }}));
 }
 function withButton(label,run){
   if(busy)return;
@@ -227,6 +309,9 @@ document.querySelectorAll("[data-portfolio-tab]").forEach(tab=>tab.addEventListe
   const s=controller.snapshot();
   if(activeTab==="Transfers"&&["connected","unfunded"].includes(s.status)&&
      transferState.owner!==s.address)void fetchTransfers(s.address);
+  if(["Open Orders","Trade History"].includes(activeTab)&&
+     ["connected","unfunded"].includes(s.status)&&
+     classicState.owner!==s.address)void fetchClassicAccount(s.address);
 }));
 window.addEventListener("focus",()=>{const s=controller.snapshot();if(s.address&&!busy)withButton("Wallet recheck",()=>controller.refresh());});
 document.addEventListener("visibilitychange",()=>{
