@@ -79,8 +79,8 @@ test("M48 browser terminal warns about independent USD vs USDC book and leaves t
     "m48BookSourceWarning","m48Spread"])assert.match(html,new RegExp('id="'+id+'"'));
   assert.match(html,/M9 spot settlement contract is deployed but paused/);
   assert.match(html,/<summary>PRODUCT STATUS<\/summary>/);
-  assert.match(js,/KRAKEN XLM\/USD.*NOT HOXO/);
-  assert.match(js,/STELLAR TESTNET XLM\/USDC.*NOT HOXO/);
+  assert.match(js,/KRAKEN · XLM\/USD · USD REFERENCE/);
+  assert.match(js,/STELLAR TESTNET DEX · XLM\/USDC · USDC/);
   assert.match(main,/hoxo:book-selection/);
   assert.match(html,/id="tradeButton"[^>]+disabled/);
   assert.doesNotMatch(js,/signTransaction|sendTransaction|set_pause\(false\)/);
