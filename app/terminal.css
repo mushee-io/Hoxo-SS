@@ -200,3 +200,9 @@
 .m59-trade-row a{color:#9beeab;text-decoration:underline;overflow-wrap:anywhere}
 .m59-trade-row small{grid-column:1/-1;color:#94ad9d}
 .m59-settlements a:focus-visible{outline:2px solid #9beeab;outline-offset:2px}
+
+/* Explicit reviewed Testnet spot ticket (not an automatic market order) */
+#tradeButton.trade-review{width:100%;padding:12px 10px;background:#1b6341;color:#e4ffea;border:1px solid #66d99a;border-radius:4px;cursor:pointer;font:700 11px var(--mono)}
+#tradeButton.trade-review:hover{background:#287e57}
+#tradeButton.trade-review:focus-visible{outline:2px solid #b5ffce;outline-offset:3px}
+#tradeButton:disabled{cursor:not-allowed}
