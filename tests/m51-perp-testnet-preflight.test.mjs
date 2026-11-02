@@ -2,16 +2,14 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {createHash} from "node:crypto";
 import {readFile} from "node:fs/promises";
+import {StrKey} from "@stellar/stellar-sdk";
 import {prepareM51PerpTerms,preflightM51XlmPerp,TESTNET_USDC_SAC,
   TESTNET_PASSPHRASE} from "../matching/m51-perp-testnet-preflight.mjs";
 
 const MAKER="GCT7YPNK7JAC2FREF5WLROOWQAWRQQV7US2ZB5YK355QV37SAWNERHDB";
 const TAKER="GB6PLT5RXSSCCEI6AF4CIBBLC6DXIMDIFKHK5YY3EFZHLXK4TBK4RCZ2";
 const ROLES=["perp-clearinghouse","oracle-adapter","risk-engine","unified-margin"];
-const IDS=["CCPT6NJCGNHFTTV54IHGSNKTKD74HFCTDKWA3XIP466YT7JHUILJZCYF",
-  "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC",
-  "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
-  "CCPT6NJCGNHFTTV54IHGSNKTKD74HFCTDKWA3XIP466YT7JHUILJZCYF"];
+const IDS=ROLES.map((_,i)=>StrKey.encodeContract(Buffer.alloc(32,i+1)));
 // These arbitrary ID fixtures never become real Hoxo deployment evidence.
 const WASM=Uint8Array.from({length:45},(_,i)=>i+1);
 const HASH=createHash("sha256").update(WASM).digest("hex");
@@ -26,18 +24,10 @@ function registry(){
     role,contractId:IDS[i],status:"verified",verifiedAtLedger:NOWLEDGER-200,
     wasmSha256:HASH,deploymentTxHash:TX
   }));
-  // Test-only distinct, well-shaped contract StrKeys; no production claims.
-  roles[3].contractId="CCPT6NJCGNHFTTV54IHGSNKTKD74HFCTDKWA3XIP466YT7JHUILJZCYF";
+  // Deterministic valid StrKeys only in mock tests, not real deployments.
   return {network:"testnet",passphrase:TESTNET_PASSPHRASE,contracts:roles};
 }
-function fixtureRegistry(){
-  // Registry function checks actual StrKey checksums; known deployed SACs
-  // and M9 are only used in fixtures. Real Hoxo perp deploys do NOT exist.
-  const r=registry();
-  // Distinct 4th fixture from another valid known Stellar Testnet contract is
-  // not available in repo, so the baseline registry should fail closed.
-  return r;
-}
+function fixtureRegistry(){return registry();}
 function params(overrides={}){
   return {maker:MAKER,taker:TAKER,action:"long",quantityXlm:"5.0000000",
     limitPriceUsd:"0.2500000",markPriceUsd:"0.2000000",
