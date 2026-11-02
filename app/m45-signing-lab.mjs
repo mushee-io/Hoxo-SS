@@ -51,7 +51,7 @@ export function createM45SigningLab({
     if(busy)fail("another signing action is still running");
     busy=true;
     try{return await action();}
-    catch(error){invalidate();throw error;}
+    catch(error){if(phase!=="SETTLED")invalidate();throw error;}
     finally{busy=false;}
   }
   async function liveProof(){
@@ -157,8 +157,13 @@ export function createM45SigningLab({
       });
     },
     async submit({acknowledgement}={}){
-      // This method can only be called by an explicit post-signature user
-      // action; no timers, retries or auto-submissions.
+      // Require deliberate user consent before locking or handling any XDR.
+      // A mistyped phrase never discards two reviewed signatures.
+      if(acknowledgement!==M52_SEND_ACK)
+        fail("separate exact Testnet send confirmation required");
+      if(phase!=="SIGNED_NOT_SENT")
+        fail("the signed Testnet settlement has not reached final review");
+      // No timers, retries, or auto-submissions. This is a user-clicked action.
       return locked(async()=>{
         if(phase!=="SIGNED_NOT_SENT"||!finished||
            !session?.signedTakerAuthEntry||!session?.signedTxXdr||
