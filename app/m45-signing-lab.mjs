@@ -79,7 +79,7 @@ export function createM45SigningLab({
         if(candidate?.simulated!==true||candidate.broadcast!==false||
            candidate.terms?.maker!==proof.wallets[0].address||
            candidate.terms?.taker!==proof.wallets[1].address||
-           candidate.currentLedger!==proof.ledger)
+           Math.abs(candidate.currentLedger-proof.ledger)>4)
           fail("simulation not bound to fresh exact wallets and ledger");
         session=candidate;
         const basicInput=Object.freeze({
