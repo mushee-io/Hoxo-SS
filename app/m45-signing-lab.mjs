@@ -22,9 +22,14 @@ export function createM45SigningLab({
   server,fetchImpl=fetch,now=()=>Date.now(),adapter,
   probe=()=>probeM45TestnetPreflight({server,fetchImpl,nowMs:now()}),
   simulate=(proof,amounts)=>simulateM45BilateralSpot({server,preflight:proof,...amounts}),
-  submitReviewed=m52ReviewedSpotSettlement
+  submitReviewed=m52ReviewedSpotSettlement,
+  verifyTaker=verifyM44TakerAuth,
+  verifyMaker=verifyM44MakerEnvelope,
+  makeEnvelopePreparer=createM44EnvelopePreparer
 }={}){
-  if(typeof submitReviewed!=="function")fail("reviewed Testnet submission adapter required");
+  if([submitReviewed,verifyTaker,verifyMaker,makeEnvelopePreparer]
+     .some(fn=>typeof fn!=="function"))
+    fail("reviewed Testnet signing and submission adapters required");
   if(!adapter||typeof adapter.getAddress!=="function"||typeof adapter.getNetwork!=="function"||
       typeof adapter.signAuthEntry!=="function"||typeof adapter.signTransaction!=="function")
     fail("reviewed M44 Freighter adapter required");
@@ -99,7 +104,7 @@ export function createM45SigningLab({
           matchId:candidate.terms.match_id
         });
         let preparedTxXdr=null;
-        const prepareEnvelope=createM44EnvelopePreparer({
+        const prepareEnvelope=makeEnvelopePreparer({
           expectedTerms:candidate.terms,currentLedger:candidate.currentLedger,
           takerAuthXdr:candidate.takerAuthXdr
         });
@@ -121,7 +126,7 @@ export function createM45SigningLab({
           fail("explicit Wallet 2 confirmation and simulation required");
         const proof=await ensureSigningProof();
         const result=await handoff.approve("taker");
-        const verified=verifyM44TakerAuth({
+        const verified=verifyTaker({
           sourceTxXdr:session.sourceTxXdr,takerAuthXdr:session.takerAuthXdr,
           signedTakerAuthEntry:result.signedAuthEntry,expectedTerms:session.terms,
           currentLedger:proof.ledger
@@ -141,7 +146,7 @@ export function createM45SigningLab({
         const result=await handoff.approve("maker");
         const prepared=session.getPrepared();
         if(!prepared)fail("auth-attached envelope was not constructed");
-        const checked=verifyM44MakerEnvelope({preparedTxXdr:prepared,
+        const checked=verifyMaker({preparedTxXdr:prepared,
           signedTxXdr:result.signedTxXdr,maker:session.terms.maker});
         if(!checked.signatureVerified||!checked.transactionBodyVerified)
           fail("Wallet 1 envelope signature not verified");
