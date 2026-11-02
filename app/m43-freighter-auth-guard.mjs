@@ -1,88 +1,144 @@
 /**
- * M43 browser-only, user-controlled dual-wallet Soroban authorization handoff.
- * Never signs automatically, never broadcasts, and never accepts a secret key.
- * Freighter API adapter must be supplied by the browser UI after independent review.
+ * M43 — non-broadcasting Stellar TESTNET M9 Freighter signing handoff.
+ *
+ * In the M9 transaction design the maker is the source account:
+ *   - taker (non-source): signAuthEntry on the exact Soroban auth entry
+ *   - maker (source): signTransaction on an envelope WITH taker's auth attached
+ *
+ * This intentionally does NOT decode XDR, verify signatures, simulate, attach
+ * the auth tree itself, submit, or certify a trade. A separately reviewed SDK
+ * bridge must construct and inspect the prepared envelope before this is wired
+ * to a browser trading UI. All returned verification flags remain false.
  */
 export const TESTNET_PASSPHRASE = "Test SDF Network ; September 2015";
-// Pin the independently checked M9 Testnet candidate; no arbitrary contract prompts.
 export const M9_TESTNET_CONTRACT_ID = "CCPT6NJCGNHFTTV54IHGSNKTKD74HFCTDKWA3XIP466YT7JHUILJZCYF";
 const G=/^G[A-Z2-7]{55}$/;
+const FIELDS=["networkPassphrase","contractId","maker","taker","sourceTxXdr","takerAuthXdr","matchId"];
 function fail(message){throw new Error("M43: "+message);}
-/** Canonical padded base64 only. Reject nonzero discarded pad bits and malformed lengths.
- * This checks transport encoding, NOT Soroban XDR structure or signatures.
- */
-function canonicalAuthBase64(value){
-  if(typeof value!=="string"||value.length<12||value.length>16384||value.length%4!==0) return false;
+
+/** Transport-only canonical padded base64; NOT Soroban/XDR validation. */
+function canonicalBase64(value){
+  if(typeof value!=="string"||value.length<12||value.length>16384||value.length%4!==0)return false;
   if(!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value))return false;
   const alphabet="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
   if(value.endsWith("=="))return (alphabet.indexOf(value[value.length-3])&15)===0;
   if(value.endsWith("="))return (alphabet.indexOf(value[value.length-2])&3)===0;
   return true;
 }
-export function validateDualWalletHandoff(input){
-  if(!input||Object.getPrototypeOf(input)!==Object.prototype)fail("plain input object required");
-  const allowed=new Set(["networkPassphrase","contractId","maker","taker","makerAuthXdr","takerAuthXdr","matchId"]);
-  for(const key of Reflect.ownKeys(input)){
-    if(typeof key!=="string"||!allowed.has(key))fail("unexpected field");
-    const d=Object.getOwnPropertyDescriptor(input,key);
-    if(!d||!("value" in d))fail("accessors prohibited");
+function exactOwnData(object,allowed,label){
+  if(!object||Object.getPrototypeOf(object)!==Object.prototype)fail(label+" must be a plain object");
+  const keys=Reflect.ownKeys(object);
+  for(const key of keys){
+    if(typeof key!=="string"||!allowed.includes(key))fail(label+" unexpected field");
+    const descriptor=Object.getOwnPropertyDescriptor(object,key);
+    if(!descriptor||!("value" in descriptor))fail(label+" accessors prohibited");
   }
-  // Never read required fields from Object.prototype, even if it was polluted.
-  for(const key of allowed)if(!Object.prototype.hasOwnProperty.call(input,key))fail("missing own field: "+key);
+  return keys;
+}
+function checkResult(result,allowed,field,label){
+  exactOwnData(result,allowed,label);
+  if(Object.prototype.hasOwnProperty.call(result,"error")&&result.error!=null)fail(label+" rejected by signer");
+  if(!canonicalBase64(result[field]))fail(label+" invalid signed XDR");
+}
+export function validateDualWalletHandoff(input){
+  exactOwnData(input,FIELDS,"handoff");
+  for(const key of FIELDS)
+    if(!Object.prototype.hasOwnProperty.call(input,key))fail("missing own field: "+key);
   if(input.networkPassphrase!==TESTNET_PASSPHRASE)fail("Testnet passphrase required");
   if(input.contractId!==M9_TESTNET_CONTRACT_ID)fail("invalid contract");
-  if(typeof input.maker!=="string"||!G.test(input.maker)||typeof input.taker!=="string"||!G.test(input.taker)||input.maker===input.taker)fail("two distinct public wallets required");
+  if(typeof input.maker!=="string"||!G.test(input.maker)||
+     typeof input.taker!=="string"||!G.test(input.taker)||input.maker===input.taker)
+    fail("two distinct public wallets required");
   if(typeof input.matchId!=="string"||!/^([a-f0-9]{64})$/.test(input.matchId))fail("canonical match ID required");
-  for(const role of ["maker","taker"]){
-    const xdr=input[role+"AuthXdr"];
-    if(!canonicalAuthBase64(xdr))fail("invalid auth entry XDR");
-  }
-  if(input.makerAuthXdr===input.takerAuthXdr)fail("distinct wallet authorization entries required");
-  return Object.freeze({networkPassphrase:input.networkPassphrase,contractId:input.contractId,maker:input.maker,taker:input.taker,makerAuthXdr:input.makerAuthXdr,takerAuthXdr:input.takerAuthXdr,matchId:input.matchId});
+  if(!canonicalBase64(input.sourceTxXdr))fail("invalid source envelope XDR");
+  if(!canonicalBase64(input.takerAuthXdr))fail("invalid taker auth entry XDR");
+  if(input.sourceTxXdr===input.takerAuthXdr)fail("envelope and auth entry must differ");
+  return Object.freeze(Object.fromEntries(FIELDS.map(k=>[k,input[k]])));
 }
 /**
- * One approval per distinct wallet, sequentially, with explicit per-role click.
- * Caller supplies a reviewed Freighter adapter. No persistence, no transaction submit.
- * Adapter contract: getAddress(): Promise<{address:string}>,
- * getNetwork(): Promise<{networkPassphrase:string}>, signAuthEntry(xdr, {address,networkPassphrase}).
+ * The caller must supply:
+ *   freighter.getAddress(): Promise<{address}>
+ *   freighter.getNetwork(): Promise<{networkPassphrase}>
+ *   freighter.signAuthEntry(authXdr,{address,networkPassphrase})
+ *     -> Promise<{signedAuthEntry,signerAddress?,error?}>
+ *   freighter.signTransaction(txXdr,{address,networkPassphrase})
+ *     -> Promise<{signedTxXdr,signerAddress?,error?}>
+ *   prepareEnvelope({sourceTxXdr,signedTakerAuthEntry,networkPassphrase,
+ *                    contractId,maker,taker,matchId})
+ *     -> Promise<{preparedTxXdr}>
+ *
+ * prepareEnvelope is a *separate*, independently reviewed SDK responsibility:
+ * attach and verify the taker's exact signed Soroban authorization to the
+ * simulated M9 operation, then build an envelope for maker/source signing.
+ * This guard only checks transport/role order, NEVER cryptographic validity.
  */
-export function createDualWalletHandoff(input,freighter){
+export function createDualWalletHandoff(input,freighter,prepareEnvelope){
   const terms=validateDualWalletHandoff(input);
-  if(!freighter||typeof freighter.getAddress!=="function"||typeof freighter.getNetwork!=="function"||typeof freighter.signAuthEntry!=="function")fail("reviewed Freighter adapter required");
-  let next="maker";
+  if(!freighter||["getAddress","getNetwork","signAuthEntry","signTransaction"].some(m=>typeof freighter[m]!=="function"))
+    fail("reviewed Freighter adapter with auth and envelope signing required");
+  if(typeof prepareEnvelope!=="function")fail("reviewed envelope preparation callback required");
+  let next="taker";
   let pending=false;
-  const signatures=Object.create(null);
+  let signedTakerAuthEntry=null;
+  let approvalCount=0;
+
+  async function requireWallet(address,phase){
+    const network=await freighter.getNetwork();
+    if(!network||network.networkPassphrase!==TESTNET_PASSPHRASE)fail("wallet must remain on Testnet ("+phase+")");
+    const selected=await freighter.getAddress();
+    if(!selected||selected.address!==address)fail("switch Freighter to the exact wallet "+address+" ("+phase+")");
+  }
   return Object.freeze({
     get nextRole(){return next;},
     async approve(role){
-      if(role!==next||!(role==="maker"||role==="taker"))fail("approval out of order or already completed");
+      if(role!==next||!(role==="taker"||role==="maker"))fail("approval out of order or already completed");
       if(pending)fail("approval already in progress");
       pending=true;
-      try {
-      const expected=terms[role];
-      const network=await freighter.getNetwork();
-      if(!network||network.networkPassphrase!==TESTNET_PASSPHRASE)fail("wallet must be on Testnet");
-      const account=await freighter.getAddress();
-      if(!account||account.address!==expected)fail("switch Freighter to the exact "+role+" public wallet");
-      const result=await freighter.signAuthEntry(terms[role+"AuthXdr"],{address:expected,networkPassphrase:TESTNET_PASSPHRASE});
-      if(!result||Object.getPrototypeOf(result)!==Object.prototype)fail("plain Freighter result required");
-      const keys=Reflect.ownKeys(result);
-      if(keys.some(k=>typeof k!=="string"||!["signedAuthEntry","error"].includes(k)))fail("unexpected Freighter result field");
-      for(const k of keys){const d=Object.getOwnPropertyDescriptor(result,k);if(!d||!("value" in d))fail("Freighter result accessors prohibited");}
-      const signed=result.signedAuthEntry;
-      if(result.error!==undefined||!canonicalAuthBase64(signed)||signed===terms[role+"AuthXdr"])fail("valid signed authorization entry not returned");
-      if(role==="taker"&&signed===signatures.maker)fail("duplicate maker/taker signed authorization entry");
-      // Never assume signedAuthEntry proves the signature: caller must independently
-      // verify its decoded Soroban credentials, invocation tree and expiry.
-      // Reject account/network changes while the user was reviewing the prompt.
-      const finalNetwork=await freighter.getNetwork();
-      const finalAccount=await freighter.getAddress();
-      if(!finalNetwork||finalNetwork.networkPassphrase!==TESTNET_PASSPHRASE||!finalAccount||finalAccount.address!==expected)fail("wallet or network changed during approval");
-      signatures[role]=signed;
-      next=role==="maker"?"taker":null;
-      return Object.freeze({role,publicAddress:expected,signedAuthEntry:signed,verified:false,broadcast:false});
-      } finally { pending=false; }
+      try{
+        const address=terms[role];
+        await requireWallet(address,"before signing");
+        if(role==="taker"){
+          const result=await freighter.signAuthEntry(terms.takerAuthXdr,{
+            address,networkPassphrase:TESTNET_PASSPHRASE
+          });
+          checkResult(result,["signedAuthEntry","signerAddress","error"],"signedAuthEntry","taker authorization");
+          if(result.signerAddress!==undefined&&result.signerAddress!==address)
+            fail("taker signer address mismatch");
+          if(result.signedAuthEntry===terms.takerAuthXdr)fail("unchanged unsigned taker authorization");
+          await requireWallet(address,"after signing");
+          signedTakerAuthEntry=result.signedAuthEntry;
+          next="maker";
+          approvalCount=1;
+          return Object.freeze({role,signatureType:"sorobanAuthEntry",
+            publicAddress:address,signedAuthEntry:result.signedAuthEntry,verified:false,broadcast:false});
+        }
+        if(!signedTakerAuthEntry)fail("taker authorization required before source envelope");
+        const assembly=await prepareEnvelope(Object.freeze({
+          sourceTxXdr:terms.sourceTxXdr,
+          signedTakerAuthEntry,
+          networkPassphrase:TESTNET_PASSPHRASE,
+          contractId:M9_TESTNET_CONTRACT_ID,
+          maker:terms.maker,taker:terms.taker,matchId:terms.matchId
+        }));
+        exactOwnData(assembly,["preparedTxXdr"],"prepared envelope");
+        if(!canonicalBase64(assembly.preparedTxXdr)||assembly.preparedTxXdr===terms.sourceTxXdr)
+          fail("valid auth-attached envelope preparation required");
+        // Do not sign with a different account selected during async assembly.
+        await requireWallet(address,"after envelope preparation");
+        const result=await freighter.signTransaction(assembly.preparedTxXdr,{
+          address,networkPassphrase:TESTNET_PASSPHRASE
+        });
+        checkResult(result,["signedTxXdr","signerAddress","error"],"signedTxXdr","maker envelope");
+        if(result.signerAddress!==undefined&&result.signerAddress!==address)
+          fail("maker signer address mismatch");
+        if(result.signedTxXdr===assembly.preparedTxXdr)fail("unchanged unsigned maker envelope");
+        await requireWallet(address,"after signing");
+        next=null;
+        approvalCount=2;
+        return Object.freeze({role,signatureType:"transactionEnvelope",
+          publicAddress:address,signedTxXdr:result.signedTxXdr,verified:false,broadcast:false});
+      }finally{pending=false;}
     },
-    get status(){return Object.freeze({nextRole:next,approvalCount:Object.keys(signatures).length,verified:false,broadcast:false});}
+    get status(){return Object.freeze({nextRole:next,approvalCount,verified:false,broadcast:false});}
   });
 }
