@@ -22,12 +22,12 @@ function clearRows(){
   $("m48Spread").textContent="—";
 }
 function sourceHeading(){
-  $("bookPriceHeading").textContent=selector.value==="kraken"?"PRICE (USD)":"PRICE (USDC)";
+  $("bookPriceHeading").textContent=selector.value==="stellar-testnet"?"PRICE (USDC)":"PRICE (USD)";
   $("bookSizeHeading").textContent="SIZE (XLM)";
   const message={
     "kraken":"KRAKEN XLM/USD · EXTERNAL SPOT ORDERS · NOT HOXO",
     "stellar-testnet":"STELLAR TESTNET XLM/USDC · CLASSIC DEX OFFERS · NOT HOXO",
-    "hyperliquid-perp":"HYPERLIQUID XLM PERP · EXTERNAL MAINNET MARKET · NOT HOXO"
+    "hyperliquid-perp":"HYPERLIQUID XLM PERP · USD PRICE / USDC MARGIN · NOT HOXO"
   };
   $("m48BookSourceWarning").textContent=message[selector.value]||"EXTERNAL REFERENCE DATA ONLY";
 }
@@ -54,7 +54,7 @@ function paint(book){
     book.executable!==false||book.hoxoFills!==false||
     (selector.value==="hyperliquid-perp"&&
       (book.marketType!=="perpetual"||book.source!=="Hyperliquid"||
-       book.currency!=="USDC"||book.externalMainnet!==true))){
+       book.currency!=="USD"||book.externalMainnet!==true))){
     label("Orderbook source unavailable · no artificial price levels",true);
     return;
   }
