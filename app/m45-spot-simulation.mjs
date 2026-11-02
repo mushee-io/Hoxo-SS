@@ -22,7 +22,9 @@ function randomId(randomBytes){
   if(!(buf instanceof Uint8Array)||buf.length!==32)fail("secure 32-byte randomness required");
   return Array.from(buf,b=>b.toString(16).padStart(2,"0")).join("");
 }
-export function draftM45BilateralTerms({xlmAmount,usdcAmount,ledger,randomBytes=(n)=>crypto.getRandomValues(new Uint8Array(n))}){
+export function draftM45BilateralTerms({xlmAmount,usdcAmount,side="sell",ledger,
+  randomBytes=(n)=>crypto.getRandomValues(new Uint8Array(n))}){
+  if(!["sell","buy"].includes(side))fail("side must be buy or sell XLM from Wallet 1");
   if(!Number.isSafeInteger(ledger)||ledger<1||ledger>0xffffffff-100)fail("verified fresh ledger required");
   const base=amountE7(xlmAmount,"XLM"),quote=amountE7(usdcAmount,"USDC");
   // User-selected manual bilateral price; no data feed or price oracle.
@@ -36,7 +38,8 @@ export function draftM45BilateralTerms({xlmAmount,usdcAmount,ledger,randomBytes=
     match_id:ids[0],maker_order_id:ids[1],taker_order_id:ids[2],
     maker:M45_CANDIDATE.maker,taker:M45_CANDIDATE.taker,
     base_token:M44_XLM_SAC,quote_token:M44_USDC_SAC,
-    base_amount:base.toString(),quote_amount:quote.toString(),maker_side:0,
+    base_amount:base.toString(),quote_amount:quote.toString(),
+    maker_side:side==="sell"?0:1,
     maker_limit_e7:price.toString(),taker_limit_e7:price.toString(),
     expires_at_ledger:ledger+20
   });
@@ -56,7 +59,7 @@ function termsScVal(terms){
   return xdr.ScVal.scvMap(fields);
 }
 export async function simulateM45BilateralSpot({
-  server,preflight,xlmAmount="0.0100000",usdcAmount="0.0200000",
+  server,preflight,xlmAmount="0.0100000",usdcAmount="0.0200000",side="sell",
   randomBytes, maxFeeStroops=1000000n
 }){
   if(!preflight||preflight.readyForSimulation!==true||preflight.contractPaused!==false||
@@ -68,7 +71,18 @@ export async function simulateM45BilateralSpot({
   const ledger=Number(latest?.sequence);
   if(!Number.isSafeInteger(ledger)||Math.abs(ledger-preflight.ledger)>4)
     fail("RPC ledger moved: run a new preflight");
-  const terms=draftM45BilateralTerms({xlmAmount,usdcAmount,ledger,randomBytes});
+  const terms=draftM45BilateralTerms({xlmAmount,usdcAmount,side,ledger,randomBytes});
+  if(!Array.isArray(preflight.wallets)||preflight.wallets.length!==2||
+     preflight.wallets[0].address!==terms.maker||
+     preflight.wallets[1].address!==terms.taker)
+    fail("exact participant balances from fresh Testnet preflight required");
+  const baseFrom=terms.maker_side===0?preflight.wallets[0]:preflight.wallets[1];
+  const quoteFrom=terms.maker_side===0?preflight.wallets[1]:preflight.wallets[0];
+  const nativeGasReserve=10_000_000n;
+  if(BigInt(baseFrom.xlmE7??"0")<BigInt(terms.base_amount)+nativeGasReserve)
+    fail("XLM selling wallet lacks funds and native fee reserve");
+  if(BigInt(quoteFrom.usdcE7??"0")<BigInt(terms.quote_amount))
+    fail("USDC paying wallet lacks exact issuer funds");
   const source=await server.getAccount(terms.maker);
   if(source?.accountId?.()!==terms.maker)fail("RPC returned wrong source account");
   const tx=new TransactionBuilder(source,{
