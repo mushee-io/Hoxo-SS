@@ -46,7 +46,7 @@ export function normalizeKrakenCandles(response,{nowSec=Date.now()/1000}={}){
   const unique=new Map(candles.map(c=>[c.time,c]));
   return [...unique.values()].sort((a,b)=>a.time-b.time).slice(-220);
 }
-export function parseKrakenOhlcMessage(raw,{pair=M47_PAIR,interval=30}={}){
+export function parseKrakenOhlcMessage(raw,{pair=M47_PAIR,interval=30,nowSec=Date.now()/1000}={}){
   let msg;
   try{msg=typeof raw==="string"?JSON.parse(raw):raw;}catch{return null;}
   if(!Array.isArray(msg)||msg.length<4||msg[msg.length-1]!==pair||
@@ -63,7 +63,7 @@ export function parseKrakenOhlcMessage(raw,{pair=M47_PAIR,interval=30}={}){
     close=finiteNumber(row[5],"stream close");
     volume=Number(row[7]);
   }catch{return null;}
-  if(!Number.isSafeInteger(bucket)||bucket<1||high<Math.max(open,close,low)||
+  if(!Number.isSafeInteger(bucket)||bucket<1||bucket>nowSec+300||high<Math.max(open,close,low)||
      low>Math.min(open,close,high)||!Number.isFinite(volume)||volume<0)return null;
   return {time:bucket,open,high,low,close,volume};
 }
