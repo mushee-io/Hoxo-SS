@@ -77,7 +77,7 @@ export function normalizeM50Trade(row,owner,nowMs){
 }
 async function readPage(url,fetchImpl){
   const response=await fetchImpl(url,{
-    method:"GET",headers:{Accept:"application/json"},cache:"no-store"
+    method:"GET",headers:{Accept:"application/json"},cache:"no-store",redirect:"error"
   });
   if(!response?.ok)fail("Horizon account history HTTP unavailable");
   const json=await response.json();
