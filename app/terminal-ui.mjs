@@ -17,6 +17,7 @@ function setView(next){
   all("[data-view]").forEach(b=>b.classList.toggle("selected",b.dataset.view===view));
   $("tradeView").classList.toggle("hidden",view!=="trade");
   $("m45SigningLab")?.classList.toggle("hidden",view!=="trade");
+  $("m46WindowsLab")?.classList.toggle("hidden",view!=="trade");
   $("alternateView").classList.toggle("hidden",view==="trade");
   if(view==="portfolio"){
     $("altTitle").textContent="YOUR PORTFOLIO";
