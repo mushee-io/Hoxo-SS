@@ -111,3 +111,6 @@ $("m45Reset").addEventListener("click",()=>{
   proof=null;clearSession();note("Signing lab reset. No transaction has been broadcast.");
 });
 paint();
+
+// Bundle Windows-only read-only wallet acceptance alongside the M45 lab.
+import "./m46-windows-ui.mjs";
