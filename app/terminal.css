@@ -79,3 +79,25 @@
 .observed-activity-row strong{font-weight:400;color:#e0eae3}.observed-activity-row small{color:#86a9a2;font-size:9px}
 #observedActivityRefresh{background:#26372d;border:1px solid #415e48;padding:7px 10px;color:#b9e4bb;font:9px var(--mono)}
 #observedActivityRefresh:disabled{opacity:.5;cursor:wait}
+
+
+/* M45 — internal, nonbroadcasting bilateral signing lab */
+.m45-lab{margin-top:20px;padding:13px 0;border-top:2px solid #344b3a;font:10px/1.55 var(--mono);color:#afc1bd}
+.m45-top{display:flex;justify-content:space-between;gap:7px;align-items:center}
+.m45-top strong{color:#e0f2e4;letter-spacing:.02em;font-size:11px}.m45-top span{font-size:9px;color:#f5c88d;background:#403023;padding:4px 5px}
+.m45-lab p{font:10px/1.6 var(--mono);color:#91a49d;margin:9px 0 12px}
+.m45-meta{display:grid;grid-template-columns:1fr;gap:4px;padding:8px;background:#182222;border:1px solid #2f4641;margin:10px 0;font:9px/1.45 var(--mono)}
+.m45-meta>div{display:flex;justify-content:space-between;gap:8px}.m45-meta b{color:#d8eade;text-align:right;overflow-wrap:anywhere}
+.m45-main{display:block;width:100%;padding:11px 6px;color:#0d1c10;background:#b5d889;font:10px/1.4 var(--mono);font-weight:600;border:0;border-radius:2px;margin:8px 0;text-align:center;white-space:normal}
+.m45-main:disabled{opacity:.45;cursor:not-allowed;background:#687c6a}
+.m45-lab .m45-status{border-left:2px solid #657a4d;padding:7px 9px;background:#1f2925;color:#c1d3bd;overflow-wrap:anywhere}
+.m45-lab .m45-error{border-color:#b75b5b;color:#ffc4c4}
+.m45-amounts{display:grid;grid-template-columns:1fr;gap:7px;margin:12px 0}
+.m45-amounts label{font:9px/1.5 var(--mono);color:#b5c2c0}
+.m45-amounts input{display:block;width:100%;min-width:0;padding:9px;background:#151c1d;border:1px solid #3c4844;color:#f7f7eb;font:11px var(--mono);margin-top:4px;box-sizing:border-box}
+.m45-consent{display:flex;gap:8px;align-items:flex-start;font:10px/1.5 var(--mono);margin:10px 0;color:#c9d2ca}
+.m45-consent input{margin-top:3px;accent-color:#b5d889;flex:none}
+.m45-terms{font:9px/1.65 var(--mono);padding:9px;background:#101817;border:1px solid #2e3c37;white-space:pre-wrap;overflow-wrap:anywhere;max-height:220px;overflow:auto;color:#bbd5c2}
+.m45-no-send{padding:9px 7px;background:#31291f;color:#e4c794!important;border:1px solid #6e5833;text-align:center}
+.m45-reset{width:100%;font:9px var(--mono);background:transparent;border:1px solid #51645b;padding:8px;color:#a4b9ae}
+@media(min-width:1400px){.m45-amounts{grid-template-columns:1fr 1fr}}
