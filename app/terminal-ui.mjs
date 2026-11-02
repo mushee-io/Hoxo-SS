@@ -123,7 +123,8 @@ function chooseMarket(id){
   $("marketLabel").textContent=market.label;
   $("marketSubheading").textContent=market.type==="spot"?
     "SPOT · STELLAR TESTNET SETTLEMENT":"PERP · REFERENCE MARKET";
-  $("marketPrimaryStat").textContent="REFERENCE PRICE"; // M47 is Kraken spot, not a perp mark price
+  $("marketPrimaryStat").textContent=market.type==="spot"?
+    "LAST VERIFIED M9 PRICE":"PERP REFERENCE PRICE";
   $("fundingStatLabel").textContent=market.type==="spot"?"FUNDING / N/A":"FUNDING / 1H";
   $("marginMode").textContent=market.type==="spot"?"SPOT · TESTNET":"PERP · TESTNET PREVIEW";
   $("sizeAssetLabel").textContent=market.base;
