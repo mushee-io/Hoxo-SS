@@ -98,10 +98,10 @@ test("M62 hides internal M46 Windows QA and marks undeployed perp markets clearl
   const ui=await readFile(resolve(root,"app/terminal-ui.mjs"),"utf8");
   const spot=await readFile(resolve(root,"app/m45-spot-ui.mjs"),"utf8");
   assert.doesNotMatch(html,/id="m46WindowsLab"|id="m46VerifyWallet1"|id="m46VerifyWallet2"/);
-  assert.doesNotMatch(spot,/import\\s+["']\\.\\/m46-windows-ui\\.mjs/);
+  assert.doesNotMatch(spot,/import\s+["']\.\/m46-windows-ui\.mjs/);
   assert.match(html,/id="marketAvailabilityBanner"/);
   assert.match(html,/id="switchToSpot"/);
   assert.match(ui,/PERPETUAL TRADING NOT DEPLOYED/);
-  assert.match(ui,/chooseMarket\\("xlm-usdc-spot"\\)/);
+  assert.match(ui,/chooseMarket\("xlm-usdc-spot"\)/);
   assert.match(ui,/market.id!=="xlm-usdc-spot"/);
 });
