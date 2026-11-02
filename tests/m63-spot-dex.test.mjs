@@ -86,7 +86,6 @@ test("M63 browser code only signs on explicit wallet approval, never bypasses in
   assert.match(html,/https:\/\/faucet\.circle\.com/);
   assert.match(ui,/api\.signTransaction\(tx\.toXDR\(\)/);
   assert.match(ui,/submit:false/);
-  assert.match(ui,/signed\.hash\(\)\.toString\("hex"\)!==tx\.hash\(\)/);
   assert.match(ui,/server\.submitTransaction\(signed\)/);
   assert.match(ui,/hashHex\(signed\.hash\(\)\)!==hashHex\(tx\.hash\(\)\)/);
   assert.match(ui,/receipt\.successful!==true/);
