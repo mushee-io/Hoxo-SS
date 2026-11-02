@@ -33,3 +33,7 @@ Every authorization term must be an own data property on the supplied plain obje
 ## Contract substitution protection
 
 The browser handoff now pins `contractId` to the independently checked M9 Testnet candidate `CCPT6NJCGNHFTTV54IHGSNKTKD74HFCTDKWA3XIP466YT7JHUILJZCYF`. Any other contract is rejected before Freighter is called, including a different syntactically valid C-address. This is an anti-phishing boundary, **not** a live check of current deployed code, owner, pause status or invocation-tree binding. Before operator approval, rerun M41's public-only on-chain checks and compare the full transaction simulation; no broadcast or unpause is enabled by this change.
+
+## Canonical base64 transport boundary
+
+Both simulated unsigned entries and Freighter-returned signed entries must now use canonical padded base64 with a multiple-of-four length and zero discarded padding bits. Malformed lengths, extra padding, nonalphabet characters and alternate noncanonical encodings fail before approval advances. Regression tests cover rejection and retry. **This does not parse Soroban XDR or verify signatures**; only a separately reviewed SDK-based decoder bound to the exact M9 invocation, nonce, credential address, expiry and fresh simulation can establish that. No transaction is broadcast.
