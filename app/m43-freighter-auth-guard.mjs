@@ -8,6 +8,17 @@ export const TESTNET_PASSPHRASE = "Test SDF Network ; September 2015";
 export const M9_TESTNET_CONTRACT_ID = "CCPT6NJCGNHFTTV54IHGSNKTKD74HFCTDKWA3XIP466YT7JHUILJZCYF";
 const G=/^G[A-Z2-7]{55}$/;
 function fail(message){throw new Error("M43: "+message);}
+/** Canonical padded base64 only. Reject nonzero discarded pad bits and malformed lengths.
+ * This checks transport encoding, NOT Soroban XDR structure or signatures.
+ */
+function canonicalAuthBase64(value){
+  if(typeof value!=="string"||value.length<12||value.length>16384||value.length%4!==0) return false;
+  if(!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value))return false;
+  const alphabet="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  if(value.endsWith("=="))return (alphabet.indexOf(value[value.length-3])&15)===0;
+  if(value.endsWith("="))return (alphabet.indexOf(value[value.length-2])&3)===0;
+  return true;
+}
 export function validateDualWalletHandoff(input){
   if(!input||Object.getPrototypeOf(input)!==Object.prototype)fail("plain input object required");
   const allowed=new Set(["networkPassphrase","contractId","maker","taker","makerAuthXdr","takerAuthXdr","matchId"]);
@@ -24,7 +35,7 @@ export function validateDualWalletHandoff(input){
   if(typeof input.matchId!=="string"||!/^([a-f0-9]{64})$/.test(input.matchId))fail("canonical match ID required");
   for(const role of ["maker","taker"]){
     const xdr=input[role+"AuthXdr"];
-    if(typeof xdr!=="string"||xdr.length<12||xdr.length>16384||!/^[A-Za-z0-9+/]+={0,2}$/.test(xdr))fail("invalid auth entry XDR");
+    if(!canonicalAuthBase64(xdr))fail("invalid auth entry XDR");
   }
   if(input.makerAuthXdr===input.takerAuthXdr)fail("distinct wallet authorization entries required");
   return Object.freeze({networkPassphrase:input.networkPassphrase,contractId:input.contractId,maker:input.maker,taker:input.taker,makerAuthXdr:input.makerAuthXdr,takerAuthXdr:input.takerAuthXdr,matchId:input.matchId});
@@ -59,7 +70,7 @@ export function createDualWalletHandoff(input,freighter){
       if(keys.some(k=>typeof k!=="string"||!["signedAuthEntry","error"].includes(k)))fail("unexpected Freighter result field");
       for(const k of keys){const d=Object.getOwnPropertyDescriptor(result,k);if(!d||!("value" in d))fail("Freighter result accessors prohibited");}
       const signed=result.signedAuthEntry;
-      if(result.error!==undefined||typeof signed!=="string"||signed.length<12||signed.length>16384||!/^[A-Za-z0-9+/]+={0,2}$/.test(signed)||signed===terms[role+"AuthXdr"])fail("valid signed authorization entry not returned");
+      if(result.error!==undefined||!canonicalAuthBase64(signed)||signed===terms[role+"AuthXdr"])fail("valid signed authorization entry not returned");
       if(role==="taker"&&signed===signatures.maker)fail("duplicate maker/taker signed authorization entry");
       // Never assume signedAuthEntry proves the signature: caller must independently
       // verify its decoded Soroban credentials, invocation tree and expiry.
