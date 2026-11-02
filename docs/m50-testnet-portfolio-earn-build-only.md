@@ -13,7 +13,7 @@ The repository now contains an official `LICENSE` file with the standard **MIT L
 - Connect a Freighter public G-address on **Stellar Testnet**. No keys, recovery phrases or signed XDR are collected.
 - The main Portfolio page reads a recent **verified Horizon Testnet network root**, exact account identity and real wallet balances. It fetches the latest 20 wallet-owned **classic Stellar DEX offers** (`GET /accounts/{G}/offers`) and **classic Stellar account trades** (`GET /accounts/{G}/trades`).
 - The existing Trade → Open Orders and Trade History tabs can now inspect these same independently observed **classic DEX** records rather than falsely presenting actual on-chain public offers/trades as unavailable. **Hoxo M9 offers, matching, perps, settlement receipts and PnL remain unverified**. Classic DEX records are not relabelled as Hoxo volume or users.
-- Strict response parsing rejects other-owner records, malformed asset issuers, duplicate IDs, invalid amounts, impossible timestamps (including pre-Stellar-network dates), wrong Testnet network and future ledger numbers. Never follow Horizon response-provided `next` links; fixed own endpoints only.
+- Strict response parsing rejects other-owner records, malformed asset issuers, overlong credit_alphanum4 codes (while permitting short credit_alphanum12 codes), duplicate IDs, invalid amounts, impossible timestamps (including pre-Stellar-network dates), wrong Testnet network and future ledger numbers. Never follow Horizon response-provided `next` links; fixed own endpoints only.
 - Account selection and wallet refresh invalidate previous public portfolio data. Failed network reads display an error rather than cached/current-looking data.
 
 ## Earn — conservative functional preview
