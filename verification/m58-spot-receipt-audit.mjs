@@ -3,8 +3,8 @@ export const TESTNET_PASSPHRASE="Test SDF Network ; September 2015";
 const hashPattern=/^[0-9a-f]{64}$/i;
 const addressPattern=/^G[A-Z2-7]{55}$/;
 function fail(s){throw Error("M58 evidence: "+s);}
-function hash(s){if(typeof s!=="string"||!hashPattern.test(s))fail("invalid hash");return s.toLowerCase();}
-function ledger(n){return Number.isSafeInteger(n)&&n>0;}
+function hash(s){if(s instanceof Uint8Array&&s.length===32)return Array.from(s,x=>x.toString(16).padStart(2,"0")).join("");if(typeof s!=="string"||!hashPattern.test(s))fail("invalid hash");return s.toLowerCase();}
+function ledger(n){return Number.isSafeInteger(n)&&n>0;}\nfunction positiveAmount(n){return typeof n==="bigint"?n>0n:typeof n==="string"&&/^[1-9][0-9]*$/.test(n);}
 export async function auditM58SpotPair({rpc,contractId,buy,sell}={}){
  if(!rpc||["getNetwork","getTransaction","queryContract"].some(k=>typeof rpc[k]!=="function"))
    fail("independent read-only RPC adapter required");
@@ -27,8 +27,7 @@ export async function auditM58SpotPair({rpc,contractId,buy,sell}={}){
      r.settled_ledger!==tx.ledger||
      !addressPattern.test(r.maker)||!addressPattern.test(r.taker)||
      r.maker===r.taker||
-     typeof r.base_amount!=="string"||!/^[1-9][0-9]*$/.test(r.base_amount)||
-     typeof r.quote_amount!=="string"||!/^[1-9][0-9]*$/.test(r.quote_amount))
+     !positiveAmount(r.base_amount)||!positiveAmount(r.quote_amount))
     fail("receipt does not match distinct-party settled trade");
   const makerOrder=hash(r.maker_order_id),takerOrder=hash(r.taker_order_id);
   if(makerOrder===takerOrder||orders.has(makerOrder)||orders.has(takerOrder))
