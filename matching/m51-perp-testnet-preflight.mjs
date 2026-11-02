@@ -8,6 +8,8 @@
  */
 import {isStellarGAddress} from "../app/wallet-core.mjs";
 import {isStellarContractId} from "../infra/registry.mjs";
+import {Account,Address,Contract,TransactionBuilder,nativeToScVal,xdr}
+  from "@stellar/stellar-sdk";
 export const TESTNET_PASSPHRASE="Test SDF Network ; September 2015";
 export const TESTNET_USDC_SAC="CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA";
 const REQUIRED=["perp-clearinghouse","oracle-adapter","risk-engine","unified-margin"];
@@ -120,11 +122,12 @@ export async function preflightM51XlmPerp({
   const quote=readVerified(await server.queryContract(oracle,"current",{market_id:1}),"oracle current");
   if(!quote||typeof quote.mark_e7!=="bigint"||quote.mark_e7<=0n||
      typeof quote.index_e7!=="bigint"||quote.index_e7<=0n||
-     !Number.isSafeInteger(quote.last_update_sec)||quote.last_update_sec<=0)
+     !Number.isSafeInteger(Number(quote.last_update_sec))||Number(quote.last_update_sec)<=0)
     fail("invalid independent on-chain price proof");
   const nowSec=Number(latest?.closeTime);
-  if(!Number.isSafeInteger(nowSec)||nowSec-quote.last_update_sec>120||
-     quote.last_update_sec>nowSec+10)
+  const quoteTime=Number(quote.last_update_sec);
+  if(!Number.isSafeInteger(nowSec)||!Number.isSafeInteger(quoteTime)||
+     nowSec-quoteTime>120||quoteTime>nowSec+10)
     fail("perp oracle quote is stale or future-dated");
   if(quote.mark_e7*10n>quote.index_e7*11n||
      quote.index_e7*10n>quote.mark_e7*11n)
@@ -143,7 +146,9 @@ export async function preflightM51XlmPerp({
   });
   const nominal=BigInt(terms.quantityE7)*BigInt(terms.markE7)/10_000_000n;
   const margin=(nominal*BigInt(market.initial_margin_bps)+9999n)/10000n;
-  const fee=(nominal*BigInt(market.fee_bps??0)+9999n)/10000n;
+  if(!Number.isSafeInteger(market.fee_bps)||market.fee_bps<0||market.fee_bps>1000)
+    fail("unverified perpetual trading fee policy");
+  const fee=(nominal*BigInt(market.fee_bps)+9999n)/10000n;
   const needed=margin+fee;
   if(needed<=0n||!a||!b||typeof a.available_e7!=="bigint"||
      typeof b.available_e7!=="bigint"||
@@ -158,4 +163,55 @@ export async function preflightM51XlmPerp({
     executionPermitted:false, // separate authenticated signed-simulation and send
     broadcast:false
   });
+}
+
+
+/**
+ * Build one-operation M12 open Soroban envelope with exact reviewed args.
+ * Unsigned only. Two-party authorization and real simulation are separate.
+ */
+export function buildM51PerpUnsignedOpen({preflight,sourceAccount,feeStroops="1000"}={}){
+  if(!preflight||preflight.riskAndOracleSourcesVerified!==true||
+     preflight.executionPermitted!==false||
+     preflight.networkPassphrase!==TESTNET_PASSPHRASE||
+     !isStellarContractId(preflight.contractId)||
+     !isStellarGAddress(preflight.long)||!isStellarGAddress(preflight.short)||
+     preflight.long===preflight.short||
+     !FULL_SHA.test(preflight.positionId)||
+     !Number.isSafeInteger(preflight.expiresAtLedger)||
+     !Number.isSafeInteger(preflight.verifiedLedger)||
+     preflight.expiresAtLedger<preflight.verifiedLedger||
+     preflight.expiresAtLedger>preflight.verifiedLedger+100)
+    fail("a verified current-ledger on-chain perpetual preflight is required");
+  const maker=preflight.operatorAction==="long"?preflight.long:
+    preflight.operatorAction==="short"?preflight.short:null;
+  if(!maker||!(sourceAccount instanceof Account)||sourceAccount.accountId()!==maker)
+    fail("selected long/short maker must be the sole transaction source");
+  if(!/^[1-9]\d*$/.test(feeStroops)||
+     BigInt(feeStroops)>1_000_000n)fail("perp simulation fee exceeds Testnet ceiling");
+  const amountKeys=["quantityE7","longMaxE7","shortMinE7"];
+  if(amountKeys.some(k=>typeof preflight[k]!=="string"||
+     !/^[1-9]\d*$/.test(preflight[k])||
+     BigInt(preflight[k])>MAX_E7))
+    fail("invalid preflight margin, quantity or price bound");
+  const idBytes=Uint8Array.from(preflight.positionId.match(/../g),
+    h=>parseInt(h,16));
+  const invocation=new Contract(preflight.contractId).call("open",
+    xdr.ScVal.scvBytes(idBytes),
+    new Address(preflight.long).toScVal(),
+    new Address(preflight.short).toScVal(),
+    nativeToScVal(BigInt(preflight.quantityE7),{type:"i128"}),
+    nativeToScVal(BigInt(preflight.longMaxE7),{type:"i128"}),
+    nativeToScVal(BigInt(preflight.shortMinE7),{type:"i128"}),
+    xdr.ScVal.scvU32(preflight.expiresAtLedger)
+  );
+  const tx=new TransactionBuilder(sourceAccount,{
+    fee:feeStroops,networkPassphrase:TESTNET_PASSPHRASE
+  }).addOperation(invocation).setTimeout(60).build();
+  if(tx.source!==maker||tx.operations.length!==1||tx.signatures.length!==0)
+    fail("unsafe perpetual transaction shape");
+  return Object.freeze({transactionXdr:tx.toXdr(),source:maker,
+    positionId:preflight.positionId,network:"Stellar Testnet",
+    operationCount:1,signatureCount:0,
+    sorobanSimulationRequired:true,broadcast:false,executionPermitted:false});
 }
