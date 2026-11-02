@@ -41,6 +41,7 @@ function updateChart(){
     :chartView==="depth"?"Depth requires an operational order book and matching engine.":"Funding requires a deployed perpetual clearinghouse.";
   $("chartMarketStatus").textContent=market.label+" / "+timeframe+" / NO TESTNET CANDLE FEED";
   $("currentTimeframe").textContent=timeframe;
+  window.dispatchEvent(new CustomEvent("hoxo:chart-selection",{detail:{market:market.id,view:chartView,timeframe}}));
 }
 function updateBook(){
   const book=bookView==="book";
