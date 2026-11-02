@@ -109,3 +109,21 @@
 .m46-lab .m45-status{border-left:2px solid #617e6e;padding:9px;background:#182825;overflow-wrap:anywhere}
 .m46-lab .m45-error{border-left-color:#cc6575;color:#ffb5bb}
 .m46-lab .m45-no-send{border:1px solid #7c5f35;padding:9px;background:#2b2820;color:#ead2a5}
+
+
+/* M47 — genuine Kraken XLM/USD external reference candlesticks */
+.chart-panel{position:relative}
+.m47-candle-surface{position:absolute;inset:0;z-index:3;background:#10171b}
+.m47-candle-surface canvas{display:block;width:100%;height:100%}
+.m47-watermark{position:absolute;left:14px;top:12px;font:9px var(--mono);letter-spacing:.035em;color:#839c8d;background:rgba(12,20,21,.8);border:1px solid #29463a;padding:5px 7px;pointer-events:none}
+.m47-chart-warning{position:absolute;left:14px;bottom:14px;font:9px var(--mono);color:#e3b68a;background:rgba(31,26,20,.9);padding:5px 7px;pointer-events:none}
+.m47-last-price{pointer-events:none;position:absolute;z-index:5;right:100px;top:90px;text-align:right;display:flex;flex-direction:column;gap:4px}
+.m47-last-price strong{color:var(--lime);font:500 15px var(--mono)}
+.m47-last-price span{max-width:300px;font:8px var(--mono);color:#a3bba3}
+#m47SourceStatus{color:#9acba2;font:9px var(--mono);max-width:275px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:middle}
+.m47-candle-surface~.chart-yaxis{display:none}
+@media(max-width:860px){
+ .m47-last-price{right:16px;top:88px}
+ .m47-last-price span{max-width:170px}
+ #m47SourceStatus{max-width:140px}
+}
