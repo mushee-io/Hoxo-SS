@@ -75,13 +75,14 @@ $("m45Prepare").addEventListener("click",()=>run("Rechecking and simulating exac
   const result=await engine.prepare({
     acknowledged:$("m45TermsAck").checked,
     xlmAmount:$("m45Xlm").value,
-    usdcAmount:$("m45Usdc").value
+    usdcAmount:$("m45Usdc").value,
+    side:$("m51SpotSide").value
   });
   const terms=result.terms;
   $("m45Terms").textContent=[
     "INTERNAL BILATERAL TEST ONLY — MANUAL PRICE, NO LIVE QUOTE",
-    "Maker (sells XLM): "+terms.maker,
-    "Taker (pays USDC): "+terms.taker,
+    "Wallet 1 "+(terms.maker_side===0?"SELLS XLM":"BUYS XLM")+": "+terms.maker,
+    "Wallet 2 "+(terms.maker_side===0?"BUYS XLM / PAYS USDC":"SELLS XLM / RECEIVES USDC")+": "+terms.taker,
     "Base XLM (7 decimals): "+terms.base_amount,
     "Quote USDC (7 decimals): "+terms.quote_amount,
     "Match ID: "+terms.match_id,
@@ -104,8 +105,8 @@ $("m45SignMaker").addEventListener("click",()=>run("Checking Wallet 1 envelope s
 for(const id of ["m45TermsAck","m45TakerAck","m45MakerAck"]){
   $(id).addEventListener("change",paint);
 }
-for(const id of ["m45Xlm","m45Usdc"]){
-  $(id).addEventListener("input",()=>{proof=null;clearSession();note("Amounts changed. Run a fresh Testnet preflight.");});
+for(const id of ["m45Xlm","m45Usdc","m51SpotSide"]){
+  $(id).addEventListener("input",()=>{proof=null;clearSession();note("Trade side or amounts changed. Run a fresh Testnet preflight.");});
 }
 $("m45Reset").addEventListener("click",()=>{
   proof=null;clearSession();note("Signing lab reset. No transaction has been broadcast.");
