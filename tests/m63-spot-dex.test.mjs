@@ -91,3 +91,24 @@ test("M63 browser code only signs on explicit wallet approval, never bypasses in
   assert.match(ui,/receipt\.successful!==true/);
   assert.doesNotMatch(ui,/Keypair\.fromSecret|setTimeout\(.*submitTransaction|localStorage\.setItem/);
 });
+
+test("M64 rejects missing, malformed and inconsistent Horizon reserve proofs before SELL",()=>{
+  const quote=quoteDirectXlmUsdc({side:"sell",quantityXlm:"10",book,nowMs});
+  const balance={xlmE7:1000000000n,usdcE7:100000000n};
+  const valid={subentry_count:1,num_sponsoring:0,num_sponsored:0};
+  assert.equal(assertCapacity({side:"sell",quote,balance,account:valid}),true);
+  for(const field of ["subentry_count","num_sponsoring","num_sponsored"]){
+    const missing={...valid};delete missing[field];
+    assert.throws(()=>assertCapacity({side:"sell",quote,balance,account:missing}),
+      /missing Horizon account reserve proof/);
+    for(const invalid of [-1,1.5,"1",null,Number.MAX_SAFE_INTEGER+1]){
+      assert.throws(()=>assertCapacity({side:"sell",quote,balance,
+        account:{...valid,[field]:invalid}}),/reserve proof/);
+    }
+  }
+  assert.throws(()=>assertCapacity({side:"sell",quote,balance,
+    account:{...valid,num_sponsored:4}}),/inconsistent Horizon sponsorship/);
+  const highlyReserved={...valid,subentry_count:180};
+  assert.throws(()=>assertCapacity({side:"sell",quote,balance,
+    account:highlyReserved}),/insufficient spendable XLM/);
+});
