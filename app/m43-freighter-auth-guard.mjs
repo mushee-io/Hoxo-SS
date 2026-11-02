@@ -4,8 +4,9 @@
  * Freighter API adapter must be supplied by the browser UI after independent review.
  */
 export const TESTNET_PASSPHRASE = "Test SDF Network ; September 2015";
+// Pin the independently checked M9 Testnet candidate; no arbitrary contract prompts.
+export const M9_TESTNET_CONTRACT_ID = "CCPT6NJCGNHFTTV54IHGSNKTKD74HFCTDKWA3XIP466YT7JHUILJZCYF";
 const G=/^G[A-Z2-7]{55}$/;
-const C=/^C[A-Z2-7]{55}$/;
 function fail(message){throw new Error("M43: "+message);}
 export function validateDualWalletHandoff(input){
   if(!input||Object.getPrototypeOf(input)!==Object.prototype)fail("plain input object required");
@@ -18,7 +19,7 @@ export function validateDualWalletHandoff(input){
   // Never read required fields from Object.prototype, even if it was polluted.
   for(const key of allowed)if(!Object.prototype.hasOwnProperty.call(input,key))fail("missing own field: "+key);
   if(input.networkPassphrase!==TESTNET_PASSPHRASE)fail("Testnet passphrase required");
-  if(typeof input.contractId!=="string"||!C.test(input.contractId))fail("invalid contract");
+  if(input.contractId!==M9_TESTNET_CONTRACT_ID)fail("invalid contract");
   if(typeof input.maker!=="string"||!G.test(input.maker)||typeof input.taker!=="string"||!G.test(input.taker)||input.maker===input.taker)fail("two distinct public wallets required");
   if(typeof input.matchId!=="string"||!/^([a-f0-9]{64})$/.test(input.matchId))fail("canonical match ID required");
   for(const role of ["maker","taker"]){
