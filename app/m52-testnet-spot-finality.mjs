@@ -80,13 +80,18 @@ async function tokenState(server,terms){
 export function reconcileM52Balances(before,after,terms,feeCeiling){
   const base=numberText(terms.base_amount,"XLM size");
   const quote=numberText(terms.quote_amount,"USDC size");
-  const makerSells=terms.maker_side===0;
+  if(terms.maker_side!==0&&terms.maker_side!==1)fail("invalid maker side for reconciliation");
+  if(typeof feeCeiling!=="bigint"||feeCeiling<0n||feeCeiling>MAX_FEE_STROOPS)
+    fail("invalid network fee ceiling");
   // maker is source (pays network fee). USDC token changes must be exact.
+  const makerSells=terms.maker_side===0;
   const expectedXlm=makerSells?[-base,base]:[base,-base];
   const expectedUsdc=makerSells?[quote,-quote]:[-quote,quote];
   const xlmBefore=before[M44_XLM_SAC],xlmAfter=after[M44_XLM_SAC];
   const usdcBefore=before[M44_USDC_SAC],usdcAfter=after[M44_USDC_SAC];
-  if(!xlmBefore||!xlmAfter||!usdcBefore||!usdcAfter)fail("missing before/after balances");
+  if([xlmBefore,xlmAfter,usdcBefore,usdcAfter].some(v=>
+    !Array.isArray(v)||v.length!==2||v.some(n=>typeof n!=="bigint"||n<0n)))
+    fail("invalid before/after wallet balances");
   for(let i=0;i<2;i++){
     const usdcDelta=usdcAfter[i]-usdcBefore[i];
     if(usdcDelta!==expectedUsdc[i])
