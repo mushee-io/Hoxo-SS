@@ -37,16 +37,24 @@ export function verifyM52SubmissionHash(signedTransactionHash,reportedHash){
     fail("RPC returned hash for a different signed transaction");
   return expected;
 }
+function sameI128Amount(observed,expected){
+  if(typeof expected!=="string"||!/^[1-9]\d*$/.test(expected))return false;
+  // @stellar/stellar-sdk queryContract decodes Soroban i128 to BigInt.
+  // Some RPC serializers return exact base-10 strings: accept either, never
+  // coerce through Number (which loses 128-bit precision).
+  if(typeof observed==="bigint")return observed.toString()===expected;
+  if(typeof observed==="string"&&/^[1-9]\d*$/.test(observed))
+    return observed===expected;
+  return false;
+}
 export function verifyM52Receipt(receipt,terms){
   if(!receipt||!sameReceiptId(receipt.match_id,terms.match_id)||
      !sameReceiptId(receipt.maker_order_id,terms.maker_order_id)||
      !sameReceiptId(receipt.taker_order_id,terms.taker_order_id)||
      receipt.maker!==terms.maker||receipt.taker!==terms.taker||
      receipt.base_token!==M44_XLM_SAC||receipt.quote_token!==M44_USDC_SAC||
-     typeof receipt.base_amount!=="string"||
-     receipt.base_amount!==terms.base_amount||
-     typeof receipt.quote_amount!=="string"||
-     receipt.quote_amount!==terms.quote_amount||
+     !sameI128Amount(receipt.base_amount,terms.base_amount)||
+     !sameI128Amount(receipt.quote_amount,terms.quote_amount)||
      receipt.maker_side!==terms.maker_side||
      !Number.isSafeInteger(receipt.settled_ledger)||
      receipt.settled_ledger<=0)
