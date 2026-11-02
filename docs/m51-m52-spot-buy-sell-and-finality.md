@@ -90,3 +90,8 @@ Read-only M9 settlement receipt verification now requires `base_amount` and `quo
 ### M56 — Fail-closed balance reconciliation inputs (2026-11-02)
 
 The post-settlement verifier now rejects non-binary `maker_side`, malformed or non-two-wallet XLM/USDC balance arrays, negative/non-bigint Soroban balances, and non-bigint, negative, or excessive fee ceilings before computing transfer deltas. Adversarial tests cover both before and after snapshots and prevent malformed RPC adapters from silently yielding an accepted settlement. This is a code-only security increment, **not** an on-chain fill or independent audit. The final user-controlled Testnet send acknowledgement and both wallet signatures remain required; no automatic broadcasting, Vercel release, or main merge is authorized.
+
+
+### M57 — Confirmed ledger must match M9 receipt (2026-11-02)
+
+A successful RPC transaction status and matching transaction hash are not sufficient to attribute an arbitrary M9 receipt to that transaction. After independently reading the exact match-id receipt, the M52 verifier now requires the RPC-confirmed transaction ledger to be the same positive safe-integer ledger as the receipt's `settled_ledger`. Mismatches, absent ledgers, strings, fractional values and unsafe integers fail closed. Regression tests cover these cases. This does not constitute a signed on-chain BUY/SELL or an independent audit; it leaves all signing, explicit Testnet send acknowledgement, and deployment restrictions unchanged.
