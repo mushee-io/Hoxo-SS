@@ -7,6 +7,7 @@ import {createDualWalletHandoff,TESTNET_PASSPHRASE,M9_TESTNET_CONTRACT_ID} from 
 import {createM44EnvelopePreparer,verifyM44TakerAuth,verifyM44MakerEnvelope} from "./m44-stellar-xdr-verifier.mjs";
 import {probeM45TestnetPreflight} from "./m45-spot-preflight.mjs";
 import {simulateM45BilateralSpot} from "./m45-spot-simulation.mjs";
+import {m52ReviewedSpotSettlement,M52_SEND_ACK} from "./m52-testnet-spot-finality.mjs";
 
 const PROOF_TTL_MS=20000;
 function fail(message){throw Error("M45 signing lab: "+message);}
@@ -20,21 +21,27 @@ function ready(proof){
 export function createM45SigningLab({
   server,fetchImpl=fetch,now=()=>Date.now(),adapter,
   probe=()=>probeM45TestnetPreflight({server,fetchImpl,nowMs:now()}),
-  simulate=(proof,amounts)=>simulateM45BilateralSpot({server,preflight:proof,...amounts})
+  simulate=(proof,amounts)=>simulateM45BilateralSpot({server,preflight:proof,...amounts}),
+  submitReviewed=m52ReviewedSpotSettlement
 }={}){
+  if(typeof submitReviewed!=="function")fail("reviewed Testnet submission adapter required");
   if(!adapter||typeof adapter.getAddress!=="function"||typeof adapter.getNetwork!=="function"||
       typeof adapter.signAuthEntry!=="function"||typeof adapter.signTransaction!=="function")
     fail("reviewed M44 Freighter adapter required");
   let phase="IDLE",session=null,handoff=null,lastProof=null,busy=false,finished=false;
+  let confirmed=null;
   function snapshot(){
     return Object.freeze({phase,checked:Boolean(lastProof),paused:lastProof?.contractPaused??null,
       ledger:lastProof?.ledger??null,readyForSimulation:ready(lastProof),
       takerSigned:phase==="TAKER_SIGNED"||phase==="SIGNED_NOT_SENT",
       makerSigned:phase==="SIGNED_NOT_SENT",
-      transactionHash:null,confirmedVolumeE7:"0",
-      verifiedOnChain:false,broadcast:false,executionPermitted:false});
+      transactionHash:phase==="SETTLED"?confirmed?.transactionHash??null:null,
+      settledLedger:phase==="SETTLED"?confirmed?.settledLedger??null:null,
+      confirmedVolumeE7:phase==="SETTLED"?confirmed?.confirmedVolumeE7??"0":"0",
+      verifiedOnChain:phase==="SETTLED",
+      broadcast:phase==="SETTLED",executionPermitted:false});
   }
-  function invalidate(){session=null;handoff=null;finished=false;phase="IDLE";}
+  function invalidate(){session=null;handoff=null;finished=false;confirmed=null;phase="IDLE";}
   async function locked(action){
     if(busy)fail("another signing action is still running");
     busy=true;
@@ -121,6 +128,7 @@ export function createM45SigningLab({
         });
         if(!verified.signatureVerified||verified.signer!==session.terms.taker)
           fail("Wallet 2 cryptographic authorization missing");
+        session={...session,signedTakerAuthEntry:result.signedAuthEntry};
         phase="TAKER_SIGNED";
         return snapshot();
       });
@@ -137,9 +145,48 @@ export function createM45SigningLab({
           signedTxXdr:result.signedTxXdr,maker:session.terms.maker});
         if(!checked.signatureVerified||!checked.transactionBodyVerified)
           fail("Wallet 1 envelope signature not verified");
+        session={...session,signedTxXdr:result.signedTxXdr};
         phase="SIGNED_NOT_SENT";finished=true;
-        // No serialization, no wallet secret, no sendTransaction, no RPC writes.
-        // Signature is deliberately never returned to the page or persisted.
+        // Signed XDR stays in transient memory, never localStorage or DOM.
+        return snapshot();
+      });
+    },
+    async submit({acknowledgement}={}){
+      // This method can only be called by an explicit post-signature user
+      // action; no timers, retries or auto-submissions.
+      return locked(async()=>{
+        if(phase!=="SIGNED_NOT_SENT"||!finished||
+           !session?.signedTakerAuthEntry||!session?.signedTxXdr||
+           !session?.getPrepared?.())
+          fail("both reviewed Freighter signatures required before Testnet submission");
+        if(acknowledgement!==M52_SEND_ACK)
+          fail("separate exact Testnet send confirmation required");
+        const wallet=await adapter.getAddress();
+        const chain=await adapter.getNetwork();
+        if(wallet.address!==session.terms.maker||
+           chain.networkPassphrase!==TESTNET_PASSPHRASE)
+          fail("Wallet 1 must be selected on Stellar Testnet for final submission");
+        const result=await submitReviewed({
+          server,fetchImpl,nowMs:now(),
+          sourceTxXdr:session.sourceTxXdr,
+          takerAuthXdr:session.takerAuthXdr,
+          signedTakerAuthEntry:session.signedTakerAuthEntry,
+          preparedTxXdr:session.getPrepared(),
+          signedTxXdr:session.signedTxXdr,
+          expectedTerms:session.terms,
+          acknowledgement,send:true
+        });
+        if(result?.phase!=="ONCHAIN_SETTLED_AND_RECONCILED"||
+           result.actualOnchainSettlement!==true||
+           !/^[a-f0-9]{64}$/i.test(result.transactionHash??"")||
+           result.observedBalancesReconciled!==true)
+          fail("Stellar Testnet settlement was not independently confirmed");
+        confirmed=Object.freeze({
+          transactionHash:result.transactionHash,
+          settledLedger:result.settledLedger,
+          confirmedVolumeE7:session.terms.base_amount
+        });
+        session=null;handoff=null;finished=false;phase="SETTLED";
         return snapshot();
       });
     },
