@@ -70,12 +70,15 @@ export function createM45SigningLab({
           quoteAllowed:proof.quoteAllowed,watchedWallets:proof.wallets});
       });
     },
-    async prepare({acknowledged,xlmAmount,usdcAmount}={}){
+    async prepare({acknowledged,xlmAmount,usdcAmount,side="sell"}={}){
       return locked(async()=>{
         if(acknowledged!==true)fail("explicit bilateral Testnet terms acknowledgement required");
+        if(!["buy","sell"].includes(side))fail("unknown XLM Buy/Sell side");
         invalidate();
         const proof=await ensureSigningProof();
-        const candidate=await simulate(proof,{xlmAmount,usdcAmount});
+        const candidate=await simulate(proof,{xlmAmount,usdcAmount,side});
+        if(candidate?.terms?.maker_side!==(side==="buy"?1:0))
+          fail("simulation returned wrong requested Buy/Sell side");
         if(candidate?.simulated!==true||candidate.broadcast!==false||
            candidate.terms?.maker!==proof.wallets[0].address||
            candidate.terms?.taker!==proof.wallets[1].address||
