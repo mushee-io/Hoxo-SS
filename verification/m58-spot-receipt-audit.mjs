@@ -4,7 +4,8 @@ const hashPattern=/^[0-9a-f]{64}$/i;
 const addressPattern=/^G[A-Z2-7]{55}$/;
 function fail(s){throw Error("M58 evidence: "+s);}
 function hash(s){if(s instanceof Uint8Array&&s.length===32)return Array.from(s,x=>x.toString(16).padStart(2,"0")).join("");if(typeof s!=="string"||!hashPattern.test(s))fail("invalid hash");return s.toLowerCase();}
-function ledger(n){return Number.isSafeInteger(n)&&n>0;}\nfunction positiveAmount(n){return typeof n==="bigint"?n>0n:typeof n==="string"&&/^[1-9][0-9]*$/.test(n);}
+function ledger(n){return Number.isSafeInteger(n)&&n>0;}
+function positiveAmount(n){return typeof n==="bigint"?n>0n:typeof n==="string"&&/^[1-9][0-9]*$/.test(n);}
 export async function auditM58SpotPair({rpc,contractId,buy,sell}={}){
  if(!rpc||["getNetwork","getTransaction","queryContract"].some(k=>typeof rpc[k]!=="function"))
    fail("independent read-only RPC adapter required");
