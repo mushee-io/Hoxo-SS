@@ -214,3 +214,13 @@
 #m45TakerAddress{display:block;width:100%;box-sizing:border-box;margin-top:6px;padding:11px 9px;border:1px solid #467a5b;background:#091d13;color:#e9faee;border-radius:3px;font:11px/1.5 var(--mono)}
 #m45TakerAddress:focus-visible{outline:2px solid var(--lime);outline-offset:2px}
 .m45-participants .m45-status{font-weight:400;color:#a0bba8}
+
+/* M62 — plain, explicit status for instrument listings that cannot execute. */
+.market-availability{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 18px;background:#221f18;border-bottom:1px solid #6b5540;color:#f4e1be;font:11px/1.55 var(--mono)}
+.market-availability.hidden{display:none}
+.market-availability strong{font-size:11px;letter-spacing:.025em;color:#f5d6a2}
+.market-availability p{margin:4px 0 0;color:#d2c3ac}
+.market-availability button{flex:none;border:1px solid #77bc86;border-radius:3px;background:#17422c;color:#e0f5e5;padding:10px 13px;cursor:pointer;font:700 10px/1.45 var(--mono)}
+.market-availability button:hover{background:#20583c}
+.market-availability button:focus-visible{outline:2px solid #b7f9bd;outline-offset:2px}
+@media(max-width:720px){.market-availability{flex-direction:column;align-items:stretch;padding:11px 12px}.market-availability button{align-self:flex-start}}
