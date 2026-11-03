@@ -145,51 +145,14 @@
   <button id="m45Reset" type="button" class="m45-reset">CLEAR REVIEW & SIGNATURE SESSION</button>
 </section>
 <section class="alternate hidden" id="alternateView"><div class="alternate-heading" id="altTitle">PORTFOLIO</div><p id="altDescription">This area is being developed.</p><div class="alternate-cards" id="alternateCards"><article><span>01 / ACCOUNT</span><h2>TESTNET BALANCES</h2><p>Real wallet balances are distinct from exchange collateral.</p></article><article><span>02 / UNIFIED MARGIN</span><h2>NOT DEPLOYED</h2><p>Account positions and margin health require Soroban clearing and risk contracts.</p></article><article><span>03 / MONEY MARKETS</span><h2>NOT DEPLOYED</h2><p>Supply and borrowing are unavailable until Soroban lending pools are verified.</p></article></div>
-<section id="lendView" class="hoxo-lend hidden" aria-labelledby="lendTitle" aria-label="Hoxo lending market">
-  <div class="lend-status-line"><span class="lend-spark">✳</span> STELLAR TESTNET <span class="lend-right">MONEY MARKETS · PRE-LAUNCH</span></div>
-  <div class="lend-intro">
-    <div><p class="lend-eyebrow">HOXO / MONEY MARKETS</p><h2 id="lendTitle">Lend &amp; Borrow</h2><p class="lend-summary">A dedicated home for supplying assets, borrowing against collateral and managing debt on Stellar. On-chain lending transactions are not enabled yet.</p></div>
-    <span class="lend-mode-badge">TESTNET · NOT LIVE</span>
-  </div>
-  <div class="lend-metrics" aria-label="Lending market status">
-    <article><span>TOTAL SUPPLIED</span><strong>—</strong><small>Not deployed · no fabricated TVL</small></article>
-    <article><span>SUPPLY APY</span><strong>—</strong><small>No verified lending rate</small></article>
-    <article><span>BORROW APY</span><strong>—</strong><small>No verified debt market rate</small></article>
-    <article><span>AVAILABLE TO BORROW</span><strong>—</strong><small>No live borrowing capacity</small></article>
-  </div>
-  <div class="lend-layout">
-    <section class="lend-markets" aria-labelledby="lendMarketsTitle">
-      <div class="lend-panel-head"><div><p class="lend-eyebrow">ASSET MARKETS</p><h3 id="lendMarketsTitle">Stellar lending pools</h3></div><span class="lend-subtle">2 PLANNED ASSETS</span></div>
-      <div class="lend-table-scroll">
-        <table class="lend-table"><thead><tr><th scope="col">ASSET</th><th scope="col">SUPPLY APY</th><th scope="col">BORROW APY</th><th scope="col">LIQUIDITY</th><th scope="col">STATUS</th></tr></thead><tbody>
-          <tr><td><span class="lend-token">✳</span><strong>XLM</strong><small>Stellar Lumens</small></td><td>—</td><td>—</td><td>—</td><td><span class="lend-pending">NOT LIVE</span></td></tr>
-          <tr><td><span class="lend-token lend-usdc">$</span><strong>USDC</strong><small>Testnet asset · issuer verified separately</small></td><td>—</td><td>—</td><td>—</td><td><span class="lend-pending">NOT LIVE</span></td></tr>
-        </tbody></table>
-      </div>
-      <div class="lend-note"><strong>Wallet balance is not supplied collateral.</strong> Assets connected through Freighter stay in the wallet until you explicitly approve a real, verified lending contract transaction. No lending pool has been activated.</div>
-    </section>
-    <section class="lend-action-panel" aria-label="Lending actions">
-      <div class="lend-action-heading"><p class="lend-eyebrow">POSITION MANAGER</p><span class="lend-pending">TRANSACTIONS DISABLED</span></div>
-      <div class="lend-action-tabs" role="tablist" aria-label="Lending actions">
-        <button type="button" id="lendSupplyTab" role="tab" aria-selected="true" aria-controls="lendSupplyPanel" data-lend-action="supply" class="selected">Supply</button>
-        <button type="button" id="lendBorrowTab" role="tab" aria-selected="false" aria-controls="lendBorrowPanel" data-lend-action="borrow">Borrow</button>
-      </div>
-      <div id="lendSupplyPanel" class="lend-action-content" role="tabpanel" aria-labelledby="lendSupplyTab">
-        <h3>Supply assets</h3><p>Supply XLM or USDC to a verified Testnet lending pool once its contracts and reserves are operational.</p>
-        <div class="lend-balance-row"><span>Available to supply</span><b>—</b></div><div class="lend-balance-row"><span>Current supplied balance</span><b>—</b></div>
-        <button type="button" disabled aria-label="Supply unavailable until lending launches">SUPPLY · NOT LIVE</button>
-        <button type="button" disabled aria-label="Withdraw unavailable until lending launches">WITHDRAW · NOT LIVE</button>
-      </div>
-      <div id="lendBorrowPanel" class="lend-action-content hidden" role="tabpanel" aria-labelledby="lendBorrowTab">
-        <h3>Borrow against collateral</h3><p>Borrowing requires deposited collateral, verified loan-to-value limits and liquidation safeguards on Stellar Testnet.</p>
-        <div class="lend-balance-row"><span>Borrowing capacity</span><b>—</b></div><div class="lend-balance-row"><span>Current debt</span><b>—</b></div>
-        <button type="button" disabled aria-label="Borrow unavailable until lending launches">BORROW · NOT LIVE</button>
-        <button type="button" disabled aria-label="Repay unavailable until lending launches">REPAY · NOT LIVE</button>
-      </div>
-      <p class="lend-action-warning" role="status">No loan transactions are signed or broadcast from this page.</p>
-      <button type="button" id="lendViewNetwork" class="lend-check-contracts">VIEW CONTRACT READINESS ↗</button>
-    </section>
-  </div>
+<section id="lendView" class="hoxo-lend hidden" aria-labelledby="lendTitle" aria-label="Hoxo Lend destination">
+  <a class="lend-entry-card" href="https://hoxo-lend.vercel.app/" aria-label="Enter the Hoxo Lend market. Proceed with caution.">
+    <span class="lend-entry-top"><span>HOXO / LENDING</span><span aria-hidden="true">↗</span></span>
+    <span class="lend-entry-brand"><span class="lend-entry-mark" aria-hidden="true"><i></i><i></i></span><span class="lend-entry-wordmark">HOXO <strong>LEND</strong></span></span>
+    <span class="lend-entry-title" id="lendTitle">Enter the Lend Market</span>
+    <span class="lend-entry-caution"><span aria-hidden="true">△</span> Proceed with caution.</span>
+    <span class="lend-entry-action">ENTER LEND MARKET <span aria-hidden="true">↗</span></span>
+  </a>
 </section>
 <section id="networkPanel" class="network-panel hidden" aria-label="Stellar Testnet infrastructure diagnostics">
   <p class="infra-caution">READ-ONLY NETWORK DIAGNOSTICS. THIS IS NOT EXCHANGE CONTRACT READINESS. NO SPOT, PERPETUAL OR LENDING CONTRACTS ARE LIVE.</p>
