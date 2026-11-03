@@ -30,3 +30,14 @@ test("M65 exact live observed fee is rejected without weakening the signing ceil
   assert.equal(classifyM65SimulationFee(100n,10000001n).allowed,false);
   assert.equal(classifyM65SimulationFee("NaN",1000000n).allowed,false);
 });
+
+test("M79 offline fee classification rejects implicit coercion and unsafe integers",()=>{
+  for(const invalid of [null,true,false,{},[],["100"]," 100","0100","1e3","1.5",1.5,Number.MAX_SAFE_INTEGER+1]){
+    assert.equal(classifyM65SimulationFee(invalid,1000000n).allowed,false);
+    assert.equal(classifyM65SimulationFee(100n,invalid).allowed,false);
+  }
+  assert.deepEqual(classifyM65SimulationFee("100",1000000n),{
+    allowed:true,reason:"within_ceiling",observedStroops:"100",configuredStroops:"1000000"
+  });
+  assert.equal(classifyM65SimulationFee(10000001n,10000000n).allowed,false);
+});
