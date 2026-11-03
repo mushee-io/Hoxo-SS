@@ -30,3 +30,7 @@ No signed Hoxo BUY/SELL receipt or public matching liquidity was established.
 ## M76 — fail-closed fee policy before RPC (2026-11-03)
 
 The read-only simulation now validates its configured fee ceiling before contacting the Stellar Testnet RPC. Invalid, fractional, negative, under-100-stroop or above-10,000,000-stroop limits abort before ledger reads, account reads or simulation. This prevents misconfigured automation from performing an RPC simulation under an invalid policy; it does not increase the existing 1 XLM simulation-only ceiling or the 0.1 XLM browser signing ceiling. Regression: `node --test tests/m76-fee-policy-preflight.test.mjs` (also included in `npm test`). The open PR must still pass exact-head CI and independent review; a successful test is not an on-chain trade receipt.
+
+## M77 fee-policy input hardening — 2026-11-03
+
+The unsigned M55 simulator now rejects implicit JavaScript `BigInt` coercion from booleans, null, arrays and arbitrary objects, as well as whitespace, leading-zero or exponential strings and unsafe fractional numbers. Only exact bounded integer policy inputs are accepted before any RPC call. This does **not** raise the existing 10,000,000-stroop simulation ceiling or the stricter 1,000,000-stroop browser-signing ceiling. Regression coverage is in `tests/m76-fee-policy-preflight.test.mjs`. An exact-head CI pass and independent review are still required before merging; no signed transaction or on-chain trading is implied.
