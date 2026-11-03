@@ -14,7 +14,8 @@ import {Asset,Horizon,Keypair,Networks,Operation,StrKey,TransactionBuilder}
 import {HORIZON_TESTNET,USDC_TESTNET_ISSUER} from "../app/m63-spot-core.mjs";
 import {parseKrakenReference,planTestnetMaker} from "../mm/testnet-classic-maker.mjs";
 
-const botMode=process.argv[2]||"plan";
+import {fileURLToPath} from "node:url";
+import {resolve} from "node:path";
 const noStore=()=>({headers:{accept:"application/json"},cache:"no-store",
   signal:AbortSignal.timeout(12000)});
 const XLM=Asset.native(),USDC=new Asset("USDC",USDC_TESTNET_ISSUER);
@@ -129,9 +130,9 @@ async function signAndSubmit({signer,ops,mode,preview}){
     claimedHoxoM9Trades:0,claimedHoxoM9Volume:"0"
   }));
 }
-async function main(){
+export async function runTestnetMM(botMode="plan"){
   if(!["plan","live","stop"].includes(botMode))fail("mode must be plan, live or stop");
-  const armed=process.env.HOXO_MM_LIVE==="YES";
+  const armed=process.env.HOXO_MM_LIVE==="YES"||process.env.HOXO_MM_VERCEL_LIVE==="YES";
   if(botMode==="live"&&!armed){
     console.log("MM disarmed: set GitHub Actions variable HOXO_MM_LIVE=YES to enable scheduled execution.");
     return;
@@ -205,7 +206,8 @@ async function main(){
     preview:{spreadBps,quotes:plan.quotes}
   });
 }
-main().catch(error=>{
+if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url))
+runTestnetMM(process.argv[2]||"plan").catch(error=>{
   // Never dump SDK error response objects, HTTP bodies or environment values.
   console.error("MM stopped: "+String(error?.message||"Unknown read-only or signing error"));
   process.exitCode=1;

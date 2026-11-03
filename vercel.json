@@ -16,5 +16,16 @@
       ]
     }
   ],
-  "outputDirectory": "."
+  "outputDirectory": ".",
+  "crons": [
+    {
+      "path": "/api/mm-runner",
+      "schedule": "*/5 * * * *"
+    }
+  ],
+  "functions": {
+    "api/mm-runner.js": {
+      "maxDuration": 60
+    }
+  }
 }
