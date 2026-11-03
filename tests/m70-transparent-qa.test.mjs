@@ -55,7 +55,7 @@ test("M70 fails closed if reference issuer, matching depth, reserves or costs in
     ...account,balances:[account.balances[0],{
       ...account.balances[1],balance:"0.0000000"
     }]
-  },nowMs}),/positive|invalid/);
+  },nowMs}),/insufficient Testnet USDC/);
   assert.throws(()=>planIndependentQa({side:"sell",book,account:{
     ...account,balances:[{...account.balances[0],balance:"1.0000000"},account.balances[1]]
   },nowMs}),/spendable XLM/);
