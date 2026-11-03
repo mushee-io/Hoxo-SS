@@ -121,8 +121,13 @@ export function inspectM66AssembledResources(assembled,simulation=null){
   try {
     // SDK Transaction.toEnvelope() is not guaranteed to expose XDR union
     // accessors. Decode the actual serialized envelope instead.
-    const envelope=typeof assembled.toEnvelope==="function"?assembled.toEnvelope():
-      xdr.TransactionEnvelope.fromXDR(assembled.toXDR(),"base64");
+    // Some Stellar SDK versions expose toEnvelope() as a plain object
+    // without XDR union accessors. Decode the serialized envelope first.
+    const serialized=typeof assembled.toXdr==="function"?assembled.toXdr():
+      typeof assembled.toXDR==="function"?assembled.toXDR():"";
+    const envelope=serialized?
+      xdr.TransactionEnvelope.fromXDR(serialized,"base64"):
+      assembled.toEnvelope();
     data=envelope.v1().tx().ext().sorobanData();
   }catch{}
   if(!data&&simulation?.transactionData){
