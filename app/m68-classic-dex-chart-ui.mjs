@@ -5,7 +5,7 @@
 const $=id=>document.getElementById(id);
 const surface=$("m68DexChartSurface"),canvas=$("m68DexCandleCanvas"),
   ctx=canvas.getContext("2d"),selector=$("m68ChartSource");
-const times=$(".timeframes"),m9Surface=$("m47ChartSurface");
+const times=document.querySelector(".timeframes"),m9Surface=$("m47ChartSurface");
 let market=new URLSearchParams(location.search).get("market")||"xlm-usdc-spot";
 let chartView="price",frame="30m",bars=[],generation=0;
 function dexActive(){return market==="xlm-usdc-spot"&&chartView==="price"&&selector.value==="stellar-dex";}
