@@ -534,3 +534,51 @@ test("M68 Chromium renders actual Classic DEX OHLC candles, timeframe changes an
     assert.deepEqual(errors,[]);
   }finally{await context.close();}
 });
+
+test("M69 Chromium displays real six-second resting bid/ask quote pulse independently of executed candles",async()=>{
+  const context=await browser.newContext({viewport:{width:1440,height:900}});
+  const nowMs=Date.now();
+  await context.route("**/*",async route=>{
+    const url=route.request().url();
+    if(url.startsWith(BASE+"/api/market-orderbook?")){
+      return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({
+        source:"Stellar Horizon Testnet",sourceKind:"stellar-testnet",currency:"USDC",
+        executable:false,hoxoFills:false,tradeExecutable:false,
+        hoxoSettlementEnabled:false,observedAtMs:nowMs,
+        bids:[{price:.1642004,amount:.821002,total:.1348}],
+        asks:[{price:.1675176,amount:5,total:.837588}],spread:.0033172
+      })});
+    }
+    if(url.startsWith(BASE+"/api/xlm-usdc-candles")){
+      const frame=new URL(url).searchParams.get("frame");
+      return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({
+        network:"Stellar Testnet",venue:"Stellar Classic DEX",frame,
+        synthetic:false,hoxoM9FillsAttributed:0,
+        candles:[{time:nowMs-3600000,open:.81,high:.82,low:.80,close:.81,volume:3,trades:1}]
+      })});
+    }
+    if(url.startsWith(BASE+"/api/hoxo-testnet-activity"))
+      return route.fulfill({status:503,contentType:"application/json",body:"{}"});
+    if(url.startsWith(BASE+"/"))return route.continue();
+    return route.abort();
+  });
+  const page=await context.newPage(),errors=[];
+  page.on("pageerror",error=>errors.push(error.message));
+  try{
+    await page.goto(BASE+"/app/?market=xlm-usdc-spot",{waitUntil:"domcontentloaded"});
+    await page.waitForFunction(()=>document.querySelector("#m69QuoteBid")?.textContent
+      .includes("0.1642004"),null,{timeout:15000});
+    assert.equal(await page.locator("#m69LiveQuotePanel").isVisible(),true);
+    assert.equal(await page.locator("#m69QuoteAsk").innerText(),"0.1675176");
+    assert.match(await page.locator("#m69QuoteStatus").innerText(),/REAL BOOK SNAPSHOT/);
+    assert.match(await page.locator("#m69LiveQuotePanel").innerText(),/RESTING OFFERS/);
+    assert.equal(await page.locator("#m69QuoteSpark").isVisible(),true);
+    assert.equal(await page.locator("#currentTimeframe").innerText(),"1m");
+    assert.match(await page.locator("#m47LastPriceSource").innerText(),/LAST EXECUTED TRADE/);
+    assert.equal(await page.locator("#m68DexChartSurface").isVisible(),true);
+    await page.locator("#m68ChartSource").selectOption("hoxo-m9");
+    assert.equal(await page.locator("#m69LiveQuotePanel").isVisible(),false,
+      "classic DEX quote pulse must not be mistaken for Hoxo M9 fills");
+    assert.deepEqual(errors,[]);
+  }finally{await context.close();}
+});

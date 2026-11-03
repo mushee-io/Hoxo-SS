@@ -7,7 +7,7 @@ const surface=$("m68DexChartSurface"),canvas=$("m68DexCandleCanvas"),
   ctx=canvas.getContext("2d"),selector=$("m68ChartSource");
 const times=document.querySelector(".timeframes"),m9Surface=$("m47ChartSurface");
 let market=new URLSearchParams(location.search).get("market")||"xlm-usdc-spot";
-let chartView="price",frame="30m",bars=[],generation=0;
+let chartView="price",frame="1m",bars=[],generation=0;
 function dexActive(){return market==="xlm-usdc-spot"&&chartView==="price"&&selector.value==="stellar-dex";}
 function setFeedStatus(message,warning=false){
   if(!dexActive())return;
@@ -45,7 +45,15 @@ function plot(){
   const padding=Math.max(0.000001,(hi0-lo0)*0.1);
   const lo=Math.max(0,lo0-padding),hi=hi0+padding;
   const y=p=>top+(hi-p)/(hi-lo)*usableH;
-  const step=usableW/bars.length,barW=Math.max(2,Math.min(14,step*.6));
+  // Respect real time gaps: never stretch sparse actual trade bars into
+  // a fictional continuous candle series. Empty minutes stay empty.
+  const duration={"1m":60000,"30m":1800000,"1h":3600000,
+    "4h":14400000,"1d":86400000}[frame];
+  const periods=frame==="4h"?48:90;
+  const endTime=Date.now(),startTime=endTime-duration*periods;
+  const xAt=time=>left+Math.min(1,Math.max(0,
+    (time-startTime)/(endTime-startTime)))*usableW;
+  const step=usableW/periods,barW=Math.max(2,Math.min(10,step*.70));
   const maxVol=Math.max(0.00001,...bars.map(b=>b.volume));
   ctx.font="10px monospace";ctx.textBaseline="middle";
   for(let i=0;i<=4;i++){
@@ -56,7 +64,7 @@ function plot(){
     ctx.fillText((hi-(hi-lo)*i/4).toFixed(5),w-right+6,yy);
   }
   for(let i=0;i<bars.length;i++){
-    const b=bars[i],x=left+(i+.5)*step;
+    const b=bars[i],x=xAt(b.time);
     const color=b.close>=b.open?"#65dc9b":"#f08391";
     ctx.strokeStyle=ctx.fillStyle=color;
     ctx.lineWidth=Math.max(1,Math.min(2,step*.15));
@@ -75,10 +83,15 @@ function plot(){
   ctx.fillText(date(bars[0].time),left,h-9);
   ctx.fillText(date(bars.at(-1).time),Math.max(left,w-right-100),h-9);
   const last=bars.at(-1);
+  const lastTime=new Date(last.time).toLocaleTimeString("en-GB",{
+    timeZone:"UTC",hour:"2-digit",minute:"2-digit",hour12:false});
+  const ageMins=Math.max(0,Math.floor((Date.now()-last.time)/60000));
+  if($("m69LatestFill"))$("m69LatestFill").textContent=
+    "LAST TRADE "+lastTime+" UTC · "+ageMins+"M AGO";
   $("marketPrimaryStat").textContent="CLASSIC DEX LAST TRADE";
   $("marketPrice").textContent=last.close.toFixed(7)+" USDC";
   $("m47LastPrice").textContent=last.close.toFixed(7)+" USDC";
-  $("m47LastPriceSource").textContent="STELLAR TESTNET CLASSIC DEX · NOT HOXO M9";
+  $("m47LastPriceSource").textContent="LAST EXECUTED TRADE "+lastTime+" UTC · NOT HOXO M9";
   $("chartMarketStatus").textContent="STELLAR CLASSIC DEX · "+frame+
     " · "+bars.length+" REPORTED CANDLES · NOT HOXO M9";
   setFeedStatus("● STELLAR HORIZON · "+bars.length+" REAL TRADE INTERVALS");
@@ -161,6 +174,6 @@ window.addEventListener("hoxo:market-change",event=>{
 window.addEventListener("resize",()=>{if(dexActive()&&bars.length)plot();});
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)void refresh();});
 window.addEventListener("hoxo:spot-settled",()=>{if(dexActive())void refresh();});
-setInterval(()=>{if(dexActive())void refresh();},30000);
+setInterval(()=>{if(dexActive())void refresh();},15000);
 updateVisibility();
 void refresh();

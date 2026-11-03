@@ -4,7 +4,7 @@ import {getMarket,filterMarkets,orderDraft,parseAmount7} from "./terminal-state.
 const $=id=>document.getElementById(id);
 const all=selector=>[...document.querySelectorAll(selector)];
 const query=new URLSearchParams(window.location.search);
-let market=getMarket(query.get("market")),chartView="price",bookView="book",timeframe="30m",orderType="Market",view="trade",filter="all",advancedM9=false;
+let market=getMarket(query.get("market")),chartView="price",bookView="book",timeframe="1m",orderType="Market",view="trade",filter="all",advancedM9=false;
 function selectGroup(selector,value,key){
   all(selector).forEach(b=>{
     const selected=b.dataset[key]===value;
