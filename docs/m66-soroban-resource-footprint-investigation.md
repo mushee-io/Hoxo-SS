@@ -15,3 +15,9 @@ Compare the measurements against independently verified M9 WASM and the exact tw
 - Any contract change requires deployment, independently verified WASM hash and renewed security review; changing local source does not change the deployed M9.
 - Signed BUY and SELL receipts, genuine distinct-party settlement, and verified balances remain required before reporting volume. Perpetual execution remains disabled until deployment, oracle, solvency and liquidation gates pass.
 - This branch is draft-only. No merge, Vercel promotion, signing or transaction submission is authorized by this investigation.
+
+## 2026-11-03 09:00 UTC — canonical envelope diagnostic patch
+
+The SDK assembled transaction does not reliably expose `sorobanData` as a direct property. The M66 diagnostic now reads `assembled.toEnvelope().v1().tx().ext().sorobanData()`, extracting numeric instruction/read/write budgets, read-only/read-write footprint counts, and resource fee. Regression tests cover successful extraction and safe `unknown` fallback. The diagnostic deliberately never serializes keys, auth entries, or the transaction envelope.
+
+This patch does **not** establish the root cause or reduce resource fees. CI must verify the exact new commit and rerun the live read-only M55 simulation. The 1 XLM CI and 0.1 XLM signing limits remain unchanged. No production release or signing is authorized.
