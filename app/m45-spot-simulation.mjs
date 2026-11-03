@@ -179,7 +179,13 @@ export async function simulateM45BilateralSpot({
   server,preflight,xlmAmount="0.0100000",usdcAmount="0.0200000",side="sell",
   randomBytes, maxFeeStroops=1000000n
 }){
-  // Reject invalid fee policy before any RPC call or wallet-related work.\n  // A read-only simulation may use a reviewed ceiling up to 1 XLM;\n  // the user-controlled signing path retains its stricter default.\n  let feeCeiling;\n  try{feeCeiling=BigInt(maxFeeStroops);}catch{fail("invalid simulation fee ceiling");}\n  if(feeCeiling<100n||feeCeiling>10_000_000n)fail("invalid simulation fee ceiling");\n  if(!preflight||preflight.readyForSimulation!==true||preflight.contractPaused!==false||
+  // Reject invalid fee policy before any RPC call or wallet-related work.
+  // A read-only simulation may use a reviewed ceiling up to 1 XLM;
+  // the user-controlled signing path retains its stricter default.
+  let feeCeiling;
+  try{feeCeiling=BigInt(maxFeeStroops);}catch{fail("invalid simulation fee ceiling");}
+  if(feeCeiling<100n||feeCeiling>10_000_000n)fail("invalid simulation fee ceiling");
+  if(!preflight||preflight.readyForSimulation!==true||preflight.contractPaused!==false||
      preflight.contract!==M9_TESTNET_CONTRACT_ID||preflight.network!=="Stellar Testnet")
     fail("fresh unpaused M9 Testnet proof required for simulation");
   if(!server||typeof server.getAccount!=="function"||typeof server.getLatestLedger!=="function"||
