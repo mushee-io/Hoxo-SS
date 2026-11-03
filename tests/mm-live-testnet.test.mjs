@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
 import {parseKrakenReference,planTestnetMaker} from "../mm/testnet-classic-maker.mjs";
 import {USDC_TESTNET_ISSUER} from "../app/m63-spot-core.mjs";
+import {Asset,Keypair,Account,Networks,Operation,TransactionBuilder,xdr} from "@stellar/stellar-sdk";
 
 const nowMs=1793680000000;
 const payload={
@@ -97,4 +98,35 @@ test("MM runner never signs on import and keeps secrets out of tracked configs",
   assert.match(workflow,/vars\.HOXO_MM_LIVE/);
   assert.match(workflow,/cron: '.*\/5/);
   assert.doesNotMatch(workflow,/S[A-Z2-7]{55}/);
+});
+
+test("MM bid/ask values are actual SDK Stellar manageSellOffer XDR (not simulated orders)",()=>{
+  const result=plan();
+  const xlm=Asset.native(),usdc=new Asset("USDC",USDC_TESTNET_ISSUER);
+  const [bid,ask]=result.quotes;
+  const operations=[
+    Operation.manageSellOffer({
+      selling:usdc,buying:xlm,amount:bid.amount,price:bid.price,offerId:"0"
+    }),
+    Operation.manageSellOffer({
+      selling:xlm,buying:usdc,amount:ask.amount,price:ask.price,offerId:"0"
+    })
+  ];
+  assert.equal(operations.length,2);
+  for(const op of operations){
+    assert.equal(op.switch().name,"manageSellOffer");
+    const manage=op.manageSellOfferOp();
+    assert.equal(manage.offerId().toString(),"0");
+    assert.ok(manage.amount().toString()!=="0");
+  }
+  const makerKey=Keypair.random();
+  const acct=new Account(makerKey.publicKey(),"123456");
+  const tx=new TransactionBuilder(acct,{
+    fee:"100",networkPassphrase:Networks.TESTNET
+  }).addOperation(operations[0]).addOperation(operations[1]).setTimeout(60).build();
+  assert.equal(tx.operations.length,2);
+  assert.equal(tx.signatures.length,0);
+  tx.sign(makerKey);
+  assert.equal(tx.signatures.length,1);
+  assert.equal(Buffer.from(tx.hash()).toString("hex").length,64);
 });
