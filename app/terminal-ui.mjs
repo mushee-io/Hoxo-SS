@@ -13,25 +13,31 @@ function selectGroup(selector,value,key){
   });
 }
 function setView(next){
-  view=["trade","portfolio","earn","network"].includes(next)?next:"trade";
-  all("[data-view]").forEach(b=>b.classList.toggle("selected",b.dataset.view===view));
+  view=["trade","portfolio","lend","earn","network"].includes(next)?next:"trade";
+  all("[data-view]").forEach(b=>{
+    const current=b.dataset.view===view;
+    b.classList.toggle("selected",current);
+    b.setAttribute("aria-pressed",String(current));
+  });
   $("tradeView").classList.toggle("hidden",view!=="trade");
   $("alternateView").classList.toggle("hidden",view==="trade");
   $("m45SigningLab")?.classList.toggle("hidden",view!=="trade"||market.id!=="xlm-usdc-spot"||!advancedM9);
   $("m55OpenLab")?.classList.toggle("hidden",view!=="trade"||market.id!=="xlm-usdc-spot");
   $("marketAvailabilityBanner")?.classList.toggle("hidden",view!=="trade"||market.id==="xlm-usdc-spot");
+  $("altTitle").classList.toggle("hidden",view==="lend");
+  $("altDescription").classList.toggle("hidden",view==="lend");
   if(view==="portfolio"){
     $("altTitle").textContent="YOUR PORTFOLIO";
     $("altDescription").textContent="Testnet wallet balances appear under Trade → Balances. Exchange collateral, positions and margin are not deployed.";
   }else if(view==="earn"){
-    $("altTitle").textContent="MONEY MARKETS";
-    $("altDescription").textContent="Supply and borrowing require independently verified Soroban lending contracts and on-chain risk enforcement.";
-  }
-  if(view==="network"){
+    $("altTitle").textContent="EARN";
+    $("altDescription").textContent="Rewards and incentives are in development. For supply and borrowing markets, use the separate Lend tab.";
+  }else if(view==="network"){
     $("altTitle").textContent="STELLAR TESTNET INFRASTRUCTURE";
     $("altDescription").textContent="Live read-only Horizon and Stellar RPC health, exact network passphrase, ledger reconciliation, and undeployed contract registry.";
   }
-  $("alternateCards").classList.toggle("hidden",view==="network");
+  $("alternateCards").classList.toggle("hidden",view==="network"||view==="lend");
+  $("lendView").classList.toggle("hidden",view!=="lend");
   $("networkPanel").classList.toggle("hidden",view!=="network");
   window.dispatchEvent(new CustomEvent("hoxo:view",{detail:{view}}));
   const location=window.location.pathname+"?market="+encodeURIComponent(market.id)+(view==="trade"?"":"#"+view);
@@ -157,6 +163,22 @@ function chooseMarket(id){
   updateChart();updateBook();updateDraft();setView(view);
 }
 all("[data-view]").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.view)));
+function setLendAction(mode){
+  const supply=mode!=="borrow";
+  $("lendSupplyTab").classList.toggle("selected",supply);
+  $("lendBorrowTab").classList.toggle("selected",!supply);
+  $("lendSupplyTab").setAttribute("aria-selected",String(supply));
+  $("lendBorrowTab").setAttribute("aria-selected",String(!supply));
+  $("lendSupplyTab").tabIndex=supply?0:-1;
+  $("lendBorrowTab").tabIndex=supply?-1:0;
+  $("lendSupplyPanel").classList.toggle("hidden",!supply);
+  $("lendBorrowPanel").classList.toggle("hidden",supply);
+}
+all("[data-lend-action]").forEach(b=>b.addEventListener("click",()=>{
+  setLendAction(b.dataset.lendAction);
+}));
+$("lendViewNetwork").addEventListener("click",()=>setView("network"));
+
 $("backToTrade").addEventListener("click",()=>setView("trade"));
 $("switchToSpot").addEventListener("click",()=>{
   chooseMarket("xlm-usdc-spot");
@@ -245,4 +267,4 @@ $("orderSize").addEventListener("input",updateDraft);
 $("limitPrice").addEventListener("input",updateDraft);
 const initialView=window.location.hash.slice(1);
 chooseSide("buy");chooseOrderType("Market");chooseMarket(market.id);
-if(initialView==="portfolio"||initialView==="earn"||initialView==="network")setView(initialView);
+if(["portfolio","lend","earn","network"].includes(initialView))setView(initialView);

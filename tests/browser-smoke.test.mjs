@@ -46,7 +46,7 @@ test("M2 desktop: reference markets, tabs, non-executable order drafts",async()=
     assert.equal(await page.locator("#tradeButton").isDisabled(),false);
     assert.equal(await page.locator(".account-actions button:disabled").count(),2);
     await page.locator('[data-view="earn"]').click();
-    assert.equal(await page.locator("#altTitle").innerText(),"MONEY MARKETS");
+    assert.equal(await page.locator("#altTitle").innerText(),"EARN");
     await page.locator("#backToTrade").click();
     assert.equal(await page.locator("#marketLabel").innerText(),"XLM/USDC");
     assert.deepEqual(errors,[],"No unhandled page errors");
@@ -579,6 +579,54 @@ test("M69 Chromium displays real six-second resting bid/ask quote pulse independ
     await page.locator("#m68ChartSource").selectOption("hoxo-m9");
     assert.equal(await page.locator("#m69LiveQuotePanel").isVisible(),false,
       "classic DEX quote pulse must not be mistaken for Hoxo M9 fills");
+    assert.deepEqual(errors,[]);
+  }finally{await context.close();}
+});
+
+test("M71 Lend nav opens a dedicated, honest, fully keyboard-addressable Testnet money market page",async()=>{
+  const {page,context,errors}=await openTerminal("/app/?market=xlm-usdc-spot#lend");
+  try{
+    await page.locator("#lendView").waitFor({state:"visible",timeout:10000});
+    assert.equal(await page.locator("#lendTitle").innerText(),"Lend & Borrow");
+    assert.equal(await page.locator('[data-view="lend"]').getAttribute("aria-pressed"),"true");
+    assert.equal(await page.locator("#tradeView").isVisible(),false);
+    assert.equal(await page.locator("#alternateCards").isVisible(),false);
+    assert.equal(await page.locator("#networkPanel").isVisible(),false);
+    assert.match(await page.locator("#lendView").innerText(),/TESTNET · NOT LIVE/);
+    assert.equal(await page.locator("#lendSupplyTab").getAttribute("aria-selected"),"true");
+    assert.equal(await page.locator("#lendSupplyPanel").isVisible(),true);
+    assert.equal(await page.locator("#lendBorrowPanel").isVisible(),false);
+    assert.equal(await page.locator("#lendView button:disabled").count(),4);
+    await page.locator("#lendBorrowTab").click();
+    assert.equal(await page.locator("#lendBorrowTab").getAttribute("aria-selected"),"true");
+    assert.equal(await page.locator("#lendSupplyPanel").isVisible(),false);
+    assert.equal(await page.locator("#lendBorrowPanel").isVisible(),true);
+    await page.locator("#lendSupplyTab").click();
+    assert.equal(await page.locator("#lendSupplyPanel").isVisible(),true);
+    assert.match(page.url(),/#lend$/);
+    await page.locator("#lendViewNetwork").click();
+    assert.equal(await page.locator("#networkPanel").isVisible(),true);
+    assert.equal(await page.locator("#lendView").isVisible(),false);
+    await page.locator('[data-view="lend"]').click();
+    assert.equal(await page.locator("#lendView").isVisible(),true);
+    await page.locator('[data-view="trade"]').click();
+    assert.equal(await page.locator("#tradeView").isVisible(),true);
+    assert.deepEqual(errors,[]);
+  }finally{await context.close();}
+});
+
+test("M71 mobile Lend view has no horizontal overflow and never enables money transfers",async()=>{
+  const {page,context,errors}=await openTerminal("/app/?market=xlm-usdc-spot#lend",{width:375,height:812});
+  try{
+    await page.locator("#lendView").waitFor({state:"visible",timeout:10000});
+    const dimensions=await page.evaluate(()=>({
+      pageWidth:document.documentElement.scrollWidth,
+      viewportWidth:window.innerWidth
+    }));
+    assert.ok(dimensions.pageWidth<=dimensions.viewportWidth+2,JSON.stringify(dimensions));
+    assert.equal(await page.locator("#lendView button:disabled").count(),4);
+    await page.locator("#lendBorrowTab").click();
+    assert.equal(await page.locator("#lendBorrowPanel").isVisible(),true);
     assert.deepEqual(errors,[]);
   }finally{await context.close();}
 });

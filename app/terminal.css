@@ -310,3 +310,63 @@
 .m70-attribution strong{font-weight:700;color:#f5c98c;font-size:9px}
 .m70-attribution a{color:#b6ffbe;text-decoration:underline;pointer-events:auto}
 .m70-attribution a.hidden{display:none}
+
+/* M71 — dedicated money markets interface, intentionally non-executable. */
+.hoxo-lend{width:min(1250px,100%);margin:0 auto;padding:8px 5px 24px;text-align:left}
+.alternate:has(.hoxo-lend:not(.hidden)){padding:26px 26px 52px;min-height:calc(100vh - 196px);background:#0d1113;text-align:left}
+.lend-status-line{display:flex;align-items:center;gap:10px;padding:12px 0;color:var(--lime);border-bottom:1px solid #33423a;font:10px var(--mono);letter-spacing:.02em}
+.lend-spark{font-size:18px;line-height:1}
+.lend-right{margin-left:auto;color:#9db0a4}
+.lend-intro{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;padding:38px 0 34px}
+.lend-eyebrow{margin:0 0 12px!important;color:var(--lime)!important;font:10px var(--mono)!important;letter-spacing:.09em}
+.lend-intro h2{font-size:clamp(38px,5.4vw,67px);line-height:1;letter-spacing:-.065em;margin:0 0 16px}
+.lend-summary{margin:0!important;max-width:625px;color:#a1b2ae!important;font:12px/1.8 var(--mono)!important}
+.lend-mode-badge{border:1px solid #67573b;color:#f0ce90;background:#27231d;padding:10px 12px;font:10px var(--mono);white-space:nowrap}
+.lend-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:18px}
+.lend-metrics article{padding:20px;min-width:0;border:1px solid #2c3b36;background:#141b1a}
+.lend-metrics article>span{display:block;color:#98ada3;font:10px var(--mono)}
+.lend-metrics article strong{display:block;margin:14px 0;font:30px var(--mono);color:#f0f6ef}
+.lend-metrics article small{display:block;color:#98a6a0;font:10px/1.5 var(--mono)}
+.lend-layout{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(305px,1fr);gap:15px}
+.lend-markets,.lend-action-panel{min-width:0;background:#151a1b;border:1px solid #35413c;padding:22px}
+.lend-panel-head,.lend-action-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.lend-panel-head h3{margin:0 0 22px;font-size:24px;letter-spacing:-.04em}
+.lend-subtle{font:10px var(--mono);color:#90a097;white-space:nowrap}
+.lend-table-scroll{overflow-x:auto}
+.lend-table{border-collapse:collapse;width:100%;min-width:515px;font:11px var(--mono);text-align:left}
+.lend-table th{color:#889c94;font:9px var(--mono);padding:13px 10px;border-top:1px solid #38423d;border-bottom:1px solid #38423d;white-space:nowrap}
+.lend-table td{padding:20px 10px;border-bottom:1px solid #2d3834;color:#ecf4ed;white-space:nowrap}
+.lend-table td:first-child{min-width:165px}
+.lend-table td:first-child strong{font-size:12px}
+.lend-table td:first-child small{display:block;margin:5px 0 0 27px;color:#879b94;font-size:9px}
+.lend-token{display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;background:#b9f962;color:#122315;border-radius:50%;font-weight:700;margin-right:9px;width:18px;height:18px;font-size:12px}
+.lend-usdc{background:#527fe2;color:#f7fbff}
+.lend-pending{display:inline-block;border:1px solid #6d5841;background:#322b21;color:#ecd09a;padding:5px 7px;font:9px var(--mono);white-space:nowrap}
+.lend-note{padding:17px 0 0;color:#a7b8ae;font:11px/1.8 var(--mono)}
+.lend-note strong{color:#d5efdd}
+.lend-action-heading{align-items:center;padding-bottom:15px}
+.lend-action-heading .lend-eyebrow{margin:0!important}
+.lend-action-tabs{display:flex;padding:4px;background:#101517;border:1px solid #2d3834;border-radius:4px;gap:3px}
+.alternate .lend-action-tabs button{flex:1;margin:0;padding:12px 10px;border:0;border-radius:3px;color:#9faeaa;background:transparent;font:bold 11px var(--mono)}
+.alternate .lend-action-tabs button.selected{color:#162b1f;background:var(--lime)}
+.lend-action-content h3{font-size:20px;margin:27px 0 10px;letter-spacing:-.04em}
+.lend-action-content>p{color:#9aaba5!important;font:11px/1.75 var(--mono)!important;min-height:54px}
+.lend-balance-row{display:flex;justify-content:space-between;gap:12px;padding:15px 0;border-bottom:1px solid #2c3932;color:#99afa5;font:11px var(--mono)}
+.lend-balance-row b{color:#dfe7e1;font-weight:600}
+.alternate .lend-action-content>button{width:100%;margin:10px 0 0;padding:13px 10px;background:#26322d;border:1px solid #405149;color:#8fa199;opacity:1;cursor:not-allowed;font:bold 10px var(--mono)}
+.lend-action-warning{color:#ebc593!important;font:10px/1.7 var(--mono)!important;margin:18px 0 0!important}
+.alternate #lendViewNetwork{display:block;width:100%;margin:15px 0 0;border:1px solid #507244;color:var(--lime);background:#243024;padding:11px;font:10px var(--mono);cursor:pointer}
+.alternate #lendViewNetwork:hover{background:#32442b}
+@media(max-width:1100px){.lend-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.lend-layout{grid-template-columns:1fr}.lend-action-content>p{min-height:0}}
+@media(max-width:650px){
+  .alternate:has(.hoxo-lend:not(.hidden)){padding:18px 12px 32px}
+  .lend-intro{flex-direction:column;gap:18px;padding:30px 0 25px}
+  .lend-intro h2{font-size:44px}
+  .lend-right{font-size:9px}
+  .lend-metrics{gap:8px}
+  .lend-metrics article{padding:14px}
+  .lend-metrics article strong{font-size:25px;margin:10px 0}
+  .lend-markets,.lend-action-panel{padding:15px}
+  .topnav{gap:4px!important;justify-content:space-between}
+  .topnav .toplink{font-size:10px}
+}
