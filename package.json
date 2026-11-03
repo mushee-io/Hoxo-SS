@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Stellar spot, perps and money markets unified-margin development foundation",
   "scripts": {
-    "test": "node --test packages/risk-engine/test/*.test.mjs tests/landing.test.mjs tests/terminal.test.mjs tests/wallet.test.mjs tests/infrastructure.test.mjs tests/matching.test.mjs tests/marketdata.test.mjs tests/settlement-preview.test.mjs tests/m9-wallet-settlement.test.mjs tests/advanced-orders.test.mjs tests/portfolio-history.test.mjs tests/indexer.test.mjs tests/security-controls.test.mjs tests/m21-evidence.test.mjs tests/m22-risk-stress.test.mjs tests/m22-chaos.test.mjs tests/m23-beta.test.mjs tests/m24-mainnet.test.mjs tests/testnet-operator.test.mjs tests/testnet-activation.test.mjs tests/testnet-code-proof.test.mjs tests/cross-product-waterfall.test.mjs tests/asset-bound-waterfall.test.mjs tests/waterfall-strict-schema.test.mjs tests/settlement-readiness.test.mjs tests/aggregate-liquidation.test.mjs tests/mm-quote-plan.test.mjs tests/mm-live-testnet.test.mjs tests/mm-vercel-cron.test.mjs tests/nine-contract-coverage.test.mjs tests/m41-spot-asset-readiness.test.mjs tests/m47-live-candles.test.mjs tests/m48-live-orderbooks.test.mjs tests/m49-perp-book.test.mjs tests/m43-freighter-auth-guard.test.mjs tests/m44-browser-xdr-verifier.test.mjs tests/m45-spot-signing.test.mjs tests/m46-windows-acceptance.test.mjs tests/m52-testnet-spot-finality.test.mjs tests/m55-testnet-spot-submit.test.mjs tests/m59-m9-ledger-activity.test.mjs tests/m63-spot-dex.test.mjs tests/m68-real-classic-dex-candles.test.mjs",
+    "test": "node --test packages/risk-engine/test/*.test.mjs tests/landing.test.mjs tests/terminal.test.mjs tests/wallet.test.mjs tests/infrastructure.test.mjs tests/matching.test.mjs tests/marketdata.test.mjs tests/settlement-preview.test.mjs tests/m9-wallet-settlement.test.mjs tests/advanced-orders.test.mjs tests/portfolio-history.test.mjs tests/indexer.test.mjs tests/security-controls.test.mjs tests/m21-evidence.test.mjs tests/m22-risk-stress.test.mjs tests/m22-chaos.test.mjs tests/m23-beta.test.mjs tests/m24-mainnet.test.mjs tests/testnet-operator.test.mjs tests/testnet-activation.test.mjs tests/testnet-code-proof.test.mjs tests/cross-product-waterfall.test.mjs tests/asset-bound-waterfall.test.mjs tests/waterfall-strict-schema.test.mjs tests/settlement-readiness.test.mjs tests/aggregate-liquidation.test.mjs tests/mm-quote-plan.test.mjs tests/mm-live-testnet.test.mjs tests/mm-vercel-cron.test.mjs tests/nine-contract-coverage.test.mjs tests/m41-spot-asset-readiness.test.mjs tests/m47-live-candles.test.mjs tests/m48-live-orderbooks.test.mjs tests/m49-perp-book.test.mjs tests/m43-freighter-auth-guard.test.mjs tests/m44-browser-xdr-verifier.test.mjs tests/m45-spot-signing.test.mjs tests/m46-windows-acceptance.test.mjs tests/m52-testnet-spot-finality.test.mjs tests/m55-testnet-spot-submit.test.mjs tests/m59-m9-ledger-activity.test.mjs tests/m63-spot-dex.test.mjs tests/m68-real-classic-dex-candles.test.mjs tests/m69-quote-pulse.test.mjs",
     "check": "npm test",
     "test:landing": "node --test tests/landing.test.mjs",
     "check:testnet": "node scripts/check-testnet.mjs",
@@ -74,7 +74,8 @@
     "test:m63": "node --test tests/m63-spot-dex.test.mjs",
     "check:m59:testnet": "node scripts/check-m59-live-testnet.mjs",
     "test:mm:cron": "node --test tests/mm-vercel-cron.test.mjs",
-    "test:m68": "node --test tests/m68-real-classic-dex-candles.test.mjs"
+    "test:m68": "node --test tests/m68-real-classic-dex-candles.test.mjs",
+    "test:m69": "node --test tests/m69-quote-pulse.test.mjs"
   },
   "engines": {
     "node": ">=20"
