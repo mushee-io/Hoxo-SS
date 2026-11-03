@@ -1,0 +1,44 @@
+name: Hoxo Testnet XLM/USDC Automatic Market Maker
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'PLAN (read-only), LIVE (post/refresh offers), STOP (cancel all bot-owned spot offers)'
+        type: choice
+        options:
+          - plan
+          - live
+          - stop
+        default: plan
+permissions:
+  contents: read
+concurrency:
+  group: hoxo-testnet-spot-maker
+  cancel-in-progress: false
+jobs:
+  stellar-classic-dex-maker:
+    name: Testnet-only real XLM/USDC passive maker offers
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    env:
+      BOT_MODE: ${{ github.event_name == 'schedule' && 'live' || inputs.mode }}
+      HOXO_MM_PUBLIC_KEY: ${{ vars.HOXO_MM_PUBLIC_KEY }}
+      HOXO_MM_SECRET: ${{ secrets.HOXO_MM_SECRET }}
+      HOXO_MM_LIVE: ${{ vars.HOXO_MM_LIVE || 'NO' }}
+      HOXO_MM_SPREAD_BPS: ${{ vars.HOXO_MM_SPREAD_BPS || '200' }}
+      HOXO_MM_SIZE_XLM: ${{ vars.HOXO_MM_SIZE_XLM || '5' }}
+      HOXO_MM_MAX_USDC: ${{ vars.HOXO_MM_MAX_USDC || '2' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install pinned official Stellar SDK with install scripts disabled
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Verify exact Testnet maker pricing and safety gates
+        run: node --test tests/mm-live-testnet.test.mjs
+      - name: Plan, post real Testnet offers or cancel maker-owned offers
+        run: node scripts/run-testnet-mm.mjs "$BOT_MODE"
