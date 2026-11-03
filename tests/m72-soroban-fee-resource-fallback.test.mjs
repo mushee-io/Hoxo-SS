@@ -33,3 +33,17 @@ test("M72: missing or malformed resource metadata fails to unknown, not zero",()
     readOnlyEntries:"unknown",readWriteEntries:"unknown",refundableFee:"unknown"
   });
 });
+
+// Diagnostics must identify SDK shape without leaking transaction bytes or
+// Soroban authorization entries into CI output.
+test("M73: diagnostic shape reveals method names only, never XDR",async()=>{
+  const {inspectM69RpcDiagnosticShape}=await import("../app/m45-spot-simulation.mjs");
+  const secret="SENSITIVE_XDR_MUST_NOT_APPEAR";
+  const shape=inspectM69RpcDiagnosticShape({toEnvelope:()=>({})},{
+    transactionData:{toXDR:()=>secret,resources:()=>({}),auth:secret},
+    minResourceFee:"22564708"
+  });
+  assert.deepEqual(shape.transactionDataMethods,["toXDR","resources"]);
+  assert.equal(shape.transactionDataKind,"object");
+  assert.equal(JSON.stringify(shape).includes(secret),false);
+});
