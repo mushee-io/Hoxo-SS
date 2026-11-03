@@ -166,7 +166,11 @@ export function inspectM69RpcDiagnosticShape(assembled,simulation){
     envelope,extension,
     transactionDataKind:kind(simulation?.transactionData),
     minResourceFeeKind:kind(simulation?.minResourceFee),
-    costKind:kind(simulation?.cost)
+    costKind:kind(simulation?.cost),
+    // Expose only a fixed allowlist of SDK method availability, never raw
+    // transactionData, ledger footprint keys, authorization or XDR bytes.
+    transactionDataMethods:["toXDR","toXdr","resources","resourceFee"]
+      .filter(name=>typeof simulation?.transactionData?.[name]==="function")
   });
 }
 
