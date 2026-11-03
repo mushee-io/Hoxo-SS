@@ -583,39 +583,31 @@ test("M69 Chromium displays real six-second resting bid/ask quote pulse independ
   }finally{await context.close();}
 });
 
-test("M71 Lend nav opens a dedicated, honest, fully keyboard-addressable Testnet money market page",async()=>{
+test("M71 Lend nav opens the single Hoxo Lend entry card and preserves keyboard access",async()=>{
   const {page,context,errors}=await openTerminal("/app/?market=xlm-usdc-spot#lend");
   try{
     await page.locator("#lendView").waitFor({state:"visible",timeout:10000});
-    assert.equal(await page.locator("#lendTitle").innerText(),"Lend & Borrow");
+    assert.equal(await page.locator("#lendTitle").innerText(),"Enter the Lend Market");
     assert.equal(await page.locator('[data-view="lend"]').getAttribute("aria-pressed"),"true");
     assert.equal(await page.locator("#tradeView").isVisible(),false);
     assert.equal(await page.locator("#alternateCards").isVisible(),false);
     assert.equal(await page.locator("#networkPanel").isVisible(),false);
-    assert.match(await page.locator("#lendView").innerText(),/TESTNET · NOT LIVE/);
-    assert.equal(await page.locator("#lendSupplyTab").getAttribute("aria-selected"),"true");
-    assert.equal(await page.locator("#lendSupplyPanel").isVisible(),true);
-    assert.equal(await page.locator("#lendBorrowPanel").isVisible(),false);
-    assert.equal(await page.locator("#lendView button:disabled").count(),4);
-    await page.locator("#lendBorrowTab").click();
-    assert.equal(await page.locator("#lendBorrowTab").getAttribute("aria-selected"),"true");
-    assert.equal(await page.locator("#lendSupplyPanel").isVisible(),false);
-    assert.equal(await page.locator("#lendBorrowPanel").isVisible(),true);
-    await page.locator("#lendSupplyTab").click();
-    assert.equal(await page.locator("#lendSupplyPanel").isVisible(),true);
+    const link=page.locator("#lendView .lend-entry-card");
+    assert.equal(await link.count(),1);
+    assert.equal(await link.getAttribute("href"),"https://hoxo-lend.vercel.app/");
+    assert.match(await link.innerText(),/HOXO\s+LEND/);
+    assert.match(await link.innerText(),/Proceed with caution\./);
+    assert.equal(await page.locator("#lendView button").count(),0);
+    await link.focus();
+    assert.equal(await link.evaluate(el=>el===document.activeElement),true);
     assert.match(page.url(),/#lend$/);
-    await page.locator("#lendViewNetwork").click();
-    assert.equal(await page.locator("#networkPanel").isVisible(),true);
-    assert.equal(await page.locator("#lendView").isVisible(),false);
-    await page.locator('[data-view="lend"]').click();
-    assert.equal(await page.locator("#lendView").isVisible(),true);
     await page.locator('[data-view="trade"]').click();
     assert.equal(await page.locator("#tradeView").isVisible(),true);
     assert.deepEqual(errors,[]);
   }finally{await context.close();}
 });
 
-test("M71 mobile Lend view has no horizontal overflow and never enables money transfers",async()=>{
+test("M71 mobile Lend entry card fits the viewport and has no financial execution controls",async()=>{
   const {page,context,errors}=await openTerminal("/app/?market=xlm-usdc-spot#lend",{width:375,height:812});
   try{
     await page.locator("#lendView").waitFor({state:"visible",timeout:10000});
@@ -624,9 +616,9 @@ test("M71 mobile Lend view has no horizontal overflow and never enables money tr
       viewportWidth:window.innerWidth
     }));
     assert.ok(dimensions.pageWidth<=dimensions.viewportWidth+2,JSON.stringify(dimensions));
-    assert.equal(await page.locator("#lendView button:disabled").count(),4);
-    await page.locator("#lendBorrowTab").click();
-    assert.equal(await page.locator("#lendBorrowPanel").isVisible(),true);
+    assert.equal(await page.locator("#lendView .lend-entry-card").isVisible(),true);
+    assert.equal(await page.locator("#lendView .lend-entry-card").getAttribute("href"),"https://hoxo-lend.vercel.app/");
+    assert.equal(await page.locator("#lendView button").count(),0);
     assert.deepEqual(errors,[]);
   }finally{await context.close();}
 });
