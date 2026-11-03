@@ -46,7 +46,7 @@ test("M2 desktop: reference markets, tabs, non-executable order drafts",async()=
     assert.equal(await page.locator("#tradeButton").isDisabled(),false);
     assert.equal(await page.locator(".account-actions button:disabled").count(),2);
     await page.locator('[data-view="earn"]').click();
-    assert.equal(await page.locator("#altTitle").innerText(),"MONEY MARKETS");
+    assert.equal(await page.locator("#altTitle").innerText(),"EARN");
     await page.locator("#backToTrade").click();
     assert.equal(await page.locator("#marketLabel").innerText(),"XLM/USDC");
     assert.deepEqual(errors,[],"No unhandled page errors");
