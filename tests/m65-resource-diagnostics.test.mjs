@@ -45,3 +45,17 @@ test("M66 diagnostic fails closed to unknown without exposing transaction conten
     readOnlyEntries:"unknown",readWriteEntries:"unknown",refundableFee:"unknown"
   });
 });
+
+test("M67 preserves available footprint and fee diagnostics when one SDK accessor is absent",()=>{
+  const resources={
+    instructions:()=>654321,readBytes:()=>2048,
+    footprint:()=>({readOnly:()=>[1,2],readWrite:()=>[3]})
+  };
+  const assembled={toEnvelope:()=>({v1:()=>({tx:()=>({ext:()=>({
+    sorobanData:()=>({resources:()=>resources,resourceFee:()=>22258090n})
+  })})})})};
+  assert.deepEqual(inspectM66AssembledResources(assembled),{
+    instructions:"654321",readBytes:"2048",writeBytes:"unknown",
+    readOnlyEntries:2,readWriteEntries:1,refundableFee:"22258090"
+  });
+});
