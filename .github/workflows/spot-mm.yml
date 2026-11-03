@@ -25,7 +25,6 @@ jobs:
     env:
       BOT_MODE: ${{ github.event_name == 'schedule' && 'live' || inputs.mode }}
       HOXO_MM_PUBLIC_KEY: ${{ vars.HOXO_MM_PUBLIC_KEY }}
-      HOXO_MM_SECRET: ${{ secrets.HOXO_MM_SECRET }}
       HOXO_MM_LIVE: ${{ vars.HOXO_MM_LIVE || 'NO' }}
       HOXO_MM_SPREAD_BPS: ${{ vars.HOXO_MM_SPREAD_BPS || '200' }}
       HOXO_MM_SIZE_XLM: ${{ vars.HOXO_MM_SIZE_XLM || '5' }}
@@ -40,4 +39,6 @@ jobs:
       - name: Verify exact Testnet maker pricing and safety gates
         run: node --test tests/mm-live-testnet.test.mjs
       - name: Plan, post real Testnet offers or cancel maker-owned offers
+        env:
+          HOXO_MM_SECRET: ${{ secrets.HOXO_MM_SECRET }}
         run: node scripts/run-testnet-mm.mjs "$BOT_MODE"
