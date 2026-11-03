@@ -41,3 +41,14 @@ test("M79 offline fee classification rejects implicit coercion and unsafe intege
   });
   assert.equal(classifyM65SimulationFee(10000001n,10000000n).allowed,false);
 });
+
+
+test("M80 malformed fee policy never reaches BigInt coercion in source review",()=>{
+  assert.match(verifier,/const feePolicy=classifyM65SimulationFee\(fee,maxFeeStroops\)/);
+  assert.match(verifier,/feePolicy\.reason==="invalid_fee"/);
+  assert.match(verifier,/fail\("invalid transaction fee ceiling"\)/);
+  assert.doesNotMatch(verifier,/configured "\+BigInt\(maxFeeStroops\)/);
+  for(const invalid of [null,true,[],{},"+100","000100",-100,Number.MAX_SAFE_INTEGER+1]){
+    assert.equal(classifyM65SimulationFee(100n,invalid).reason,"invalid_fee");
+  }
+});
