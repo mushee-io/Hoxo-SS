@@ -11,7 +11,7 @@ import {Asset,Horizon,Keypair,Networks,Operation,StrKey,TransactionBuilder}
 import {HORIZON_TESTNET,USDC_TESTNET_ISSUER,validateBook}
   from "../app/m63-spot-core.mjs";
 import {QA_INTERVAL_MS,QA_LABEL,qaWindow,completedQaThisWindow,
-  planIndependentQa} from "../mm/m70-transparent-qa.mjs";
+  planIndependentQa,isM70QaOperation} from "../mm/m70-transparent-qa.mjs";
 import {runTestnetMM} from "./run-testnet-mm.mjs";
 
 const server=new Horizon.Server(HORIZON_TESTNET);
@@ -90,11 +90,9 @@ async function verifiedReceipt(hash,source,side){
   if(!Array.isArray(records)||records.length<1||records.length>3)
     fail("on-chain operation evidence unavailable");
   const last=records.at(-1);
-  if(last?.source_account!==source||last?.type!==
+  if(!isM70QaOperation(last,source)||last.type!==
      (side==="buy"?"path_payment_strict_receive":"path_payment_strict_send"))
-    fail("receipt does not prove the expected automated Testnet swap");
-  if(last.to!==source)
-    fail("QA swap must return the purchased asset to the bot's own Testnet account");
+    fail("receipt does not prove the exact 0.02 XLM automated QA swap");
   return Object.freeze({hash,ledger:tx.ledger,at:tx.created_at});
 }
 export async function runTransparentTestnetQaTrade(){
