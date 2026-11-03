@@ -26,3 +26,7 @@ Run `node --test tests/m65-m55-fee-boundary.test.mjs` and `npm run m55:simulate:
 4. Keep **0.1 XLM browser** and **1 XLM CI simulation** fee ceilings and security review gates unchanged. A larger fee or contract upgrade requires a separate reviewed decision; CI success is not consent to spend assets.
 
 No signed Hoxo BUY/SELL receipt or public matching liquidity was established.
+
+## M76 — fail-closed fee policy before RPC (2026-11-03)
+
+The read-only simulation now validates its configured fee ceiling before contacting the Stellar Testnet RPC. Invalid, fractional, negative, under-100-stroop or above-10,000,000-stroop limits abort before ledger reads, account reads or simulation. This prevents misconfigured automation from performing an RPC simulation under an invalid policy; it does not increase the existing 1 XLM simulation-only ceiling or the 0.1 XLM browser signing ceiling. Regression: `node --test tests/m76-fee-policy-preflight.test.mjs` (also included in `npm test`). The open PR must still pass exact-head CI and independent review; a successful test is not an on-chain trade receipt.
