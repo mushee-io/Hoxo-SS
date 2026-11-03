@@ -25,3 +25,7 @@ This patch does **not** establish the root cause or reduce resource fees. CI mus
 ## 2026-11-03 10:00 UTC — M67 fail-safe partial diagnostics
 
 The exact-head M66 GitHub Actions run 41608226109 failed only the M55 live simulation step: fee 22,258,090 stroops, minimum resource fee 22,257,090, above the 10,000,000-stroop CI cap. The resource inspector printed all `unknown`, so fee root cause remains undetermined. M67 reads each numeric XDR field independently, supports either `diskReadBytes()` or `readBytes()`, and retains footprint counts and resource fee when one SDK accessor is absent. A regression fixture covers that partial-failure case. Re-run exact-head CI to collect the next live measurements; do not relax the cap or enable signing/broadcast.
+
+## 2026-11-03 11:00 UTC — M68 independent RPC metadata fallback
+
+Exact-head M67 [CI run 41616177620](https://github.com/mushee-io/Hoxo-SS/actions/runs/41616177620) failed the M55 unsigned simulation at 22,308,918 stroops (minimum resource fee 22,307,918); all other eight jobs passed. The assembled-envelope resource accessor still yielded `unknown` fields. M68 now attempts the RPC `transactionData` Soroban XDR directly when the assembled-envelope accessor fails, with a regression fixture for the fallback. This is diagnostic only, not a fee reduction or permission to sign. A new exact-head CI run must confirm the behavior. Keep the 10,000,000-stroop CI refusal and the 1,000,000-stroop browser signing ceiling. No transactions were broadcast.
