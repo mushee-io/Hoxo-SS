@@ -91,6 +91,13 @@ function verifyExpectedTerms(actual,expected,now){
 }
 /** Fail-closed fee classification; never authorises a signature or transaction. */
 export function classifyM65SimulationFee(observedStroops, configuredStroops=1000000n){
+  // BigInt() coerces booleans, null, arrays and objects. A fee policy must
+  // instead be an exact, explicitly typed nonnegative integer.
+  const exact=value=>typeof value==="bigint"||
+    (typeof value==="number"&&Number.isSafeInteger(value))||
+    (typeof value==="string"&&/^(?:0|[1-9]\\d*)$/.test(value));
+  if(!exact(observedStroops)||!exact(configuredStroops))
+    return Object.freeze({allowed:false,reason:"invalid_fee"});
   let observed,configured;
   try{observed=BigInt(observedStroops);configured=BigInt(configuredStroops);}
   catch{return Object.freeze({allowed:false,reason:"invalid_fee"});}
