@@ -21,3 +21,7 @@ Compare the measurements against independently verified M9 WASM and the exact tw
 The SDK assembled transaction does not reliably expose `sorobanData` as a direct property. The M66 diagnostic now reads `assembled.toEnvelope().v1().tx().ext().sorobanData()`, extracting numeric instruction/read/write budgets, read-only/read-write footprint counts, and resource fee. Regression tests cover successful extraction and safe `unknown` fallback. The diagnostic deliberately never serializes keys, auth entries, or the transaction envelope.
 
 This patch does **not** establish the root cause or reduce resource fees. CI must verify the exact new commit and rerun the live read-only M55 simulation. The 1 XLM CI and 0.1 XLM signing limits remain unchanged. No production release or signing is authorized.
+
+## 2026-11-03 10:00 UTC — M67 fail-safe partial diagnostics
+
+The exact-head M66 GitHub Actions run 41608226109 failed only the M55 live simulation step: fee 22,258,090 stroops, minimum resource fee 22,257,090, above the 10,000,000-stroop CI cap. The resource inspector printed all `unknown`, so fee root cause remains undetermined. M67 reads each numeric XDR field independently, supports either `diskReadBytes()` or `readBytes()`, and retains footprint counts and resource fee when one SDK accessor is absent. A regression fixture covers that partial-failure case. Re-run exact-head CI to collect the next live measurements; do not relax the cap or enable signing/broadcast.
