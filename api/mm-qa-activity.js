@@ -5,6 +5,7 @@
  */
 import {StrKey} from "@stellar/stellar-sdk";
 import {HORIZON_TESTNET} from "../app/m63-spot-core.mjs";
+import {isM70QaOperation} from "../mm/m70-transparent-qa.mjs";
 
 async function get(url){
   const response=await fetch(url,{
@@ -30,10 +31,7 @@ export default async function handler(req,res){
     const operations=(await get(url.href))?._embedded?.records;
     if(!Array.isArray(operations))
       throw Error("Cannot verify public bot operations");
-    const candidates=operations.filter(op=>
-      op.source_account===address&&
-      ["path_payment_strict_send","path_payment_strict_receive"].includes(op.type)
-    ).slice(0,4);
+    const candidates=operations.filter(op=>isM70QaOperation(op,address)).slice(0,4);
     const verified=[];
     for(const op of candidates){
       const hash=op.transaction_hash;
