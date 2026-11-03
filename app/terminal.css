@@ -304,3 +304,9 @@
 .m69-foot{margin:6px 0 0;padding-top:6px;border-top:1px solid #355041;color:#a8b7a9;font:9px/1.5 var(--mono)}
 .m69-foot b{color:#d5edc6}
 @media(max-width:650px){.m69-live-quotes{width:min(238px,calc(100% - 18px));top:8px;left:8px;padding:8px 9px}.m69-prices strong{font-size:11px}}
+
+/* Independently verified operator QA fills are never presented as organic. */
+.m70-attribution{display:flex;flex-direction:column;gap:5px;margin:9px 0 0;padding:7px 0 0;border-top:1px dashed #556d59;color:#bdcfbd;font:9px/1.6 var(--mono)}
+.m70-attribution strong{font-weight:700;color:#f5c98c;font-size:9px}
+.m70-attribution a{color:#b6ffbe;text-decoration:underline;pointer-events:auto}
+.m70-attribution a.hidden{display:none}
