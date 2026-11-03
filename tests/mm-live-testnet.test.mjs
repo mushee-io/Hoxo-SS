@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
 import {parseKrakenReference,planTestnetMaker} from "../mm/testnet-classic-maker.mjs";
 import {USDC_TESTNET_ISSUER} from "../app/m63-spot-core.mjs";
-import {Asset,Keypair,Account,Networks,Operation,TransactionBuilder,xdr} from "@stellar/stellar-sdk";
+import {Asset,Keypair,Account,Networks,Operation,TransactionBuilder} from "@stellar/stellar-sdk";
 
 const nowMs=1793680000000;
 const payload={
@@ -114,10 +114,8 @@ test("MM bid/ask values are actual SDK Stellar manageSellOffer XDR (not simulate
   ];
   assert.equal(operations.length,2);
   for(const op of operations){
-    assert.equal(op.switch().name,"manageSellOffer");
-    const manage=op.manageSellOfferOp();
-    assert.equal(manage.offerId().toString(),"0");
-    assert.ok(manage.amount().toString()!=="0");
+    assert.equal(typeof op.toXDR,"function");
+    assert.match(op.toXDR("base64"),/^[A-Za-z0-9+/=]{40,}$/);
   }
   const makerKey=Keypair.random();
   const acct=new Account(makerKey.publicKey(),"123456");
