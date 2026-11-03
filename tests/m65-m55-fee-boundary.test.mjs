@@ -14,4 +14,7 @@ test("M65 expanded resource fee is confined to read-only CI simulation",()=>{
   assert.match(simulation,/maxFeeStroops=1000000n/);
   assert.match(verifier,/maxFeeStroops=1000000n/);
   assert.match(verifier,/BigInt\(maxFeeStroops\)>10000000n/);
+  assert.match(verifier,/observed /);
+  assert.match(verifier,/configured /);
+  assert.match(verifier,/hard maximum 10000000 stroops/);
 });
