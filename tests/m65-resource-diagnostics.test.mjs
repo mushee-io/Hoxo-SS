@@ -82,3 +82,15 @@ test("M69 shape diagnostics report only bounded public type labels, never transa
   assert.doesNotMatch(JSON.stringify(shape),/secret-soroban-auth-material/);
   assert.equal(inspectM69RpcDiagnosticShape({toEnvelope:()=>{throw Error(privateXdr);}},{}).envelope,"unavailable");
 });
+
+
+test("M71 uses the SDK XDR envelope directly without requiring a nonexistent toXdr method",()=>{
+  const data={resources:()=>({instructions:()=>777,diskReadBytes:()=>32,writeBytes:()=>64,
+    footprint:()=>({readOnly:()=>[1],readWrite:()=>[2]})}),resourceFee:()=>22457677n};
+  const assembled={toEnvelope:()=>({v1:()=>({tx:()=>({ext:()=>({sorobanData:()=>data})})})})};
+  assert.deepEqual(inspectM66AssembledResources(assembled),{
+    instructions:"777",readBytes:"32",writeBytes:"64",
+    readOnlyEntries:1,readWriteEntries:1,refundableFee:"22457677"
+  });
+  assert.doesNotMatch(simulation,/assembled\.toXdr\(\)/);
+});
