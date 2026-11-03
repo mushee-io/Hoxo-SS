@@ -4,7 +4,7 @@ import {readFile} from "node:fs/promises";
 import {Account,Asset,Keypair,Networks,Operation,TransactionBuilder}
   from "@stellar/stellar-sdk";
 import {QA_LABEL,QA_INTERVAL_MS,QA_XLM_AMOUNT,QA_MAX_QUOTE_USDC,
-  qaWindow,completedQaThisWindow,planIndependentQa}
+  qaWindow,completedQaThisWindow,planIndependentQa,isM70QaOperation}
   from "../mm/m70-transparent-qa.mjs";
 import {USDC_TESTNET_ISSUER} from "../app/m63-spot-core.mjs";
 const address=Keypair.random().publicKey();
@@ -63,8 +63,16 @@ test("M70 fails closed if reference issuer, matching depth, reserves or costs in
 test("M70 rate limit independently checks recent on-chain path payments in 15m windows",()=>{
   const now=qaWindow(nowMs),timestamp=new Date(now*QA_INTERVAL_MS+3000).toISOString();
   const old=new Date(now*QA_INTERVAL_MS-10000).toISOString();
-  const settled={source_account:address,type:"path_payment_strict_send",created_at:timestamp};
+  const settled={source_account:address,to:address,
+    type:"path_payment_strict_send",created_at:timestamp,
+    source_amount:QA_XLM_AMOUNT,source_asset_type:"native",
+    asset_type:"credit_alphanum4",asset_code:"USDC",
+    asset_issuer:USDC_TESTNET_ISSUER};
   assert.equal(completedQaThisWindow([settled],{account,nowMs}),true);
+  assert.equal(isM70QaOperation(settled,address),true);
+  assert.equal(isM70QaOperation({...settled,source_amount:"25.0000000"},address),false,
+    "old 25 XLM inventory bootstrap must never be reported as QA volume");
+  assert.equal(isM70QaOperation({...settled,source_account:Keypair.random().publicKey()},address),false);
   assert.equal(completedQaThisWindow([{
     ...settled,type:"manage_sell_offer"
   },{...settled,created_at:old}],{account,nowMs}),false);
