@@ -105,6 +105,32 @@ function termsScVal(terms){
   });
   return xdr.ScVal.scvMap(fields);
 }
+/** Read resource counts from the canonical envelope, not an SDK convenience field.
+ * This is bounded metadata only: never expose ledger keys or auth XDR.
+ */
+export function inspectM66AssembledResources(assembled){
+  const unknown={instructions:"unknown",readBytes:"unknown",writeBytes:"unknown",
+    readOnlyEntries:"unknown",readWriteEntries:"unknown",refundableFee:"unknown"};
+  try {
+    const envelope=assembled.toEnvelope();
+    const tx=envelope.v1().tx();
+    const ext=tx.ext();
+    const data=ext.sorobanData();
+    const resources=data.resources();
+    const footprint=resources.footprint();
+    return {
+      instructions:String(resources.instructions()),
+      readBytes:String(resources.diskReadBytes()),
+      writeBytes:String(resources.writeBytes()),
+      readOnlyEntries:footprint.readOnly().length,
+      readWriteEntries:footprint.readWrite().length,
+      refundableFee:String(data.resourceFee())
+    };
+  } catch {
+    return unknown;
+  }
+}
+
 export async function simulateM45BilateralSpot({
   server,preflight,xlmAmount="0.0100000",usdcAmount="0.0200000",side="sell",
   randomBytes, maxFeeStroops=1000000n
@@ -143,17 +169,7 @@ export async function simulateM45BilateralSpot({
   // diagnostics for investigation. No signatures or broadcasts are attempted.
   // The assembled Soroban transaction-data XDR is read-only public metadata.
   // Record bounded footprint/resource measurements without auth payloads.
-  const data=assembled.sorobanData;
-  const resources=data?.resources?.();
-  const footprint=resources?.footprint?.();
-  const resourceSummary={
-    instructions:resources?.instructions?.()?.toString?.()??"unknown",
-    readBytes:resources?.diskReadBytes?.()?.toString?.()??"unknown",
-    writeBytes:resources?.writeBytes?.()?.toString?.()??"unknown",
-    readOnlyEntries:footprint?.readOnly?.()?.length??"unknown",
-    readWriteEntries:footprint?.readWrite?.()?.length??"unknown",
-    refundableFee:data?.resourceFee?.()?.toString?.()??"unknown"
-  };
+  const resourceSummary=inspectM66AssembledResources(assembled);
   const assembledFee=BigInt(assembled.fee);
   if(assembledFee>BigInt(maxFeeStroops)){
     const resourceFee=sim?.minResourceFee==null?"unknown":String(sim.minResourceFee);
