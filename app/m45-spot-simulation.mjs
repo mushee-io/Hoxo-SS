@@ -185,7 +185,7 @@ export async function simulateM45BilateralSpot({
   // Accept only an exact integer fee policy. BigInt() itself accepts booleans,
   // null, and coerced objects, which must never become implicit fee authority.
   if(typeof maxFeeStroops!=="bigint"&&
-     !(typeof maxFeeStroops==="string"&&/^(?:0|[1-9]\\d*)$/.test(maxFeeStroops))&&
+     !(typeof maxFeeStroops==="string"&&/^(?:0|[1-9]\d*)$/.test(maxFeeStroops))&&
      !(typeof maxFeeStroops==="number"&&Number.isSafeInteger(maxFeeStroops)))
     fail("invalid simulation fee ceiling");
   const feeCeiling=BigInt(maxFeeStroops);
