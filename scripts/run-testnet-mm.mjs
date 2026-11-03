@@ -15,8 +15,8 @@ import {HORIZON_TESTNET,USDC_TESTNET_ISSUER} from "../app/m63-spot-core.mjs";
 import {parseKrakenReference,planTestnetMaker} from "../mm/testnet-classic-maker.mjs";
 
 const botMode=process.argv[2]||"plan";
-const noStore={headers:{accept:"application/json"},cache:"no-store",
-  signal:AbortSignal.timeout(12000)};
+const noStore=()=>({headers:{accept:"application/json"},cache:"no-store",
+  signal:AbortSignal.timeout(12000)});
 const XLM=Asset.native(),USDC=new Asset("USDC",USDC_TESTNET_ISSUER);
 const server=new Horizon.Server(HORIZON_TESTNET);
 const fail=message=>{throw Error("Hoxo MM: "+message);};
@@ -29,7 +29,7 @@ function limitedPositiveInt(raw,defaultValue,min,max,label){
   return n;
 }
 async function json(url){
-  const res=await fetch(url,noStore);
+  const res=await fetch(url,noStore());
   if(!res.ok)fail("public market endpoint unavailable: HTTP "+res.status);
   const parsed=await res.json();
   if(!parsed||typeof parsed!=="object")fail("malformed public market response");
@@ -111,7 +111,7 @@ async function signAndSubmit({signer,ops,mode,preview}){
   console.log(JSON.stringify({
     action:mode,mode:"STELLAR_TESTNET_CLASSIC_DEX",
     account:signer.publicKey(),operations:ops.length,
-    expected:preview??null,transactionHash:tx.hash().toString("hex")
+    expected:preview??null,transactionHash:Buffer.from(tx.hash()).toString("hex")
   }));
   const res=await server.submitTransaction(tx);
   if(res?.successful===false||!(/^[a-fA-F0-9]{64}$/).test(res?.hash??""))
