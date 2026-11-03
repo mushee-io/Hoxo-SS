@@ -96,7 +96,7 @@ export function reviewM44SourceEnvelope({sourceTxXdr,expectedTerms,currentLedger
   if(tx.signatures.length!==0)fail("expected unsigned source envelope");
   const fee=BigInt(tx.fee);
   if(fee<100n||fee>BigInt(maxFeeStroops)||BigInt(maxFeeStroops)>10000000n)
-    fail("transaction fee exceeds configured ceiling");
+    fail("transaction fee exceeds configured ceiling (observed "+fee.toString()+" stroops; configured "+BigInt(maxFeeStroops).toString()+" stroops; hard maximum 10000000 stroops)");
   const actual=readTerms(invoke);
   verifyExpectedTerms(actual,expectedTerms,now);
   const entries=op.auth??[];
