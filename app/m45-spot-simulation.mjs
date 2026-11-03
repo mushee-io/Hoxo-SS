@@ -182,8 +182,13 @@ export async function simulateM45BilateralSpot({
   // Reject invalid fee policy before any RPC call or wallet-related work.
   // A read-only simulation may use a reviewed ceiling up to 1 XLM;
   // the user-controlled signing path retains its stricter default.
-  let feeCeiling;
-  try{feeCeiling=BigInt(maxFeeStroops);}catch{fail("invalid simulation fee ceiling");}
+  // Accept only an exact integer fee policy. BigInt() itself accepts booleans,
+  // null, and coerced objects, which must never become implicit fee authority.
+  if(typeof maxFeeStroops!=="bigint"&&
+     !(typeof maxFeeStroops==="string"&&/^(?:0|[1-9]\\d*)$/.test(maxFeeStroops))&&
+     !(typeof maxFeeStroops==="number"&&Number.isSafeInteger(maxFeeStroops)))
+    fail("invalid simulation fee ceiling");
+  const feeCeiling=BigInt(maxFeeStroops);
   if(feeCeiling<100n||feeCeiling>10_000_000n)fail("invalid simulation fee ceiling");
   if(!preflight||preflight.readyForSimulation!==true||preflight.contractPaused!==false||
      preflight.contract!==M9_TESTNET_CONTRACT_ID||preflight.network!=="Stellar Testnet")
@@ -222,13 +227,13 @@ export async function simulateM45BilateralSpot({
   const resourceSummary=inspectM66AssembledResources(assembled,sim);
   const diagnosticShape=inspectM69RpcDiagnosticShape(assembled,sim);
   const assembledFee=BigInt(assembled.fee);
-  if(assembledFee>BigInt(maxFeeStroops)){
+  if(assembledFee>feeCeiling){
     const resourceFee=typeof sim?.minResourceFee==="string"&&/^(?:0|[1-9]\d*)$/.test(sim.minResourceFee)?
       sim.minResourceFee:"unknown";
     const cpu=sim?.cost?.cpuInsns==null?"unknown":String(sim.cost.cpuInsns);
     const memory=sim?.cost?.memBytes==null?"unknown":String(sim.cost.memBytes);
     fail("assembled Testnet fee exceeds ceiling; feeStroops="+assembledFee+
-      " ceilingStroops="+BigInt(maxFeeStroops)+
+      " ceilingStroops="+feeCeiling+
       " minResourceFee="+resourceFee.slice(0,32)+
       " resources="+JSON.stringify(resourceSummary).slice(0,350)+
       " metadataShape="+JSON.stringify(diagnosticShape).slice(0,250)+
