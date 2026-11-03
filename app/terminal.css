@@ -261,3 +261,25 @@
   .terminal-grid{grid-template-rows:450px minmax(260px,auto) minmax(280px,auto)}
   .terminal-grid>.order-panel{grid-column:2;grid-row:2/4}
 }
+
+/* M68: separately attributed, real Stellar Horizon XLM/USDC Classic DEX candles. */
+.chart-panel .chart-source-control{margin-left:auto;display:flex;gap:7px;align-items:center;min-width:0}
+.chart-source-control label{font:9px var(--mono);color:#94a7a0;white-space:nowrap}
+.chart-source-control select{max-width:230px;width:218px;min-width:0;padding:7px 6px;border:1px solid #365a46;background:#17231f;color:#c9ffbd;font:10px var(--mono);border-radius:3px}
+.chart-source-control.hidden{display:none}
+.chart-source-control select:focus-visible{outline:2px solid #b9ef8a;outline-offset:2px}
+#m68DexChartSurface{z-index:4}
+#m68DexCandleCanvas{display:block;width:100%;height:100%}
+@media(max-width:1200px){
+  .chart-panel .tabbar{padding:0 5px}
+  .chart-panel .tab{padding:10px 8px}
+  .chart-source-control label{display:none}
+  .chart-source-control select{width:169px;font-size:9px}
+  .chart-panel .chart-tools{gap:5px;padding:0 8px}
+  .chart-panel .chart-tool-label{font-size:9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .chart-panel .timeframes{gap:5px}
+}
+@media(max-width:650px){
+  .chart-source-control select{width:min(42vw,180px);font-size:9px}
+  .chart-panel .tab{padding:10px 7px}
+}
