@@ -111,24 +111,24 @@ function termsScVal(terms){
 export function inspectM66AssembledResources(assembled){
   const unknown={instructions:"unknown",readBytes:"unknown",writeBytes:"unknown",
     readOnlyEntries:"unknown",readWriteEntries:"unknown",refundableFee:"unknown"};
-  try {
-    const envelope=assembled.toEnvelope();
-    const tx=envelope.v1().tx();
-    const ext=tx.ext();
-    const data=ext.sorobanData();
-    const resources=data.resources();
-    const footprint=resources.footprint();
-    return {
-      instructions:String(resources.instructions()),
-      readBytes:String(resources.diskReadBytes()),
-      writeBytes:String(resources.writeBytes()),
-      readOnlyEntries:footprint.readOnly().length,
-      readWriteEntries:footprint.readWrite().length,
-      refundableFee:String(data.resourceFee())
-    };
-  } catch {
-    return unknown;
-  }
+  // Never let an SDK-version-specific accessor erase measurements that
+  // are still available. Each public numeric field is independently guarded.
+  const safe=(read)=>{try {const v=read();return v==null?"unknown":String(v);}catch{return "unknown";}};
+  const count=(read)=>{try {const v=read();return Array.isArray(v)?v.length:"unknown";}catch{return "unknown";}};
+  let data;
+  try {data=assembled.toEnvelope().v1().tx().ext().sorobanData();}catch{return unknown;}
+  const resources=(()=>{try{return data.resources();}catch{return null;}})();
+  const footprint=(()=>{try{return resources?.footprint();}catch{return null;}})();
+  return {
+    instructions:safe(()=>resources.instructions()),
+    // Older SDK XDR uses readBytes; newer SDKs expose diskReadBytes.
+    readBytes:safe(()=>typeof resources.diskReadBytes==="function"?
+      resources.diskReadBytes():resources.readBytes()),
+    writeBytes:safe(()=>resources.writeBytes()),
+    readOnlyEntries:count(()=>footprint.readOnly()),
+    readWriteEntries:count(()=>footprint.readWrite()),
+    refundableFee:safe(()=>data.resourceFee())
+  };
 }
 
 export async function simulateM45BilateralSpot({
