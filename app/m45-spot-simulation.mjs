@@ -141,6 +141,19 @@ export async function simulateM45BilateralSpot({
   const sourceTxXdr=assembled.toXdr();
   // Preserve the hard fee refusal while exposing bounded, read-only resource
   // diagnostics for investigation. No signatures or broadcasts are attempted.
+  // The assembled Soroban transaction-data XDR is read-only public metadata.
+  // Record bounded footprint/resource measurements without auth payloads.
+  const data=assembled.sorobanData;
+  const resources=data?.resources?.();
+  const footprint=resources?.footprint?.();
+  const resourceSummary={
+    instructions:resources?.instructions?.()?.toString?.()??"unknown",
+    readBytes:resources?.diskReadBytes?.()?.toString?.()??"unknown",
+    writeBytes:resources?.writeBytes?.()?.toString?.()??"unknown",
+    readOnlyEntries:footprint?.readOnly?.()?.length??"unknown",
+    readWriteEntries:footprint?.readWrite?.()?.length??"unknown",
+    refundableFee:data?.resourceFee?.()?.toString?.()??"unknown"
+  };
   const assembledFee=BigInt(assembled.fee);
   if(assembledFee>BigInt(maxFeeStroops)){
     const resourceFee=sim?.minResourceFee==null?"unknown":String(sim.minResourceFee);
@@ -149,6 +162,7 @@ export async function simulateM45BilateralSpot({
     fail("assembled Testnet fee exceeds ceiling; feeStroops="+assembledFee+
       " ceilingStroops="+BigInt(maxFeeStroops)+
       " minResourceFee="+resourceFee.slice(0,32)+
+      " resources="+JSON.stringify(resourceSummary).slice(0,350)+
       " cpuInsns="+cpu.slice(0,32)+" memBytes="+memory.slice(0,32)+
       "; no signing or broadcast");
   }
