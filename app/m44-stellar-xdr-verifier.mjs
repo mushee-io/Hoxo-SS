@@ -95,7 +95,7 @@ export function classifyM65SimulationFee(observedStroops, configuredStroops=1000
   // instead be an exact, explicitly typed nonnegative integer.
   const exact=value=>typeof value==="bigint"||
     (typeof value==="number"&&Number.isSafeInteger(value))||
-    (typeof value==="string"&&/^(?:0|[1-9]\\d*)$/.test(value));
+    (typeof value==="string"&&/^(?:0|[1-9]\d*)$/.test(value));
   if(!exact(observedStroops)||!exact(configuredStroops))
     return Object.freeze({allowed:false,reason:"invalid_fee"});
   let observed,configured;
