@@ -139,6 +139,19 @@ export async function simulateM45BilateralSpot({
   }
   const assembled=rpc.assembleTransaction(tx,sim).build();
   const sourceTxXdr=assembled.toXdr();
+  // Preserve the hard fee refusal while exposing bounded, read-only resource
+  // diagnostics for investigation. No signatures or broadcasts are attempted.
+  const assembledFee=BigInt(assembled.fee);
+  if(assembledFee>BigInt(maxFeeStroops)){
+    const resourceFee=sim?.minResourceFee==null?"unknown":String(sim.minResourceFee);
+    const cpu=sim?.cost?.cpuInsns==null?"unknown":String(sim.cost.cpuInsns);
+    const memory=sim?.cost?.memBytes==null?"unknown":String(sim.cost.memBytes);
+    fail("assembled Testnet fee exceeds ceiling; feeStroops="+assembledFee+
+      " ceilingStroops="+BigInt(maxFeeStroops)+
+      " minResourceFee="+resourceFee.slice(0,32)+
+      " cpuInsns="+cpu.slice(0,32)+" memBytes="+memory.slice(0,32)+
+      "; no signing or broadcast");
+  }
   reviewM44SourceEnvelope({sourceTxXdr,expectedTerms:terms,currentLedger:ledger,maxFeeStroops});
   const auth=assembled.operations[0].auth??[];
   const takerEntries=auth.filter(item=>{
