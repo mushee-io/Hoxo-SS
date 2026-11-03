@@ -27,7 +27,7 @@ function trace(){
   const lower=Math.min(...values),upper=Math.max(...values);
   const pad=Math.max(0.0000001,(upper-lower)*.1);
   const lo=lower-pad,hi=upper+pad,left=3,right=w-3;
-  const x=i=>left+(history.length===1?.5:i/(history.length-1))*(right-left);
+  const x=i=>left+(history.length===1 ? .5 : i/(history.length-1))*(right-left);
   const y=v=>5+(hi-v)/(hi-lo)*(h-10);
   ctx.lineWidth=1.6;ctx.lineJoin="round";ctx.lineCap="round";
   for(const [side,color] of [["bid","#61e49e"],["ask","#f596a2"]]){
