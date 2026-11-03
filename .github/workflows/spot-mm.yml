@@ -20,6 +20,7 @@ concurrency:
 jobs:
   stellar-classic-dex-maker:
     name: Testnet-only real XLM/USDC passive maker offers
+    if: ${{ github.event_name != 'schedule' || vars.HOXO_MM_LIVE == 'YES' }}
     runs-on: ubuntu-latest
     timeout-minutes: 4
     env:
