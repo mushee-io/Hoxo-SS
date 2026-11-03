@@ -8,7 +8,7 @@ import {createM44FreighterBrowserAdapter,getM44FreighterFromWindow} from "../app
 import {TESTNET_PASSPHRASE,M9_TESTNET_CONTRACT_ID} from "../app/m43-freighter-auth-guard.mjs";
 import {
   M44_XLM_SAC,M44_USDC_SAC,reviewM44SourceEnvelope,verifyM44TakerAuth,
-  createM44EnvelopePreparer,verifyM44MakerEnvelope
+  createM44EnvelopePreparer,verifyM44MakerEnvelope,classifyM65SimulationFee
 } from "../app/m44-stellar-xdr-verifier.mjs";
 
 const maker=Keypair.random(),taker=Keypair.random();
@@ -170,4 +170,21 @@ test("browser adapter rejects wrong network, wrong signer, unexpected fields and
   api.getAddress=async()=>({address:taker.publicKey(),seed:"SSECRET"});
   await assert.rejects(adapter.getAddress(),/unexpected field/);
   assert.throws(()=>getM44FreighterFromWindow({}),/missing/);
+});
+
+test("M65 fee policy rejects coercion and never expands the signing ceiling",async()=>{
+  const {sourceTxXdr}=await signatureFixture();
+  for(const invalid of [null,false,true,[],{},["1000"],"1e6"," 1000","01000",
+    -1,1.5,Number.MAX_SAFE_INTEGER+1,10000001n]){
+    assert.equal(classifyM65SimulationFee(500n,invalid).allowed,false);
+    assert.throws(()=>reviewM44SourceEnvelope({
+      sourceTxXdr,expectedTerms,currentLedger,maxFeeStroops:invalid
+    }),/invalid transaction fee ceiling/);
+  }
+  assert.equal(classifyM65SimulationFee(1000001n,1000000n).reason,"fee_exceeds_ceiling");
+  assert.equal(classifyM65SimulationFee(1000000n,1000000n).allowed,true);
+  assert.equal(classifyM65SimulationFee(10000000n,10000000n).allowed,true);
+  assert.equal(classifyM65SimulationFee(10000001n,10000000n).allowed,false);
+  assert.equal(classifyM65SimulationFee(500n,10000001n).allowed,false);
+  assert.equal(classifyM65SimulationFee({},1000000n).reason,"invalid_fee");
 });
