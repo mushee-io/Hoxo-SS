@@ -59,3 +59,15 @@ test("M67 preserves available footprint and fee diagnostics when one SDK accesso
     readOnlyEntries:2,readWriteEntries:1,refundableFee:"22258090"
   });
 });
+
+test("M68 recovers resource diagnostics from RPC transactionData if envelope accessor fails",()=>{
+  const data={resources:()=>({
+    instructions:()=>98765,diskReadBytes:()=>1200,writeBytes:()=>900,
+    footprint:()=>({readOnly:()=>[1],readWrite:()=>[2,3]})
+  }),resourceFee:()=>22308918n};
+  const assembled={toEnvelope:()=>{throw Error("unavailable envelope variant");}};
+  assert.deepEqual(inspectM66AssembledResources(assembled,{transactionData:data}),{
+    instructions:"98765",readBytes:"1200",writeBytes:"900",
+    readOnlyEntries:1,readWriteEntries:2,refundableFee:"22308918"
+  });
+});
