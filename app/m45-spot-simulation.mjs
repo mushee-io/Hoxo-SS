@@ -108,7 +108,7 @@ function termsScVal(terms){
 /** Read resource counts from the canonical envelope, not an SDK convenience field.
  * This is bounded metadata only: never expose ledger keys or auth XDR.
  */
-export function inspectM66AssembledResources(assembled){
+export function inspectM66AssembledResources(assembled,simulation=null){
   const unknown={instructions:"unknown",readBytes:"unknown",writeBytes:"unknown",
     readOnlyEntries:"unknown",readWriteEntries:"unknown",refundableFee:"unknown"};
   // Never let an SDK-version-specific accessor erase measurements that
@@ -116,7 +116,17 @@ export function inspectM66AssembledResources(assembled){
   const safe=(read)=>{try {const v=read();return v==null?"unknown":String(v);}catch{return "unknown";}};
   const count=(read)=>{try {const v=read();return Array.isArray(v)?v.length:"unknown";}catch{return "unknown";}};
   let data;
-  try {data=assembled.toEnvelope().v1().tx().ext().sorobanData();}catch{return unknown;}
+  // Recover bounded public resource metadata from the RPC simulation when
+  // an SDK assembled-envelope extension accessor is unavailable.
+  try {data=assembled.toEnvelope().v1().tx().ext().sorobanData();}catch{}
+  if(!data&&simulation?.transactionData){
+    try {
+      data=typeof simulation.transactionData==="string"?
+        xdr.SorobanTransactionData.fromXDR(simulation.transactionData,"base64"):
+        simulation.transactionData;
+    } catch {}
+  }
+  if(!data)return unknown;
   const resources=(()=>{try{return data.resources();}catch{return null;}})();
   const footprint=(()=>{try{return resources?.footprint();}catch{return null;}})();
   return {
@@ -169,7 +179,7 @@ export async function simulateM45BilateralSpot({
   // diagnostics for investigation. No signatures or broadcasts are attempted.
   // The assembled Soroban transaction-data XDR is read-only public metadata.
   // Record bounded footprint/resource measurements without auth payloads.
-  const resourceSummary=inspectM66AssembledResources(assembled);
+  const resourceSummary=inspectM66AssembledResources(assembled,sim);
   const assembledFee=BigInt(assembled.fee);
   if(assembledFee>BigInt(maxFeeStroops)){
     const resourceFee=sim?.minResourceFee==null?"unknown":String(sim.minResourceFee);
