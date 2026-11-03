@@ -287,6 +287,7 @@ test("M59 Chromium shows confirmed M9 transaction hashes and exact Testnet volum
   page.on("pageerror",e=>errors.push(e.message));
   try{
     await page.goto(BASE+"/app/?market=xlm-usdc-spot",{waitUntil:"domcontentloaded"});
+    await page.locator("#m68ChartSource").selectOption("hoxo-m9");
     await page.locator("#m47ChartSurface").waitFor({state:"visible",timeout:15000});
     assert.match(await page.locator("#m59Volume").innerText(),/0\.03 XLM/);
     assert.match(await page.locator("#m59Summary").innerText(),/2 VERIFIED SETTLEMENTS/);
@@ -483,6 +484,53 @@ test("M62 public spot screen has no internal Windows acceptance controls",async(
     assert.equal(await page.locator("#m63SpotSwap").isVisible(),true);
     assert.equal(await page.locator("#marketAvailabilityBanner").isVisible(),false);
     assert.equal(await page.locator("#tradeButton").isDisabled(),false);
+    assert.deepEqual(errors,[]);
+  }finally{await context.close();}
+});
+
+test("M68 Chromium renders actual Classic DEX OHLC candles, timeframe changes and explicit M9 source",async()=>{
+  const context=await browser.newContext({viewport:{width:1440,height:900}});
+  const hits=[];
+  const t=Date.parse("2026-11-03T13:00:00Z");
+  await context.route("**/*",async route=>{
+    const url=route.request().url();
+    if(url.startsWith(BASE+"/api/xlm-usdc-candles")){
+      const frame=new URL(url).searchParams.get("frame");
+      hits.push(frame);
+      return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({
+        network:"Stellar Testnet",venue:"Stellar Classic DEX",pair:"XLM/USDC",
+        frame,source:"Official Stellar Horizon Testnet trade_aggregations",
+        hoxoM9FillsAttributed:0,synthetic:false,
+        candles:[{time:t-1800000,open:.16,high:.18,low:.15,close:.17,volume:14,trades:5},
+          {time:t,open:.17,high:.18,low:.16,close:.175,volume:2,trades:2}]
+      })});
+    }
+    if(url.startsWith(BASE+"/api/hoxo-testnet-activity"))
+      return route.fulfill({status:503,contentType:"application/json",body:"{}"});
+    if(url.startsWith(BASE+"/api/market-orderbook"))
+      return route.fulfill({status:503,contentType:"application/json",body:"{}"});
+    if(url.startsWith(BASE+"/"))return route.continue();
+    return route.abort();
+  });
+  const page=await context.newPage(),errors=[];
+  page.on("pageerror",e=>errors.push(e.message));
+  try{
+    await page.goto(BASE+"/app/?market=xlm-usdc-spot",{waitUntil:"domcontentloaded"});
+    await page.locator("#m68DexChartSurface").waitFor({state:"visible",timeout:15000});
+    assert.equal(await page.locator("#m68ChartSource").inputValue(),"stellar-dex");
+    assert.match(await page.locator("#marketPrice").innerText(),/0\.1750000 USDC/);
+    assert.match(await page.locator("#chartMarketStatus").innerText(),/CLASSIC DEX/);
+    assert.match(await page.locator("#m47LastPriceSource").innerText(),/NOT HOXO M9/);
+    assert.equal(await page.locator("#m47ChartSurface").isVisible(),false);
+    await page.locator('[data-timeframe="1m"]').click();
+    await page.waitForFunction(()=>document.querySelector("#chartMarketStatus")?.textContent
+      .includes("1m"));
+    assert.ok(hits.includes("1m"));
+    await page.locator("#m68ChartSource").selectOption("hoxo-m9");
+    assert.equal(await page.locator("#m68DexChartSurface").isVisible(),false);
+    assert.equal(await page.locator(".timeframes").isVisible(),false);
+    await page.locator("#m68ChartSource").selectOption("stellar-dex");
+    await page.locator("#m68DexChartSurface").waitFor({state:"visible",timeout:15000});
     assert.deepEqual(errors,[]);
   }finally{await context.close();}
 });
