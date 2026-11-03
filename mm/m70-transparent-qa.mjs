@@ -16,6 +16,24 @@ export function qaWindow(nowMs=Date.now()){
   if(!Number.isSafeInteger(nowMs)||nowMs<=0)fail("invalid clock");
   return Math.floor(nowMs/QA_INTERVAL_MS);
 }
+/**
+ * Horizon operation source, exact amount and both assets distinguish real
+ * 0.02-XLM bot QA trades from the earlier 25-XLM bootstrap swap and from
+ * ordinary funded-wallet activity. This is provenance, not user demand.
+ */
+export function isM70QaOperation(o,address){
+  if(!o||o.source_account!==address||o.to!==address)return false;
+  const native=a=>a==="native";
+  const usd=(type,code,issuer)=>
+    type==="credit_alphanum4"&&code==="USDC"&&issuer===USDC_TESTNET_ISSUER;
+  if(o.type==="path_payment_strict_send")
+    return o.source_amount===QA_XLM_AMOUNT&&native(o.source_asset_type)&&
+      usd(o.asset_type,o.asset_code,o.asset_issuer);
+  if(o.type==="path_payment_strict_receive")
+    return o.amount===QA_XLM_AMOUNT&&native(o.asset_type)&&
+      usd(o.source_asset_type,o.source_asset_code,o.source_asset_issuer);
+  return false;
+}
 export function completedQaThisWindow(ops,{account,nowMs=Date.now()}={}){
   if(!Array.isArray(ops)||!Array.isArray(account?.balances)||!account?.id)
     fail("independent account/operation evidence missing");
@@ -27,8 +45,7 @@ export function completedQaThisWindow(ops,{account,nowMs=Date.now()}={}){
     if(!Number.isFinite(ts)||ts>nowMs+5000||ts>previous)
       fail("unexpected or unordered Stellar operation history");
     previous=ts;
-    if(o.source_account!==account.id)continue;
-    if(o.type!=="path_payment_strict_send"&&o.type!=="path_payment_strict_receive")continue;
+    if(!isM70QaOperation(o,account.id))continue;
     if(ts>=windowStart)return true;
   }
   // Horizon is ordered descending. If capped at 200 and all of them are
