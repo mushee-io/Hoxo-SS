@@ -34,13 +34,23 @@ function format7(units){
 export function orderDraft({marketId=DEFAULT_MARKET_ID,orderType="Market",size="",limitPrice=""}={}){
   const market=getMarket(marketId);
   const amount=parseAmount7(size);
-  if(size==="")return {valid:false,sizeLabel:"—",notional:"—",message:"Enter a size to prepare a non-executable draft."};
+  if(size==="")return {valid:false,sizeLabel:"—",notional:"—",message:market.id==="xlm-usdc-spot"?
+    "Enter an XLM amount, then click GET LIVE BUY/SELL QUOTE to check actual Stellar Testnet liquidity.":
+    "Enter a size to prepare a non-executable reference draft."};
   if(amount===null)return {valid:false,sizeLabel:"—",notional:"—",message:"Enter a positive size using up to 7 decimals."};
   const sizeLabel=format7(amount)+" "+market.base;
-  if(orderType!=="Limit")return {valid:true,sizeLabel,notional:"—",message:"No verified market price. Market orders cannot be estimated or submitted."};
-  if(limitPrice==="")return {valid:true,sizeLabel,notional:"—",message:"Enter your own limit price for an input-only estimate. This is not a live quote."};
+  if(market.id==="xlm-usdc-spot"&&orderType!=="Limit")return {
+    valid:true,sizeLabel,notional:"Live order-book quote after review",
+    message:"Click GET LIVE BUY/SELL QUOTE for an executable Stellar Testnet Classic DEX price. No transaction is sent until you approve it in Freighter."
+  };
+  if(orderType!=="Limit")return {valid:true,sizeLabel,notional:"—",message:"Reference only: trading is not deployed for this market."};
+  if(limitPrice==="")return {valid:true,sizeLabel,notional:"—",message:market.id==="xlm-usdc-spot"?
+    "Enter the USDC/XLM limit price, then request a fresh Stellar Classic DEX quote.":
+    "Enter your own limit price for an input-only estimate. This is not a live quote."};
   const price=parseAmount7(limitPrice);
   if(price===null)return {valid:false,sizeLabel,notional:"—",message:"Limit price must be positive and use up to 7 decimals."};
   const result=amount*price/10_000_000n;
-  return {valid:true,sizeLabel,notional:format7(result)+" "+market.quote+" (input only)",message:"Draft estimate only. No live quote, liquidity, margin check or order execution."};
+  return {valid:true,sizeLabel,notional:format7(result)+" "+market.quote+" (input only)",message:
+    market.id==="xlm-usdc-spot"?"User-entered limit estimate only. Click GET LIVE QUOTE to verify actual market depth and fees; Freighter approval is still required.":
+    "Draft estimate only. No live quote, liquidity, margin check or order execution."};
 }
