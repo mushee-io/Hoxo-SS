@@ -105,6 +105,76 @@ function termsScVal(terms){
   });
   return xdr.ScVal.scvMap(fields);
 }
+/** Read resource counts from the canonical envelope, not an SDK convenience field.
+ * This is bounded metadata only: never expose ledger keys or auth XDR.
+ */
+export function inspectM66AssembledResources(assembled,simulation=null){
+  const unknown={instructions:"unknown",readBytes:"unknown",writeBytes:"unknown",
+    readOnlyEntries:"unknown",readWriteEntries:"unknown",refundableFee:"unknown"};
+  // Never let an SDK-version-specific accessor erase measurements that
+  // are still available. Each public numeric field is independently guarded.
+  const safe=(read)=>{try {const v=read();return v==null?"unknown":String(v);}catch{return "unknown";}};
+  const count=(read)=>{try {const v=read();return Array.isArray(v)?v.length:"unknown";}catch{return "unknown";}};
+  let data;
+  // Recover bounded public resource metadata from the RPC simulation when
+  // an SDK assembled-envelope extension accessor is unavailable.
+  try {
+    // SDK Transaction.toEnvelope() is not guaranteed to expose XDR union
+    // accessors. Decode the actual serialized envelope instead.
+    // Some Stellar SDK versions expose toEnvelope() as a plain object
+    // without XDR union accessors. Decode the serialized envelope first.
+    const serialized=typeof assembled.toXdr==="function"?assembled.toXdr():
+      typeof assembled.toXDR==="function"?assembled.toXDR():"";
+    const envelope=serialized?
+      xdr.TransactionEnvelope.fromXDR(serialized,"base64"):
+      assembled.toEnvelope();
+    data=envelope.v1().tx().ext().sorobanData();
+  }catch{}
+  if(!data&&simulation?.transactionData){
+    try {
+      data=typeof simulation.transactionData==="string"?
+        xdr.SorobanTransactionData.fromXDR(simulation.transactionData,"base64"):
+        simulation.transactionData;
+    } catch {}
+  }
+  if(!data)return unknown;
+  const resources=(()=>{try{return data.resources();}catch{return null;}})();
+  const footprint=(()=>{try{return resources?.footprint();}catch{return null;}})();
+  return {
+    instructions:safe(()=>resources.instructions()),
+    // Older SDK XDR uses readBytes; newer SDKs expose diskReadBytes.
+    readBytes:safe(()=>typeof resources.diskReadBytes==="function"?
+      resources.diskReadBytes():resources.readBytes()),
+    writeBytes:safe(()=>resources.writeBytes()),
+    readOnlyEntries:count(()=>footprint.readOnly()),
+    readWriteEntries:count(()=>footprint.readWrite()),
+    refundableFee:safe(()=>data.resourceFee())
+  };
+}
+
+/** Public-only shape diagnostics. Never serialize transaction data or auth. */
+export function inspectM69RpcDiagnosticShape(assembled,simulation){
+  const kind=value=>value==null?"absent":typeof value==="string"?
+    (/^(?:0|[1-9]\d*)$/.test(value)?"decimal-string":"encoded-string"):typeof value;
+  let envelope="unavailable",extension="unavailable";
+  try{
+    const e=assembled.toEnvelope();
+    envelope=typeof e?.switch==="function"?String(e.switch().name??"unknown").slice(0,48):"no-switch";
+    const tx=e?.v1?.()?.tx?.();
+    extension=tx?.ext?.()?"present":"absent";
+  }catch{}
+  return Object.freeze({
+    envelope,extension,
+    transactionDataKind:kind(simulation?.transactionData),
+    minResourceFeeKind:kind(simulation?.minResourceFee),
+    costKind:kind(simulation?.cost),
+    // Expose only a fixed allowlist of SDK method availability, never raw
+    // transactionData, ledger footprint keys, authorization or XDR bytes.
+    transactionDataMethods:["toXDR","toXdr","resources","resourceFee"]
+      .filter(name=>typeof simulation?.transactionData?.[name]==="function")
+  });
+}
+
 export async function simulateM45BilateralSpot({
   server,preflight,xlmAmount="0.0100000",usdcAmount="0.0200000",side="sell",
   randomBytes, maxFeeStroops=1000000n
@@ -139,6 +209,26 @@ export async function simulateM45BilateralSpot({
   }
   const assembled=rpc.assembleTransaction(tx,sim).build();
   const sourceTxXdr=assembled.toXdr();
+  // Preserve the hard fee refusal while exposing bounded, read-only resource
+  // diagnostics for investigation. No signatures or broadcasts are attempted.
+  // The assembled Soroban transaction-data XDR is read-only public metadata.
+  // Record bounded footprint/resource measurements without auth payloads.
+  const resourceSummary=inspectM66AssembledResources(assembled,sim);
+  const diagnosticShape=inspectM69RpcDiagnosticShape(assembled,sim);
+  const assembledFee=BigInt(assembled.fee);
+  if(assembledFee>BigInt(maxFeeStroops)){
+    const resourceFee=typeof sim?.minResourceFee==="string"&&/^(?:0|[1-9]\d*)$/.test(sim.minResourceFee)?
+      sim.minResourceFee:"unknown";
+    const cpu=sim?.cost?.cpuInsns==null?"unknown":String(sim.cost.cpuInsns);
+    const memory=sim?.cost?.memBytes==null?"unknown":String(sim.cost.memBytes);
+    fail("assembled Testnet fee exceeds ceiling; feeStroops="+assembledFee+
+      " ceilingStroops="+BigInt(maxFeeStroops)+
+      " minResourceFee="+resourceFee.slice(0,32)+
+      " resources="+JSON.stringify(resourceSummary).slice(0,350)+
+      " metadataShape="+JSON.stringify(diagnosticShape).slice(0,250)+
+      " cpuInsns="+cpu.slice(0,32)+" memBytes="+memory.slice(0,32)+
+      "; no signing or broadcast");
+  }
   reviewM44SourceEnvelope({sourceTxXdr,expectedTerms:terms,currentLedger:ledger,maxFeeStroops});
   const auth=assembled.operations[0].auth??[];
   const takerEntries=auth.filter(item=>{

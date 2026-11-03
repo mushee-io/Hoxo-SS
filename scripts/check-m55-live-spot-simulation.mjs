@@ -19,7 +19,11 @@ const results=[];
 for(const side of ["sell","buy"]){
   const sample=await simulateM45BilateralSpot({
     server,preflight:proof,side,
-    xlmAmount:"0.0100000",usdcAmount:"0.0017000"
+    xlmAmount:"0.0100000",usdcAmount:"0.0017000",
+    // READ-ONLY CI simulation only: Stellar resource fees can exceed the
+    // browser signer\'s 1,000,000-stroop default. Never propagate this
+    // higher ceiling into user-approved signing or broadcast paths.
+    maxFeeStroops:10_000_000n
   });
   if(sample.simulated!==true||sample.broadcast!==false||
      sample.signaturesApplied!==false||

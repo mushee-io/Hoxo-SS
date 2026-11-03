@@ -89,14 +89,23 @@ function verifyExpectedTerms(actual,expected,now){
   if(actual.expires_at_ledger<now||actual.expires_at_ledger>now+100)
     fail("settlement deadline stale or too far ahead");
 }
+/** Fail-closed fee classification; never authorises a signature or transaction. */
+export function classifyM65SimulationFee(observedStroops, configuredStroops=1000000n){
+  let observed,configured;
+  try{observed=BigInt(observedStroops);configured=BigInt(configuredStroops);}
+  catch{return Object.freeze({allowed:false,reason:"invalid_fee"});}
+  if(observed<100n||configured<100n||configured>10000000n)
+    return Object.freeze({allowed:false,reason:"invalid_fee",observedStroops:observed.toString(),configuredStroops:configured.toString()});
+  return Object.freeze({allowed:observed<=configured,reason:observed>configured?"fee_exceeds_ceiling":"within_ceiling",observedStroops:observed.toString(),configuredStroops:configured.toString()});
+}
 export function reviewM44SourceEnvelope({sourceTxXdr,expectedTerms,currentLedger,maxFeeStroops=1000000n}){
   const now=ledgerNumber(currentLedger);
   const {tx,op,invoke}=decodeSource(sourceTxXdr);
   if(tx.source!==expectedTerms?.maker)fail("maker must be transaction source");
   if(tx.signatures.length!==0)fail("expected unsigned source envelope");
   const fee=BigInt(tx.fee);
-  if(fee<100n||fee>BigInt(maxFeeStroops)||BigInt(maxFeeStroops)>10000000n)
-    fail("transaction fee exceeds configured ceiling");
+  if(!classifyM65SimulationFee(fee,maxFeeStroops).allowed)
+    fail("transaction fee exceeds configured ceiling (observed "+fee.toString()+" stroops; configured "+BigInt(maxFeeStroops).toString()+" stroops; hard maximum 10000000 stroops)");
   const actual=readTerms(invoke);
   verifyExpectedTerms(actual,expectedTerms,now);
   const entries=op.auth??[];
