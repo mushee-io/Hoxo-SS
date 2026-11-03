@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
-import {inspectM66AssembledResources} from "../app/m45-spot-simulation.mjs";
+import {inspectM66AssembledResources,inspectM69RpcDiagnosticShape} from "../app/m45-spot-simulation.mjs";
 import {classifyM65SimulationFee} from "../app/m44-stellar-xdr-verifier.mjs";
 
 const simulation=readFileSync(new URL("../app/m45-spot-simulation.mjs",import.meta.url),"utf8");
@@ -70,4 +70,15 @@ test("M68 recovers resource diagnostics from RPC transactionData if envelope acc
     instructions:"98765",readBytes:"1200",writeBytes:"900",
     readOnlyEntries:1,readWriteEntries:2,refundableFee:"22308918"
   });
+});
+
+test("M69 shape diagnostics report only bounded public type labels, never transaction XDR",()=>{
+  const privateXdr="secret-soroban-auth-material";
+  const shape=inspectM69RpcDiagnosticShape({
+    toEnvelope:()=>({switch:()=>({name:"envelopeTypeTx"}),v1:()=>({tx:()=>({ext:()=>({})})})})
+  },{transactionData:privateXdr,minResourceFee:"22359602",cost:{auth:privateXdr}});
+  assert.deepEqual(shape,{envelope:"envelopeTypeTx",extension:"present",
+    transactionDataKind:"base64-string",minResourceFeeKind:"base64-string",costKind:"object"});
+  assert.doesNotMatch(JSON.stringify(shape),/secret-soroban-auth-material/);
+  assert.equal(inspectM69RpcDiagnosticShape({toEnvelope:()=>{throw Error(privateXdr);}},{}).envelope,"unavailable");
 });
