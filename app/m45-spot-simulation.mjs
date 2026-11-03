@@ -118,7 +118,12 @@ export function inspectM66AssembledResources(assembled,simulation=null){
   let data;
   // Recover bounded public resource metadata from the RPC simulation when
   // an SDK assembled-envelope extension accessor is unavailable.
-  try {data=assembled.toEnvelope().v1().tx().ext().sorobanData();}catch{}
+  try {
+    // SDK Transaction.toEnvelope() is not guaranteed to expose XDR union
+    // accessors. Decode the actual serialized envelope instead.
+    const envelope=xdr.TransactionEnvelope.fromXDR(assembled.toXdr(),"base64");
+    data=envelope.v1().tx().ext().sorobanData();
+  }catch{}
   if(!data&&simulation?.transactionData){
     try {
       data=typeof simulation.transactionData==="string"?
