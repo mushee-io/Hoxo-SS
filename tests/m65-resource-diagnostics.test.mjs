@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
+import {inspectM66AssembledResources} from "../app/m45-spot-simulation.mjs";
 import {classifyM65SimulationFee} from "../app/m44-stellar-xdr-verifier.mjs";
 
 const simulation=readFileSync(new URL("../app/m45-spot-simulation.mjs",import.meta.url),"utf8");
@@ -20,4 +21,27 @@ test("M65 resource diagnostic stays on unsigned simulation path and refuses over
   assert.match(simulation,/no signing or broadcast/);
   assert.match(simulation,/reviewM44SourceEnvelope/);
   assert.doesNotMatch(simulation,/\.sendTransaction\s*\(|\.signTransaction\s*\(/);
+});
+
+test("M66 extracts exact counts from canonical envelope transaction-data XDR",()=>{
+  const resources={
+    instructions:()=>1234567,
+    diskReadBytes:()=>456,
+    writeBytes:()=>78,
+    footprint:()=>({readOnly:()=>[1,2,3],readWrite:()=>[4]})
+  };
+  const assembled={toEnvelope:()=>({v1:()=>({tx:()=>({ext:()=>({
+    sorobanData:()=>({resources:()=>resources,resourceFee:()=>22151779n})
+  })})})})};
+  assert.deepEqual(inspectM66AssembledResources(assembled),{
+    instructions:"1234567",readBytes:"456",writeBytes:"78",
+    readOnlyEntries:3,readWriteEntries:1,refundableFee:"22151779"
+  });
+});
+
+test("M66 diagnostic fails closed to unknown without exposing transaction contents",()=>{
+  assert.deepEqual(inspectM66AssembledResources({toEnvelope:()=>{throw Error("private auth XDR");}}),{
+    instructions:"unknown",readBytes:"unknown",writeBytes:"unknown",
+    readOnlyEntries:"unknown",readWriteEntries:"unknown",refundableFee:"unknown"
+  });
 });
