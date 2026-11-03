@@ -78,7 +78,7 @@ test("M69 shape diagnostics report only bounded public type labels, never transa
     toEnvelope:()=>({switch:()=>({name:"envelopeTypeTx"}),v1:()=>({tx:()=>({ext:()=>({})})})})
   },{transactionData:privateXdr,minResourceFee:"22359602",cost:{auth:privateXdr}});
   assert.deepEqual(shape,{envelope:"envelopeTypeTx",extension:"present",
-    transactionDataKind:"base64-string",minResourceFeeKind:"base64-string",costKind:"object"});
+    transactionDataKind:"encoded-string",minResourceFeeKind:"decimal-string",costKind:"object"});
   assert.doesNotMatch(JSON.stringify(shape),/secret-soroban-auth-material/);
   assert.equal(inspectM69RpcDiagnosticShape({toEnvelope:()=>{throw Error(privateXdr);}},{}).envelope,"unavailable");
 });
@@ -93,4 +93,16 @@ test("M71 uses the SDK XDR envelope directly without requiring a nonexistent toX
     readOnlyEntries:1,readWriteEntries:1,refundableFee:"22457677"
   });
   assert.doesNotMatch(simulation,/assembled\.toXdr\(\)/);
+});
+
+
+test("M74 rejects malformed RPC fee strings from diagnostics without leaking content",()=>{
+  const secret="private-auth-XDR";
+  const shape=inspectM69RpcDiagnosticShape({toEnvelope:()=>{throw Error(secret);}},
+    {transactionData:secret,minResourceFee:secret});
+  assert.equal(shape.transactionDataKind,"encoded-string");
+  assert.equal(shape.minResourceFeeKind,"encoded-string");
+  assert.doesNotMatch(JSON.stringify(shape),/private-auth-XDR/);
+  assert.equal(inspectM69RpcDiagnosticShape({toEnvelope:()=>{}},
+    {minResourceFee:"22564708"}).minResourceFeeKind,"decimal-string");
 });
