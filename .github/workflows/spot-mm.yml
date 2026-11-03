@@ -37,7 +37,7 @@ jobs:
           node-version: '22'
           cache: npm
       - name: Install pinned official Stellar SDK with install scripts disabled
-        run: npm ci --ignore-scripts --no-audit --no-fund
+        run: npm install --ignore-scripts --no-package-lock --no-audit --no-fund
       - name: Verify exact Testnet maker pricing and safety gates
         run: node --test tests/mm-live-testnet.test.mjs
       - name: Plan, post real Testnet offers or cancel maker-owned offers
