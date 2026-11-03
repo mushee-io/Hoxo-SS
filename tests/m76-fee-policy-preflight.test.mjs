@@ -9,7 +9,7 @@ test("M76 rejects invalid fee policy before contacting Testnet RPC", async()=>{
     getAccount(){calls++;throw Error("RPC should not be contacted");},
     simulateTransaction(){calls++;throw Error("RPC should not be contacted");}
   };
-  for(const maxFeeStroops of [0n,99n,10000001n,-1n,"NaN",null,1.5]){
+  for(const maxFeeStroops of [0n,99n,10000001n,-1n,"NaN",null,1.5,true,false,{},["100"]," 100","0100","1e3",Number.MAX_SAFE_INTEGER+1]){
     await assert.rejects(
       simulateM45BilateralSpot({server,preflight:null,maxFeeStroops}),
       /invalid simulation fee ceiling/
