@@ -10,6 +10,8 @@ let selectedMarket=new URLSearchParams(location.search).get("market")||"xlm-usdc
 let selectedTab="book",selectedChart="price",lastResult=null,loading=false,epoch=0;
 const SCALE=10000000n;
 const isSpot=()=>selectedMarket==="xlm-usdc-spot";
+const isM9Chart=()=>isSpot()&&selectedChart==="price"&&
+  $("m68ChartSource")?.value==="hoxo-m9";
 function formatE7(value){
   if(typeof value!=="string"||!/^(0|[1-9]\d*)$/.test(value))return "—";
   const v=BigInt(value),whole=(v/SCALE).toString(),
@@ -17,11 +19,11 @@ function formatE7(value){
   return whole+(fraction?"."+fraction:"");
 }
 function message(s){
-  $("m47SourceStatus").textContent=s;
+  if(isM9Chart())$("m47SourceStatus").textContent=s;
   $("m59Status").textContent=s;
 }
 function showEmpty(title,details){
-  if(selectedChart!=="price")return;
+  if(!isM9Chart())return;
   surface.classList.add("hidden");canvas.setAttribute("aria-hidden","true");
   $("chartEmptyTitle").parentElement.classList.remove("hidden");
   $("chartEmptyTitle").textContent=title;
@@ -31,7 +33,7 @@ function showEmpty(title,details){
   $("m47LastPriceSource").textContent="M9 · NO VERIFIED SETTLEMENT PRICE";
 }
 function draw(trades){
-  if(!isSpot()||selectedChart!=="price"||!trades.length)return;
+  if(!isM9Chart()||!trades.length)return;
   surface.classList.remove("hidden");canvas.setAttribute("aria-hidden","false");
   $("chartEmptyTitle").parentElement.classList.add("hidden");
   const rect=canvas.getBoundingClientRect(),w=rect.width,h=rect.height;
@@ -78,6 +80,10 @@ function draw(trades){
 }
 function render(){
   const result=lastResult;
+  if(!isM9Chart()){
+    surface.classList.add("hidden");
+    canvas.setAttribute("aria-hidden","true");
+  }
   panel.classList.toggle("hidden",selectedTab!=="trades"||!isSpot());
   const market= isSpot();
   $("m59Summary").classList.toggle("hidden",!market);
@@ -125,9 +131,10 @@ function render(){
     rows.append(p);
     showEmpty("AWAITING FIRST VERIFIED XLM/USDC SETTLEMENT",
       "Prices and volumes appear only after an on-chain M9 transaction succeeds.");
-    $("chartMarketStatus").textContent="HOXO M9 · NO VERIFIED FILL IN CHECKED WINDOW";
+    if(isM9Chart())$("chartMarketStatus").textContent="HOXO M9 · NO VERIFIED FILL IN CHECKED WINDOW";
     return;
   }
+  if(!isM9Chart())return;
   const newest=transactions[0],price=newest.priceQuotePerXlm;
   if(!Number.isFinite(price)||price<=0)return;
   $("m47LastPrice").textContent=price.toFixed(7)+" USDC";
@@ -155,6 +162,15 @@ async function refresh(){
     if(ticket===epoch)lastResult={state:"unavailable"};
   }finally{loading=false;render();}
 }
+window.addEventListener("hoxo:chart-source",()=>{
+  if(isM9Chart()){
+    $("marketPrimaryStat").textContent="LAST VERIFIED M9 PRICE";
+    render();
+  }else{
+    surface.classList.add("hidden");
+    canvas.setAttribute("aria-hidden","true");
+  }
+});
 window.addEventListener("hoxo:chart-selection",event=>{
   selectedChart=event.detail?.view??"price";
   if(selectedChart!=="price"){
@@ -172,7 +188,7 @@ window.addEventListener("hoxo:book-selection",event=>{
   render();
   if(selectedTab==="trades"&&isSpot())refresh();
 });
-window.addEventListener("resize",()=>{if(isSpot()&&lastResult?.records?.length)draw(lastResult.records);});
+window.addEventListener("resize",()=>{if(isM9Chart()&&lastResult?.records?.length)draw(lastResult.records);});
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)refresh();});
 window.setInterval(refresh,30000);
 render();refresh();
