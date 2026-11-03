@@ -111,8 +111,13 @@ export function reviewM44SourceEnvelope({sourceTxXdr,expectedTerms,currentLedger
   if(tx.source!==expectedTerms?.maker)fail("maker must be transaction source");
   if(tx.signatures.length!==0)fail("expected unsigned source envelope");
   const fee=BigInt(tx.fee);
-  if(!classifyM65SimulationFee(fee,maxFeeStroops).allowed)
-    fail("transaction fee exceeds configured ceiling (observed "+fee.toString()+" stroops; configured "+BigInt(maxFeeStroops).toString()+" stroops; hard maximum 10000000 stroops)");
+  const feePolicy=classifyM65SimulationFee(fee,maxFeeStroops);
+  if(!feePolicy.allowed){
+    // Never coerce an untrusted ceiling merely to construct an error message.
+    // A malformed fee policy must fail closed with a stable, non-sensitive error.
+    if(feePolicy.reason==="invalid_fee")fail("invalid transaction fee ceiling");
+    fail("transaction fee exceeds configured ceiling (observed "+feePolicy.observedStroops+" stroops; configured "+feePolicy.configuredStroops+" stroops; hard maximum 10000000 stroops)");
+  }
   const actual=readTerms(invoke);
   verifyExpectedTerms(actual,expectedTerms,now);
   const entries=op.auth??[];
