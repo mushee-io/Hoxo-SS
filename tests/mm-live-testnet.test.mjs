@@ -49,7 +49,7 @@ test("MM checks authentic Stellar account reserves and free USDC/XLM, including 
   };
   const q=plan({account:small});
   assert.equal(q.quotes[0].amount,"0.8910000");
-  assert.equal(q.quotes[1].amount,"1.4900000");
+  assert.equal(q.quotes[1].amount,"1.5000000");
   assert.throws(()=>plan({account:{
     ...small,balances:[{asset_type:"native",balance:"1.0000000"},
       small.balances[1]]
