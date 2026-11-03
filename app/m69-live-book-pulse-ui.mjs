@@ -74,6 +74,50 @@ async function refresh(){
     if(ticket===epoch&&active())markUnavailable();
   }finally{loading=false;}
 }
+/**
+ * Bot-generated QA swaps have a deliberately separate receipt and label.
+ * Never turn offers, independent user fills, or unverified API data into
+ * presumed bot activity or organic trading demand.
+ */
+async function refreshVerifiedQa(){
+  if(!active()||document.hidden)return;
+  const status=$("m70QaStatus"),link=$("m70QaReceipt");
+  try{
+    const response=await fetch("/api/mm-qa-activity",{
+      cache:"no-store",headers:{accept:"application/json"}
+    });
+    if(!response.ok)throw Error("Testnet QA receipt source unavailable");
+    const data=await response.json();
+    if(data.status!=="VERIFIED"||data.publishedSyntheticVolume!==false||
+      !Array.isArray(data.results)||data.results.length>4)
+      throw Error("Unverified bot trade response");
+    if(!data.results.length){
+      status.textContent="NO CONFIRMED AUTOMATED QA SWAPS YET";
+      link.classList.add("hidden");link.removeAttribute("href");
+      return;
+    }
+    const latest=data.results[0],hash=latest.transactionHash;
+    if(latest.label!=="AUTOMATED_TESTNET_QA_NOT_ORGANIC_VOLUME"||
+      latest.type!=="BOT_GENERATED_TEST_TRADE"||
+      latest.network!=="Stellar Testnet"||
+      latest.venue!=="Stellar Classic DEX"||
+      latest.organicUserVolumeAttributed!==0||
+      latest.hoxoM9VolumeAttributed!==0||
+      !/^[a-f0-9]{64}$/i.test(hash??"")||
+      !["BUY","SELL"].includes(latest.side))
+      throw Error("Unverified operator-labelled QA trade receipt");
+    status.textContent=latest.side+" · VERIFIED TEST SWAP · "+
+      new Date(latest.at).toLocaleTimeString("en-GB",{
+        timeZone:"UTC",hour12:false
+      })+" UTC";
+    link.href="https://stellar.expert/explorer/testnet/tx/"+hash;
+    link.textContent="BOT QA TX "+hash.slice(0,12)+"…";
+    link.classList.remove("hidden");
+  }catch{
+    status.textContent="BOT TEST TRADE EVIDENCE UNAVAILABLE";
+    link.classList.add("hidden");link.removeAttribute("href");
+  }
+}
 window.addEventListener("hoxo:market-change",event=>{
   market=event.detail?.market??"";
   shown();if(active())void refresh();
@@ -89,4 +133,5 @@ window.addEventListener("hoxo:chart-source",event=>{
 window.addEventListener("resize",()=>{if(active())trace();});
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)void refresh();});
 setInterval(()=>{if(active())void refresh();},6000);
-shown();void refresh();
+setInterval(()=>{if(active())void refreshVerifiedQa();},30000);
+shown();void refresh();void refreshVerifiedQa();
