@@ -141,6 +141,24 @@ export function inspectM66AssembledResources(assembled,simulation=null){
   };
 }
 
+/** Public-only shape diagnostics. Never serialize transaction data or auth. */
+export function inspectM69RpcDiagnosticShape(assembled,simulation){
+  const kind=value=>value==null?"absent":typeof value==="string"?"base64-string":typeof value;
+  let envelope="unavailable",extension="unavailable";
+  try{
+    const e=assembled.toEnvelope();
+    envelope=typeof e?.switch==="function"?String(e.switch().name??"unknown").slice(0,48):"no-switch";
+    const tx=e?.v1?.()?.tx?.();
+    extension=tx?.ext?.()?"present":"absent";
+  }catch{}
+  return Object.freeze({
+    envelope,extension,
+    transactionDataKind:kind(simulation?.transactionData),
+    minResourceFeeKind:kind(simulation?.minResourceFee),
+    costKind:kind(simulation?.cost)
+  });
+}
+
 export async function simulateM45BilateralSpot({
   server,preflight,xlmAmount="0.0100000",usdcAmount="0.0200000",side="sell",
   randomBytes, maxFeeStroops=1000000n
@@ -180,6 +198,7 @@ export async function simulateM45BilateralSpot({
   // The assembled Soroban transaction-data XDR is read-only public metadata.
   // Record bounded footprint/resource measurements without auth payloads.
   const resourceSummary=inspectM66AssembledResources(assembled,sim);
+  const diagnosticShape=inspectM69RpcDiagnosticShape(assembled,sim);
   const assembledFee=BigInt(assembled.fee);
   if(assembledFee>BigInt(maxFeeStroops)){
     const resourceFee=sim?.minResourceFee==null?"unknown":String(sim.minResourceFee);
@@ -189,6 +208,7 @@ export async function simulateM45BilateralSpot({
       " ceilingStroops="+BigInt(maxFeeStroops)+
       " minResourceFee="+resourceFee.slice(0,32)+
       " resources="+JSON.stringify(resourceSummary).slice(0,350)+
+      " metadataShape="+JSON.stringify(diagnosticShape).slice(0,250)+
       " cpuInsns="+cpu.slice(0,32)+" memBytes="+memory.slice(0,32)+
       "; no signing or broadcast");
   }
