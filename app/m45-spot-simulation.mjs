@@ -154,7 +154,7 @@ export function inspectM66AssembledResources(assembled,simulation=null){
 
 /** Public-only shape diagnostics. Never serialize transaction data or auth. */
 export function inspectM69RpcDiagnosticShape(assembled,simulation){
-  const kind=value=>value==null?"absent":typeof value==="string"?"base64-string":typeof value;
+  const kind=value=>value==null?"absent":typeof value==="string"?\n    (/^(?:0|[1-9]\\d*)$/.test(value)?"decimal-string":"encoded-string"):typeof value;
   let envelope="unavailable",extension="unavailable";
   try{
     const e=assembled.toEnvelope();
@@ -216,7 +216,7 @@ export async function simulateM45BilateralSpot({
   const diagnosticShape=inspectM69RpcDiagnosticShape(assembled,sim);
   const assembledFee=BigInt(assembled.fee);
   if(assembledFee>BigInt(maxFeeStroops)){
-    const resourceFee=sim?.minResourceFee==null?"unknown":String(sim.minResourceFee);
+    const resourceFee=typeof sim?.minResourceFee==="string"&&/^(?:0|[1-9]\\d*)$/.test(sim.minResourceFee)?\n      sim.minResourceFee:"unknown";
     const cpu=sim?.cost?.cpuInsns==null?"unknown":String(sim.cost.cpuInsns);
     const memory=sim?.cost?.memBytes==null?"unknown":String(sim.cost.memBytes);
     fail("assembled Testnet fee exceeds ceiling; feeStroops="+assembledFee+
