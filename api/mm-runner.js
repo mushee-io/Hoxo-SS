@@ -10,6 +10,7 @@ import {Asset,Horizon,Keypair,Networks,Operation,TransactionBuilder,StrKey}
 import {HORIZON_TESTNET,USDC_TESTNET_ISSUER,quoteDirectXlmUsdc}
   from "../app/m63-spot-core.mjs";
 import {runTestnetMM} from "../scripts/run-testnet-mm.mjs";
+import {runTransparentTestnetQaTrade} from "../scripts/m70-independent-qa-trade.mjs";
 
 export const config={maxDuration:60};
 const server=new Horizon.Server(HORIZON_TESTNET);
@@ -132,10 +133,27 @@ export default async function handler(req,res){
       return res.status(200).json({status:"STOP_REQUESTED",account:address});
     }
     await bootstrap(signer);
+    let qa={status:"DISABLED"};
+    if(process.env.HOXO_MM_QA_ENABLED==="YES"){
+      try{qa=await runTransparentTestnetQaTrade();}
+      catch(error){
+        // A failed QA test must NEVER misstate a fill or prevent the
+        // separate passive liquidity bot from restoring its offers.
+        qa={status:"HALTED_NO_CONFIRMED_SWAP"};
+        console.error("Isolated QA test not confirmed: "+
+          String(error?.message||"unavailable").slice(0,170));
+      }
+    }
     await runTestnetMM("live");
     return res.status(200).json({
       status:"MM_TICK_COMPLETED",network:"Stellar Testnet",
-      account:address,venue:"Stellar Classic DEX",m9VolumeClaimed:false
+      account:address,venue:"Stellar Classic DEX",m9VolumeClaimed:false,
+      qaStatus:qa.status,
+      qaReceipt:qa.status==="CONFIRMED"?{
+        transactionHash:qa.hash,ledger:qa.ledger,
+        side:qa.side,quantityXlm:qa.quantityXlm,
+        label:"AUTOMATED_TESTNET_QA_NOT_ORGANIC_VOLUME"
+      }:null
     });
   }catch(error){
     // Never return the signing seed, HTTP bodies or provider stack traces.
