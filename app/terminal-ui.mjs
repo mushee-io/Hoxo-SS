@@ -163,22 +163,6 @@ function chooseMarket(id){
   updateChart();updateBook();updateDraft();setView(view);
 }
 all("[data-view]").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.view)));
-function setLendAction(mode){
-  const supply=mode!=="borrow";
-  $("lendSupplyTab").classList.toggle("selected",supply);
-  $("lendBorrowTab").classList.toggle("selected",!supply);
-  $("lendSupplyTab").setAttribute("aria-selected",String(supply));
-  $("lendBorrowTab").setAttribute("aria-selected",String(!supply));
-  $("lendSupplyTab").tabIndex=supply?0:-1;
-  $("lendBorrowTab").tabIndex=supply?-1:0;
-  $("lendSupplyPanel").classList.toggle("hidden",!supply);
-  $("lendBorrowPanel").classList.toggle("hidden",supply);
-}
-all("[data-lend-action]").forEach(b=>b.addEventListener("click",()=>{
-  setLendAction(b.dataset.lendAction);
-}));
-$("lendViewNetwork").addEventListener("click",()=>setView("network"));
-
 $("backToTrade").addEventListener("click",()=>setView("trade"));
 $("switchToSpot").addEventListener("click",()=>{
   chooseMarket("xlm-usdc-spot");
