@@ -14,7 +14,8 @@ test("M65 live observed resource fees are rejected under both ceilings",()=>{
 });
 
 test("M65 resource diagnostic stays on unsigned simulation path and refuses over-cap fees",()=>{
-  assert.match(simulation,/assembledFee>BigInt\(maxFeeStroops\)/);
+  assert.match(simulation,/assembledFee>feeCeiling/);
+  assert.match(simulation,/feeCeiling>10_000_000n/);
   assert.match(simulation,/minResourceFee/);
   assert.match(simulation,/cpuInsns/);
   assert.match(simulation,/memBytes/);
@@ -93,7 +94,8 @@ test("M71 uses the SDK XDR envelope directly without requiring a nonexistent toX
     instructions:"777",readBytes:"32",writeBytes:"64",
     readOnlyEntries:1,readWriteEntries:1,refundableFee:"22457677"
   });
-  assert.doesNotMatch(simulation,/assembled\.toXdr\(\)/);
+  assert.match(simulation,/typeof assembled\.toXdr==="function"\?assembled\.toXdr\(\)/);
+  assert.match(simulation,/assembled\.toEnvelope\(\)/);
 });
 
 
