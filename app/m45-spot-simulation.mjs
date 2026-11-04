@@ -230,8 +230,16 @@ export async function simulateM45BilateralSpot({
   if(assembledFee>feeCeiling){
     const resourceFee=typeof sim?.minResourceFee==="string"&&/^(?:0|[1-9]\d*)$/.test(sim.minResourceFee)?
       sim.minResourceFee:"unknown";
-    const cpu=sim?.cost?.cpuInsns==null?"unknown":String(sim.cost.cpuInsns);
-    const memory=sim?.cost?.memBytes==null?"unknown":String(sim.cost.memBytes);
+    // Provider-controlled cost fields are never interpolated unless exact bounded integers.
+    // String(value) could invoke hostile toString() or expose auth material.
+    const safeCost=(value)=>{
+      if(typeof value==="number"&&Number.isSafeInteger(value)&&value>=0)return String(value);
+      if(typeof value==="bigint"&&value>=0n&&value<=0xffffffffffffffffn)return String(value);
+      if(typeof value==="string"&&/^(?:0|[1-9]\\d{0,19})$/.test(value)&&BigInt(value)<=0xffffffffffffffffn)return value;
+      return "unknown";
+    };
+    const cpu=safeCost(sim?.cost?.cpuInsns);
+    const memory=safeCost(sim?.cost?.memBytes);
     fail("assembled Testnet fee exceeds ceiling; feeStroops="+assembledFee+
       " ceilingStroops="+feeCeiling+
       " minResourceFee="+resourceFee.slice(0,32)+
