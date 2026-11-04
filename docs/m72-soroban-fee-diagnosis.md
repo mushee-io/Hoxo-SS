@@ -30,3 +30,8 @@ The canonical assembled-envelope and RPC fallback resource inspector now applies
 ## M86 — envelope variant diagnostic label validation
 
 RPC/SDK envelope variant labels are now accepted only as short ASCII identifiers. Object-valued or multiline labels are replaced with `unknown` without invoking provider-controlled `toString()` or including arbitrary text in operator diagnostics. Adversarial tests cover throwing coercion, secret-looking labels and newlines. This is a diagnostic-only hardening change; it does not increase simulation/signing fee limits, authorize signatures or broadcasts, or prove a Testnet fill. Require exact-head CI and independent review before merging.
+
+
+### M87 — defensive RPC diagnostics (2026-11-04)
+
+Read-only resource diagnostics now isolate exceptions from provider-controlled property getters and proxy method traps. An inaccessible diagnostic field is reported as `unavailable` rather than exposing provider exception text or aborting the fee refusal path. Adversarial Node tests cover hostile getters, method probes, and secret-bearing exceptions. This does not change the simulation fee ceiling, browser signature ceiling, Testnet settlement permissions, or the requirement for independently verified signed receipts. Do not interpret a passing diagnostic test as a successful on-chain trade.
