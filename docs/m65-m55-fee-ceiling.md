@@ -34,3 +34,7 @@ The read-only simulation now validates its configured fee ceiling before contact
 ## M77 fee-policy input hardening — 2026-11-03
 
 The unsigned M55 simulator now rejects implicit JavaScript `BigInt` coercion from booleans, null, arrays and arbitrary objects, as well as whitespace, leading-zero or exponential strings and unsafe fractional numbers. Only exact bounded integer policy inputs are accepted before any RPC call. This does **not** raise the existing 10,000,000-stroop simulation ceiling or the stricter 1,000,000-stroop browser-signing ceiling. Regression coverage is in `tests/m76-fee-policy-preflight.test.mjs`. An exact-head CI pass and independent review are still required before merging; no signed transaction or on-chain trading is implied.
+
+## M81 offline pre-RPC regression — 2026-11-04
+
+`tests/m65-m55-fee-boundary.test.mjs` now calls the actual `simulateM45BilateralSpot` entry point with a sentinel RPC client and malformed fee policy inputs. The test requires every invalid input to fail before any ledger, account, or simulation RPC method is invoked. It covers null, booleans, arrays, objects, coerced strings, fractional/unsafe numbers, and out-of-range stroop amounts. This is an offline guard test, not a live simulation or signed trade. The observed ~2.2 XLM resource requirement remains above the 1 XLM simulation-only cap; the browser signing ceiling remains 0.1 XLM. Exact-head GitHub CI and independent review remain required.
