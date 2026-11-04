@@ -120,3 +120,12 @@ test("M82 RPC diagnostic method allowlist cannot leak arbitrary SDK properties",
   assert.equal(shape.minResourceFeeKind,"decimal-string");
   assert.doesNotMatch(JSON.stringify(shape),/private-auth-XDR-never-log/);
 });
+
+
+test("M83 unsigned simulation refuses RPC errors without exposing provider-controlled payloads",()=>{
+  assert.match(simulation,/if\(!rpc\.Api\.isSimulationSuccess\(sim\)\)/);
+  assert.match(simulation,/Review private operator RPC logs/);
+  assert.doesNotMatch(simulation,/sim\.error\.slice\s*\(/);
+  assert.doesNotMatch(simulation,/RPC: "\+detail/);
+  assert.doesNotMatch(simulation,/\.sendTransaction\s*\(|\.signTransaction\s*\(/);
+});
