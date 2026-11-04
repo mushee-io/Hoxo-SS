@@ -114,7 +114,9 @@ export function inspectM66AssembledResources(assembled,simulation=null){
   // Never let an SDK-version-specific accessor erase measurements that
   // are still available. Each public numeric field is independently guarded.
   const safe=(read)=>{try{return safeM84RpcCost(read());}catch{return "unknown";}};
-  const count=(read)=>{try {const v=read();return Array.isArray(v)?v.length:"unknown";}catch{return "unknown";}};
+  const count=(read)=>{try {const v=read();if(!Array.isArray(v))return "unknown";
+    const length=v.length;
+    return Number.isSafeInteger(length)&&length>=0&&length<=10000?length:"unknown";}catch{return "unknown";}};
   let data;
   // Recover bounded public resource metadata from the RPC simulation when
   // an SDK assembled-envelope extension accessor is unavailable.
