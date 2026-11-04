@@ -156,7 +156,7 @@ export function inspectM66AssembledResources(assembled,simulation=null){
 export function safeM84RpcCost(value){
   if(typeof value==="number"&&Number.isSafeInteger(value)&&value>=0)return String(value);
   if(typeof value==="bigint"&&value>=0n&&value<=0xffffffffffffffffn)return String(value);
-  if(typeof value==="string"&&/^(?:0|[1-9]\\d{0,19})$/.test(value)&&BigInt(value)<=0xffffffffffffffffn)return value;
+  if(typeof value==="string"&&/^(?:0|[1-9]\d{0,19})$/.test(value)&&BigInt(value)<=0xffffffffffffffffn)return value;
   return "unknown";
 }
 
