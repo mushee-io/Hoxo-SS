@@ -42,3 +42,7 @@ The unsigned M55 simulator now rejects implicit JavaScript `BigInt` coercion fro
 ## M88 — Defensive fee diagnostics
 
 Unsigned RPC fee-refusal diagnostics now independently guard `minResourceFee`, `cost.cpuInsns`, and `cost.memBytes` against throwing getters or proxy traps. An inaccessible field is reported as `unknown`, never as raw provider exception text or authorization data. This changes diagnostics only: the reviewed 10,000,000-stroop simulation hard cap and stricter user-controlled signing ceiling remain intact. The observed ~22-million-stroop assembled fee still refuses; this change does not permit a trade, prove an on-chain fill, or authorize a deployment. Exact-head CI and independent fee investigation remain required.
+
+## M90 — Regression suite alignment (2026-11-04)
+
+The resource-diagnostics test still asserted an obsolete `assembledFee > BigInt(maxFeeStroops)` expression after M76 introduced a validated `feeCeiling` and M70 introduced the optional `toXdr()` SDK fallback. The test now asserts the current bounded fee guard and both XDR/fallback paths rather than rejecting the implemented fallback. This is a test repair only, not an increase in the 10,000,000-stroop unsigned simulation ceiling or the 1,000,000-stroop browser-signing ceiling. Run `node --test tests/m65-resource-diagnostics.test.mjs` and exact-head GitHub CI before merge. No signed trade evidence is implied.
