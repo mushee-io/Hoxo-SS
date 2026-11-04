@@ -167,7 +167,7 @@ export function inspectM69RpcDiagnosticShape(assembled,simulation){
   let envelope="unavailable",extension="unavailable";
   try{
     const e=assembled.toEnvelope();
-    envelope=typeof e?.switch==="function"?String(e.switch().name??"unknown").slice(0,48):"no-switch";
+    envelope=typeof e?.switch==="function"?(()=>{const name=e.switch()?.name;return typeof name==="string"&&/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(name)?name:"unknown";})():"no-switch";
     const tx=e?.v1?.()?.tx?.();
     extension=tx?.ext?.()?"present":"absent";
   }catch{}
