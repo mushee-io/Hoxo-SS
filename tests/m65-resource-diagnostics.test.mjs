@@ -78,7 +78,8 @@ test("M69 shape diagnostics report only bounded public type labels, never transa
     toEnvelope:()=>({switch:()=>({name:"envelopeTypeTx"}),v1:()=>({tx:()=>({ext:()=>({})})})})
   },{transactionData:privateXdr,minResourceFee:"22359602",cost:{auth:privateXdr}});
   assert.deepEqual(shape,{envelope:"envelopeTypeTx",extension:"present",
-    transactionDataKind:"encoded-string",minResourceFeeKind:"decimal-string",costKind:"object"});
+    transactionDataKind:"encoded-string",minResourceFeeKind:"decimal-string",costKind:"object",
+    transactionDataMethods:[]});
   assert.doesNotMatch(JSON.stringify(shape),/secret-soroban-auth-material/);
   assert.equal(inspectM69RpcDiagnosticShape({toEnvelope:()=>{throw Error(privateXdr);}},{}).envelope,"unavailable");
 });
@@ -105,4 +106,17 @@ test("M74 rejects malformed RPC fee strings from diagnostics without leaking con
   assert.doesNotMatch(JSON.stringify(shape),/private-auth-XDR/);
   assert.equal(inspectM69RpcDiagnosticShape({toEnvelope:()=>{}},
     {minResourceFee:"22564708"}).minResourceFeeKind,"decimal-string");
+});
+
+
+test("M82 RPC diagnostic method allowlist cannot leak arbitrary SDK properties",()=>{
+  const sensitive="private-auth-XDR-never-log";
+  const data={toXDR:()=>sensitive,resources:()=>({secret:sensitive}),
+    secret:sensitive,resourceFee:()=>1n};
+  const shape=inspectM69RpcDiagnosticShape({toEnvelope:()=>{throw Error(sensitive);}},
+    {transactionData:data,minResourceFee:"1234"});
+  assert.deepEqual(shape.transactionDataMethods,["toXDR","resources","resourceFee"]);
+  assert.equal(shape.transactionDataKind,"object");
+  assert.equal(shape.minResourceFeeKind,"decimal-string");
+  assert.doesNotMatch(JSON.stringify(shape),/private-auth-XDR-never-log/);
 });
