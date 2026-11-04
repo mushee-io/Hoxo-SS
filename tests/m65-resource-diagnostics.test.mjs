@@ -139,8 +139,8 @@ test("M84 cost diagnostics accept only bounded unsigned integer counters",()=>{
   const hostile={toString(){throw Error(sensitive);}};
   assert.equal(safeM84RpcCost(hostile),"unknown");
   assert.equal(safeM84RpcCost(sensitive),"unknown");
-  assert.match(simulation,/safeM84RpcCost\(sim\?\.cost\?\.cpuInsns\)/);
-  assert.match(simulation,/safeM84RpcCost\(sim\?\.cost\?\.memBytes\)/);
+  assert.match(simulation,/safeRead\(\(\)=>sim\?\.cost\?\.cpuInsns\)/);
+  assert.match(simulation,/safeRead\(\(\)=>sim\?\.cost\?\.memBytes\)/);
   assert.doesNotMatch(simulation,/String\(sim\.cost\.cpuInsns\)/);
 });
 
@@ -190,4 +190,12 @@ test("M87 RPC diagnostics tolerate hostile getters and proxy method traps withou
   assert.doesNotMatch(JSON.stringify(shape),/private-auth-XDR-never-log/);
   const inaccessible=new Proxy({}, {get(){throw Error(secret);}});
   assert.equal(inspectM69RpcDiagnosticShape({},inaccessible).transactionDataKind,"unavailable");
+});
+
+test("M88 fee refusal protects all provider-controlled diagnostics from throwing getters",()=>{
+  assert.match(simulation,/const safeRead=read=>\{try\{return safeM84RpcCost\(read\(\)\);\}catch\{return "unknown";\}\}/);
+  for(const field of ["minResourceFee","cpuInsns","memBytes"])
+    assert.match(simulation,new RegExp("safeRead\\(\\(\\)=>sim\\?\\."+(field==="minResourceFee"?"minResourceFee":"cost\\?\\."+field)+"\\)"));
+  assert.doesNotMatch(simulation,/const cpu=safeM84RpcCost\(sim\?\.cost/);
+  assert.doesNotMatch(simulation,/const resourceFee=typeof sim\?\.minResourceFee/);
 });
