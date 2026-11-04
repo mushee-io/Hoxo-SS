@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
-import {inspectM66AssembledResources,inspectM69RpcDiagnosticShape} from "../app/m45-spot-simulation.mjs";
+import {inspectM66AssembledResources,inspectM69RpcDiagnosticShape,safeM84RpcCost} from "../app/m45-spot-simulation.mjs";
 import {classifyM65SimulationFee} from "../app/m44-stellar-xdr-verifier.mjs";
 
 const simulation=readFileSync(new URL("../app/m45-spot-simulation.mjs",import.meta.url),"utf8");
@@ -128,4 +128,18 @@ test("M83 unsigned simulation refuses RPC errors without exposing provider-contr
   assert.doesNotMatch(simulation,/sim\.error\.slice\s*\(/);
   assert.doesNotMatch(simulation,/RPC: "\+detail/);
   assert.doesNotMatch(simulation,/\.sendTransaction\s*\(|\.signTransaction\s*\(/);
+});
+
+
+test("M84 cost diagnostics accept only bounded unsigned integer counters",()=>{
+  for(const [input,expected] of [[0,"0"],[12345,"12345"],[12345n,"12345"],["12345","12345"],[18446744073709551615n,"18446744073709551615"],[18446744073709551616n,"unknown"],["18446744073709551616","unknown"],[-1,"unknown"],[1.5,"unknown"],[NaN,"unknown"],[Infinity,"unknown"],["-1","unknown"],["1e3","unknown"],["001","unknown"],[null,"unknown"],[true,"unknown"]]){
+    assert.equal(safeM84RpcCost(input),expected);
+  }
+  const sensitive="private-auth-XDR-never-log";
+  const hostile={toString(){throw Error(sensitive);}};
+  assert.equal(safeM84RpcCost(hostile),"unknown");
+  assert.equal(safeM84RpcCost(sensitive),"unknown");
+  assert.match(simulation,/safeM84RpcCost\\(sim\\?\\.cost\\?\\.cpuInsns\\)/);
+  assert.match(simulation,/safeM84RpcCost\\(sim\\?\\.cost\\?\\.memBytes\\)/);
+  assert.doesNotMatch(simulation,/String\\(sim\\.cost\\.cpuInsns\\)/);
 });
