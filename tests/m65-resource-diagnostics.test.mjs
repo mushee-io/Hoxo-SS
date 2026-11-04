@@ -162,3 +162,14 @@ test("M85 Soroban resource counters never coerce hostile XDR accessors or leak a
   });
   assert.doesNotMatch(JSON.stringify(result),/private-auth-XDR-never-log/);
 });
+
+
+test("M86 envelope labels reject hostile coercion and arbitrary diagnostic text",()=>{
+  const secret="private-auth-XDR-never-log";
+  for(const label of [{toString(){throw Error(secret);}},secret,"envelopeTypeTx\\n"+secret]){
+    const shape=inspectM69RpcDiagnosticShape({toEnvelope:()=>({switch:()=>({name:label}),v1:()=>({tx:()=>({ext:()=>({})})})})},{});
+    assert.equal(shape.envelope,"unknown");
+    assert.doesNotMatch(JSON.stringify(shape),/private-auth-XDR-never-log/);
+  }
+  assert.equal(inspectM69RpcDiagnosticShape({toEnvelope:()=>({switch:()=>({name:"envelopeTypeTx"})})},{}).envelope,"envelopeTypeTx");
+});
