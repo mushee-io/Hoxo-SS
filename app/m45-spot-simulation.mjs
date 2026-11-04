@@ -239,12 +239,12 @@ export async function simulateM45BilateralSpot({
   const diagnosticShape=inspectM69RpcDiagnosticShape(assembled,sim);
   const assembledFee=BigInt(assembled.fee);
   if(assembledFee>feeCeiling){
-    const resourceFee=typeof sim?.minResourceFee==="string"&&/^(?:0|[1-9]\d*)$/.test(sim.minResourceFee)?
-      sim.minResourceFee:"unknown";
-    // Provider-controlled cost fields are never interpolated unless exact bounded integers.
-    // String(value) could invoke hostile toString() or expose auth material.
-    const cpu=safeM84RpcCost(sim?.cost?.cpuInsns);
-    const memory=safeM84RpcCost(sim?.cost?.memBytes);
+    // Read every provider-controlled field behind a getter/proxy boundary.
+    // An RPC diagnostic must never turn a fee refusal into an untrusted exception.
+    const safeRead=read=>{try{return safeM84RpcCost(read());}catch{return "unknown";}};
+    const resourceFee=safeRead(()=>sim?.minResourceFee);
+    const cpu=safeRead(()=>sim?.cost?.cpuInsns);
+    const memory=safeRead(()=>sim?.cost?.memBytes);
     fail("assembled Testnet fee exceeds ceiling; feeStroops="+assembledFee+
       " ceilingStroops="+feeCeiling+
       " minResourceFee="+resourceFee.slice(0,32)+
