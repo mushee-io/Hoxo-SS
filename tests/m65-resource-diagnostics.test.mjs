@@ -143,3 +143,22 @@ test("M84 cost diagnostics accept only bounded unsigned integer counters",()=>{
   assert.match(simulation,/safeM84RpcCost\(sim\?\.cost\?\.memBytes\)/);
   assert.doesNotMatch(simulation,/String\(sim\.cost\.cpuInsns\)/);
 });
+
+test("M85 Soroban resource counters never coerce hostile XDR accessors or leak auth",()=>{
+  const secret="private-auth-XDR-never-log";
+  const hostile={toString(){throw Error(secret);}};
+  const resources={
+    instructions:()=>hostile,
+    diskReadBytes:()=>"-10",
+    writeBytes:()=>18446744073709551616n,
+    footprint:()=>({readOnly:()=>[1],readWrite:()=>[2]})
+  };
+  const data={resources:()=>resources,resourceFee:()=>hostile};
+  const assembled={toEnvelope:()=>({v1:()=>({tx:()=>({ext:()=>({sorobanData:()=>data})})})})};
+  const result=inspectM66AssembledResources(assembled);
+  assert.deepEqual(result,{
+    instructions:"unknown",readBytes:"unknown",writeBytes:"unknown",
+    readOnlyEntries:1,readWriteEntries:1,refundableFee:"unknown"
+  });
+  assert.doesNotMatch(JSON.stringify(result),/private-auth-XDR-never-log/);
+});
