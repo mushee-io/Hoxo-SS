@@ -16,3 +16,7 @@ M73 reports only a fixed allowlist of available methods on the returned transact
 ### M74 (2026-11-03): fee metadata safety
 
 The 15:03 UTC PR #52 CI run (41659825705) refused an unsigned M9 simulation at 22,565,708 stroops against the unchanged 10,000,000-stroop ceiling. RPC `minResourceFee` was a **decimal string** (22,564,708), not base64; the prior type label was misleading. M74 distinguishes decimal from encoded strings, redacts malformed fee values in failure diagnostics, and adds a regression test. This is diagnostic hardening only, not fee reduction, signing, or settlement. Keep the ceiling unchanged and require a fresh passing exact-head CI run plus reviewed resource provenance before proceeding.
+
+## M84 — 2026-11-04 bounded RPC cost diagnostics
+
+The unsigned M9 fee-refusal path now accepts CPU-instruction and memory-byte counters only as nonnegative safe integers, bounded unsigned 64-bit bigints, or canonical decimal strings within the same range. Provider-controlled objects, floating-point numbers, malformed strings, negative counters and oversized values are recorded as `unknown`, never coerced with `String(value)` or echoed to user-visible diagnostics. Adversarial regression tests include throwing `toString()` objects and auth-looking strings. This hardens operator diagnostics; it does **not** lower the observed ~22 million-stroop resource fee, raise the 10 million-stroop read-only ceiling, authorize Freighter signatures, or prove a settled trade. Review exact-head CI before merging; no production promotion or chain mutation.
