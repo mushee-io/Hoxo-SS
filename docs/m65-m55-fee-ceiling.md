@@ -38,3 +38,7 @@ The unsigned M55 simulator now rejects implicit JavaScript `BigInt` coercion fro
 ## M81 offline pre-RPC regression — 2026-11-04
 
 `tests/m65-m55-fee-boundary.test.mjs` now calls the actual `simulateM45BilateralSpot` entry point with a sentinel RPC client and malformed fee policy inputs. The test requires every invalid input to fail before any ledger, account, or simulation RPC method is invoked. It covers null, booleans, arrays, objects, coerced strings, fractional/unsafe numbers, and out-of-range stroop amounts. This is an offline guard test, not a live simulation or signed trade. The observed ~2.2 XLM resource requirement remains above the 1 XLM simulation-only cap; the browser signing ceiling remains 0.1 XLM. Exact-head GitHub CI and independent review remain required.
+
+## M88 — Defensive fee diagnostics
+
+Unsigned RPC fee-refusal diagnostics now independently guard `minResourceFee`, `cost.cpuInsns`, and `cost.memBytes` against throwing getters or proxy traps. An inaccessible field is reported as `unknown`, never as raw provider exception text or authorization data. This changes diagnostics only: the reviewed 10,000,000-stroop simulation hard cap and stricter user-controlled signing ceiling remain intact. The observed ~22-million-stroop assembled fee still refuses; this change does not permit a trade, prove an on-chain fill, or authorize a deployment. Exact-head CI and independent fee investigation remain required.
