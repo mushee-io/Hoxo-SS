@@ -12,3 +12,7 @@ The offline M44 source-envelope review now classifies the exact typed fee policy
 ## M82 — bounded RPC diagnostic regression (2026-11-04)
 
 The M69 diagnostic now reports an explicit fixed allowlist of available transaction-data methods. The existing M69 test previously expected an older object shape without `transactionDataMethods`; M82 aligns that assertion with the implemented shape and adds a separate regression ensuring that sensitive SDK properties, method return values, and thrown exception text never appear in the public diagnostic output. This is a test-only hardening change; it does not establish that the 2.2 XLM resource fee is correct, reduce it, raise either fee ceiling, or authorize signing. Run `node --test tests/m65-resource-diagnostics.test.mjs` and verify exact-head GitHub CI before review or merge.
+
+## M83 — provider-error redaction (2026-11-04)
+
+The unsigned M9 simulation refusal no longer echoes raw `sim.error` text into browser-visible errors. Stellar RPC may return untrusted transaction, authorization, or ledger details; operators should inspect restricted RPC diagnostics rather than exposing provider messages to connected users. A regression asserts that the read-only simulation retains its fail-closed rejection and has no signing or broadcast call. The observed ~2.2 XLM resource fee remains unresolved; no fee ceiling or execution permission changes. Verify exact-head CI and review before merging PR #52.
