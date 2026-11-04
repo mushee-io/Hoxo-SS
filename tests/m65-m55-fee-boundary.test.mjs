@@ -52,3 +52,24 @@ test("M80 malformed fee policy never reaches BigInt coercion in source review",(
     assert.equal(classifyM65SimulationFee(100n,invalid).reason,"invalid_fee");
   }
 });
+
+import {simulateM45BilateralSpot} from "../app/m45-spot-simulation.mjs";
+
+test("M81 invalid simulation fee policy fails before any network call",async()=>{
+  let calls=0;
+  const server={
+    getLatestLedger(){calls++;throw Error("unexpected RPC access");},
+    getAccount(){calls++;throw Error("unexpected RPC access");},
+    simulateTransaction(){calls++;throw Error("unexpected RPC access");}
+  };
+  const invalid=[null,undefined,true,false,{},[],["100"]," 100","01","1e3","1.5",
+    -1,0,99,1.5,Number.MAX_SAFE_INTEGER+1,0n,99n,10000001n,"10000001"];
+  for(const maxFeeStroops of invalid){
+    await assert.rejects(
+      simulateM45BilateralSpot({server,maxFeeStroops}),
+      /invalid simulation fee ceiling/,
+      "must reject "+String(maxFeeStroops)
+    );
+  }
+  assert.equal(calls,0,"invalid fee policy must not reach RPC");
+});
