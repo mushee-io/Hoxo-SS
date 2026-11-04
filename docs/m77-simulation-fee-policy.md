@@ -16,3 +16,7 @@ The M69 diagnostic now reports an explicit fixed allowlist of available transact
 ## M83 — provider-error redaction (2026-11-04)
 
 The unsigned M9 simulation refusal no longer echoes raw `sim.error` text into browser-visible errors. Stellar RPC may return untrusted transaction, authorization, or ledger details; operators should inspect restricted RPC diagnostics rather than exposing provider messages to connected users. A regression asserts that the read-only simulation retains its fail-closed rejection and has no signing or broadcast call. The observed ~2.2 XLM resource fee remains unresolved; no fee ceiling or execution permission changes. Verify exact-head CI and review before merging PR #52.
+
+## M89 — bounded footprint entry counts (2026-11-04)
+
+Read-only Soroban resource diagnostics now accept footprint array lengths only within a conservative 0–10,000 entry range. Implausible or throwing proxy-backed lengths produce `unknown`, never provider-controlled text. Regression tests exercise normal, oversized and hostile arrays. This does not reduce the observed fee, change the 1 XLM unsigned-simulation ceiling or the 0.1 XLM browser signing ceiling, or authorize a transaction. PR #52 remains draft pending exact-head CI and review.
