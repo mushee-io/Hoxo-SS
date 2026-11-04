@@ -25,3 +25,8 @@ The unsigned M9 fee-refusal path now accepts CPU-instruction and memory-byte cou
 ## M85 — 2026-11-04 Soroban XDR resource counter hardening
 
 The canonical assembled-envelope and RPC fallback resource inspector now applies the same bounded unsigned-integer validation to instructions, read bytes, write bytes and resource fees as M84 applies to RPC cost counters. Previously `String(value)` could invoke a provider-controlled object's `toString()` or echo malformed text. Invalid or oversized counters now become `unknown`; independent footprint counts remain available. An adversarial Node test covers throwing objects, negative byte strings and out-of-range u64 values. This changes only diagnostic formatting, not transaction assembly, the 10,000,000-stroop read-only simulation cap or the 1,000,000-stroop signing gate. Exact-head CI and live resource-fee root-cause investigation are still required. No signing, broadcast, Vercel promotion or merge is authorized.
+
+
+## M86 — envelope variant diagnostic label validation
+
+RPC/SDK envelope variant labels are now accepted only as short ASCII identifiers. Object-valued or multiline labels are replaced with `unknown` without invoking provider-controlled `toString()` or including arbitrary text in operator diagnostics. Adversarial tests cover throwing coercion, secret-looking labels and newlines. This is a diagnostic-only hardening change; it does not increase simulation/signing fee limits, authorize signatures or broadcasts, or prove a Testnet fill. Require exact-head CI and independent review before merging.
