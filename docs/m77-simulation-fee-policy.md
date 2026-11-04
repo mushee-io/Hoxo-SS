@@ -8,3 +8,7 @@ Run `node --test tests/m77-fee-policy-decimal.test.mjs` and the complete branch 
 ## M80 — malformed ceiling hardening (2026-11-03)
 
 The offline M44 source-envelope review now classifies the exact typed fee policy before formatting refusal diagnostics. A malformed caller-provided ceiling (including null, boolean, array, object, negative or unsafe number) returns a stable fail-closed `invalid transaction fee ceiling` error rather than invoking `BigInt()` on untrusted data while building the message. The separate fee classifier and regression tests cover these cases. This does not raise the 0.1 XLM browser-signing ceiling or the 1 XLM read-only simulation ceiling, and provides no permission to sign, broadcast or claim a fill. Verify exact-head CI before merging this draft.
+
+## M82 — bounded RPC diagnostic regression (2026-11-04)
+
+The M69 diagnostic now reports an explicit fixed allowlist of available transaction-data methods. The existing M69 test previously expected an older object shape without `transactionDataMethods`; M82 aligns that assertion with the implemented shape and adds a separate regression ensuring that sensitive SDK properties, method return values, and thrown exception text never appear in the public diagnostic output. This is a test-only hardening change; it does not establish that the 2.2 XLM resource fee is correct, reduce it, raise either fee ceiling, or authorize signing. Run `node --test tests/m65-resource-diagnostics.test.mjs` and verify exact-head GitHub CI before review or merge.
