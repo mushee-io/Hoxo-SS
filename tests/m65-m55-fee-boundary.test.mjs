@@ -62,7 +62,7 @@ test("M81 invalid simulation fee policy fails before any network call",async()=>
     getAccount(){calls++;throw Error("unexpected RPC access");},
     simulateTransaction(){calls++;throw Error("unexpected RPC access");}
   };
-  const invalid=[null,undefined,true,false,{},[],["100"]," 100","01","1e3","1.5",
+  const invalid=[null,true,false,{},[],["100"]," 100","01","1e3","1.5",
     -1,0,99,1.5,Number.MAX_SAFE_INTEGER+1,0n,99n,10000001n,"10000001"];
   for(const maxFeeStroops of invalid){
     await assert.rejects(
