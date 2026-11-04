@@ -199,3 +199,17 @@ test("M88 fee refusal protects all provider-controlled diagnostics from throwing
   assert.doesNotMatch(simulation,/const cpu=safeM84RpcCost\(sim\?\.cost/);
   assert.doesNotMatch(simulation,/const resourceFee=typeof sim\?\.minResourceFee/);
 });
+
+
+test("M89 footprint counts reject implausible or hostile array lengths",()=>{
+  const inspect=entries=>inspectM66AssembledResources({toEnvelope:()=>({v1:()=>({tx:()=>({ext:()=>({
+    sorobanData:()=>({resources:()=>({instructions:()=>1,diskReadBytes:()=>1,writeBytes:()=>1,
+      footprint:()=>({readOnly:()=>entries,readWrite:()=>[1]})}),resourceFee:()=>100n})
+  })})})})});
+  assert.equal(inspect([1,2]).readOnlyEntries,2);
+  assert.equal(inspect(new Array(10001)).readOnlyEntries,"unknown");
+  const hostile=new Proxy([],{get(target,key){if(key==="length")throw Error("private-auth-XDR");return Reflect.get(target,key);}});
+  const result=inspect(hostile);
+  assert.equal(result.readOnlyEntries,"unknown");
+  assert.doesNotMatch(JSON.stringify(result),/private-auth-XDR/);
+});
