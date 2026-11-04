@@ -173,3 +173,21 @@ test("M86 envelope labels reject hostile coercion and arbitrary diagnostic text"
   }
   assert.equal(inspectM69RpcDiagnosticShape({toEnvelope:()=>({switch:()=>({name:"envelopeTypeTx"})})},{}).envelope,"envelopeTypeTx");
 });
+
+test("M87 RPC diagnostics tolerate hostile getters and proxy method traps without leaking",()=>{
+  const secret="private-auth-XDR-never-log";
+  const hostileData=new Proxy({},{
+    get(_target,key){if(key==="resources")throw Error(secret);if(key==="toXDR")throw Error(secret);return undefined;}
+  });
+  const hostileSim=new Proxy({},{
+    get(_target,key){if(key==="transactionData")return hostileData;if(key==="minResourceFee"||key==="cost")throw Error(secret);return undefined;}
+  });
+  const shape=inspectM69RpcDiagnosticShape({toEnvelope:()=>{throw Error(secret);}},hostileSim);
+  assert.deepEqual(shape,{
+    envelope:"unavailable",extension:"unavailable",transactionDataKind:"object",
+    minResourceFeeKind:"unavailable",costKind:"unavailable",transactionDataMethods:[]
+  });
+  assert.doesNotMatch(JSON.stringify(shape),/private-auth-XDR-never-log/);
+  const inaccessible=new Proxy({}, {get(){throw Error(secret);}});
+  assert.equal(inspectM69RpcDiagnosticShape({},inaccessible).transactionDataKind,"unavailable");
+});
