@@ -215,3 +215,14 @@ test("M89 footprint counts reject implausible or hostile array lengths",()=>{
   assert.equal(result.readOnlyEntries,"unknown");
   assert.doesNotMatch(JSON.stringify(result),/private-auth-XDR/);
 });
+
+
+test("M91 over-cap unsigned simulation refuses before wallet-facing XDR serialization",()=>{
+  const feeGuard=simulation.indexOf("if(assembledFee>feeCeiling)");
+  const xdrMaterialization=simulation.indexOf("const sourceTxXdr=assembled.toXdr();");
+  const sourceReview=simulation.indexOf("reviewM44SourceEnvelope({sourceTxXdr");
+  assert.ok(feeGuard>=0,"assembled fee refusal must exist");
+  assert.ok(xdrMaterialization>feeGuard,"wallet-facing XDR must be materialized only after fee refusal");
+  assert.ok(sourceReview>xdrMaterialization,"XDR still requires exact source review");
+  assert.match(simulation,/no signing or broadcast/);
+});
