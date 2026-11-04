@@ -214,9 +214,9 @@ export async function simulateM45BilateralSpot({
     .setTimeout(60).build();
   const sim=await server.simulateTransaction(tx);
   if(!rpc.Api.isSimulationSuccess(sim)){
-    const detail=typeof sim?.error==="string"?
-      sim.error.slice(0,750).replace(/[\r\n]+/g," "):"No simulation result from Stellar RPC";
-    fail("M9 Soroban simulation failed; no wallet prompt permitted. RPC: "+detail);
+    // RPC error text may contain transaction data or auth details. Never
+    // echo untrusted provider messages into browser-visible diagnostics.
+    fail("M9 Soroban simulation failed; no wallet prompt permitted. Review private operator RPC logs.");
   }
   const assembled=rpc.assembleTransaction(tx,sim).build();
   const sourceTxXdr=assembled.toXdr();
