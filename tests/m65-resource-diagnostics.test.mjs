@@ -139,7 +139,7 @@ test("M84 cost diagnostics accept only bounded unsigned integer counters",()=>{
   const hostile={toString(){throw Error(sensitive);}};
   assert.equal(safeM84RpcCost(hostile),"unknown");
   assert.equal(safeM84RpcCost(sensitive),"unknown");
-  assert.match(simulation,/safeM84RpcCost\\(sim\\?\\.cost\\?\\.cpuInsns\\)/);
-  assert.match(simulation,/safeM84RpcCost\\(sim\\?\\.cost\\?\\.memBytes\\)/);
-  assert.doesNotMatch(simulation,/String\\(sim\\.cost\\.cpuInsns\\)/);
+  assert.match(simulation,/safeM84RpcCost\(sim\?\.cost\?\.cpuInsns\)/);
+  assert.match(simulation,/safeM84RpcCost\(sim\?\.cost\?\.memBytes\)/);
+  assert.doesNotMatch(simulation,/String\(sim\.cost\.cpuInsns\)/);
 });
