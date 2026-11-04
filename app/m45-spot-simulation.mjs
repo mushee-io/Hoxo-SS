@@ -164,6 +164,9 @@ export function safeM84RpcCost(value){
 export function inspectM69RpcDiagnosticShape(assembled,simulation){
   const kind=value=>value==null?"absent":typeof value==="string"?
     (/^(?:0|[1-9]\d*)$/.test(value)?"decimal-string":"encoded-string"):typeof value;
+  // Provider proxies can throw on property access; never echo their errors.
+  const guarded=(read,fallback="unavailable")=>{try{return read();}catch{return fallback;}};
+  const methodNames=["toXDR","toXdr","resources","resourceFee"];
   let envelope="unavailable",extension="unavailable";
   try{
     const e=assembled.toEnvelope();
@@ -173,13 +176,13 @@ export function inspectM69RpcDiagnosticShape(assembled,simulation){
   }catch{}
   return Object.freeze({
     envelope,extension,
-    transactionDataKind:kind(simulation?.transactionData),
-    minResourceFeeKind:kind(simulation?.minResourceFee),
-    costKind:kind(simulation?.cost),
+    transactionDataKind:guarded(()=>kind(simulation?.transactionData)),
+    minResourceFeeKind:guarded(()=>kind(simulation?.minResourceFee)),
+    costKind:guarded(()=>kind(simulation?.cost)),
     // Expose only a fixed allowlist of SDK method availability, never raw
     // transactionData, ledger footprint keys, authorization or XDR bytes.
-    transactionDataMethods:["toXDR","toXdr","resources","resourceFee"]
-      .filter(name=>typeof simulation?.transactionData?.[name]==="function")
+    transactionDataMethods:methodNames
+      .filter(name=>guarded(()=>typeof simulation?.transactionData?.[name]==="function",false))
   });
 }
 
