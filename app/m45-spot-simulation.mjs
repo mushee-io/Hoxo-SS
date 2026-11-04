@@ -232,7 +232,8 @@ export async function simulateM45BilateralSpot({
     fail("M9 Soroban simulation failed; no wallet prompt permitted. Review private operator RPC logs.");
   }
   const assembled=rpc.assembleTransaction(tx,sim).build();
-  const sourceTxXdr=assembled.toXdr();
+  // Reject excessive resource fees before materializing any wallet-facing XDR.
+  // A failed unsigned simulation must never produce an approval payload.
   // Preserve the hard fee refusal while exposing bounded, read-only resource
   // diagnostics for investigation. No signatures or broadcasts are attempted.
   // The assembled Soroban transaction-data XDR is read-only public metadata.
@@ -255,6 +256,7 @@ export async function simulateM45BilateralSpot({
       " cpuInsns="+cpu.slice(0,32)+" memBytes="+memory.slice(0,32)+
       "; no signing or broadcast");
   }
+  const sourceTxXdr=assembled.toXdr();
   reviewM44SourceEnvelope({sourceTxXdr,expectedTerms:terms,currentLedger:ledger,maxFeeStroops});
   const auth=assembled.operations[0].auth??[];
   const takerEntries=auth.filter(item=>{
